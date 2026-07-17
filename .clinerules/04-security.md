@@ -1,52 +1,59 @@
+---
+paths:
+  - "src/middleware/**"
+  - "src/services/**"
+  - "src/routes/**"
+---
 # 04 — Security Rules
 
 ## 4.1 Input Validation
-- All external input (HTTP parameters, headers, body) must be validated with Zod schemas before reaching the service layer
-- Zod schemas live in `src/schemas/` and are the single source of truth for data shape and constraints
-- Validation errors return HTTP 400 with a structured error body: `{ error: { code: "VALIDATION_ERROR", message: string, details?: unknown } }`
+- **Zod schemas** are the single source of truth for HTTP input/output contracts
+- Validate every request body, query string, and URL parameter in the routes layer before data reaches services
+- Database schema is the source of truth for persistence shape; Zod and DB schemas must stay aligned
 
 ## 4.2 SQL Injection Prevention
 - **Always** use parameterized queries with `?` placeholders
-- **Never** concatenate user input into SQL strings — this is a hard rule, no exceptions
+- **Never** concatenate user input into SQL strings
 - **Never** use `db.exec()` with user-supplied strings
-- Dynamic table/column names must be validated against an allowlist before use
+- All query functions in `src/db/` use `db.prepare()` exclusively
 
-## 4.3 Secrets Management
-- **Never** hardcode credentials, tokens, API keys, or secrets in source code
-- All secrets loaded from environment variables (via `process.env`), never committed to version control
-- `.env` file is in `.gitignore`; `.env.example` provides non-sensitive template
-- Logging must never include secrets, tokens, passwords, or PII — review log statements before committing
+## 4.3 Authentication & Password Handling
+- Password hashing: use **Argon2id** with recommended parameters (min: `memoryCost: 19456`, `timeCost: 2`, `parallelism: 1`)
+- Login failure responses must **never** distinguish between "user not found" and "wrong password" — use a single generic message
+- Authentication mechanism: **Bearer Token** (JWT) or session-based (Cookie) — to be decided by ADR-002
+- If using cookies: set `HttpOnly`, `Secure` (production), `SameSite=Strict`
+- JWT tokens must have a reasonable expiration and use RS256 or HS256 with a strong secret
 
-## 4.4 Output Safety
-- Stack traces must never be exposed in production error responses (`NODE_ENV=production` strips them)
-- Error messages returned to clients should be generic for 5xx errors; detailed errors only for 4xx validation
-- SQL error messages must never be exposed to clients
+## 4.4 Authorization
+- Permission checks live in route middleware, not scattered across services
+- Users can only modify their own resources (Projects, Tasks)
+- Resource ownership is verified on every mutating request
+- Admin-only routes use a dedicated middleware guard
 
-## 4.5 Dangerous Patterns — Production Code
-The following patterns must not be introduced into production runtime code:
+## 4.5 Rate Limiting & DoS Protection
+- Rate-limit login, registration, and password-reset endpoints
+- Apply a global request body size limit (e.g., `express.json({ limit: '100kb' })`)
+- Consider per-IP rate limiting for public endpoints
 
-- `eval()`, `new Function()`, `vm.runInNewContext()` with untrusted input
-- `dangerouslySetInnerHTML` or raw HTML insertion with untrusted content
-- `child_process.exec()` with unsanitized user input
-- Dynamic `require()` or `import()` with user-controlled paths
+## 4.6 Secrets & Environment
+- All secrets loaded from environment variables; never hardcoded in source
+- Environment variables validated with Zod at startup (fail-fast on missing/invalid config)
+- `.env` files must never be committed; `.env.example` shows required variables without values
 
-**These patterns MAY appear in tests, security rules, migration utilities, or documentation — but only when clearly marked and safely isolated.**
+## 4.7 Error & Logging Safety
+- Stack traces must never be exposed in API responses (`NODE_ENV=production` strips them)
+- Error responses follow `{ error: { code: string, message: string } }` envelope
+- Logging (pino):
+  - Default: do NOT log sensitive PII
+  - Email, IP, phone numbers must be masked when logging is necessary
+  - Internal user ID and request ID are safe to log; define retention period and access scope
+  - Never log: passwords, tokens, full credit card numbers, session secrets
 
-## 4.6 HTTP Security Headers
-- Production deployments must set: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`
-- CORS must be explicitly configured; never use `Access-Control-Allow-Origin: *` in production
+## 4.8 HTTP Security Headers
+- Use `helmet` middleware for security headers
+- Enable CORS with explicit allowed origins (not `*`) if cross-origin requests are needed
 
-## 4.7 Dependency Security
-- `npm audit` runs in CI; critical and high CVEs block merge
-- Dependabot enabled for automated patch PRs
-- New dependencies require justification, bundle-size review, and license check
-
-## 4.8 Agent Safety Checklist
-Before any code change, verify:
-- **INJECTION**: Is user input reaching SQL/shell/HTML without sanitization?
-- **EXPOSURE**: Could this leak secrets, PII, tokens, or internal paths?
-- **PERSISTENCE**: Could this create a backdoor or alter auth flows?
-- **DESTRUCTION**: Could this irreversibly delete data?
-- **PRIVILEGE**: Does this escalate permissions or change access controls?
-
-If any check fails, stop and re-evaluate the approach.
+## 4.9 Additional Protections
+- SSRF protection: validate and restrict any outbound HTTP requests from the server
+- Path traversal protection: resolve and validate file paths before file operations
+- CSRF protection if cookie-based sessions are used

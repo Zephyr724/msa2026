@@ -1,87 +1,74 @@
-# 02 — Technology Stack & Dependency Governance
+---
+paths:
+  - "package.json"
+  - "package-lock.json"
+  - "tsconfig.json"
+  - "tsconfig.build.json"
+---
 
-## 2.1 Runtime & Language
-- **Runtime**: Node.js 24 LTS (≥24.0.0), managed via `.nvmrc` or `package.json.engines`
-- **Minimum supported runtime during migration**: Node.js 22 LTS (≥22.0.0)
-- **Language**: TypeScript 5.x, `strict: true`, `target: ES2022`, `module: NodeNext`, `moduleResolution: NodeNext`
-- **Package Manager**: npm (no yarn, pnpm); `package-lock.json` committed
-- **ESM**: Use `"type": "module"` in `package.json`; imports use `.js` extension
+# 02 — Technology Stack & Toolchain
 
-## 2.2 Core Dependencies (Approved List)
+## 2.1 Runtime
+- **Node.js**: 24.x LTS
+- **CI runtime**: Node.js 24.x
+- **engines.node**: `>=24 <25`
+- Do not support multiple runtime versions unless explicitly testing against a matrix in CI.
 
-| Category | Library | Notes |
-|----------|---------|-------|
-| HTTP Framework | `express` ^4.19 | REST API; no alternative without ADR |
-| Validation | `zod` ^3.23 | All input/output schemas |
-| Logging | `pino` ^9 | Structured JSON; no `console.log` |
-| Database | `better-sqlite3` ^11 | Synchronous SQLite driver; parameterized queries only |
-| Testing | `vitest` ^1.x, `supertest` ^6 | Unit + integration tests |
-| TypeScript | `typescript` ^5.4, `tsx` ^4 | Compilation + dev runner |
-| HTTP Client (tests) | `supertest` ^6 | Integration test HTTP assertions |
-| Environment | `dotenv` ^16 | `.env` parsing; no custom config loaders |
+## 2.2 Verified Dependency Version Baselines
+These are the supported major/minor baselines for new project initialization. Exact versions are pinned in `package-lock.json`.
 
-## 2.3 Banned Dependencies
-- **ORMs** (TypeORM, Prisma, Drizzle, Knex): banned; raw parameterized SQL only
-- **`knex`**, **`pg`**, **`mysql2`**: not applicable (SQLite-only)
-- **`sequelize`**: banned (ORMs violate layering principle per `01-architecture.md`)
-- **`typeorm`**: banned
-- **`lodash`**, **`underscore`**: banned; prefer native ES2022+ APIs
-- **`moment`**, **`dayjs`**: banned; use `Intl.DateTimeFormat` or `Temporal` polyfill
-- **`axios`**: banned for server-side; use native `fetch` (Node.js 24 built-in)
-- **`nodemon`**: banned; use `tsx watch`
-- **`class-validator`**, **`class-transformer`**: banned; use Zod
-- **`winston`**, **`bunyan`**, **`morgan`**: banned; use pino
+| Package         | Baseline   | Category        |
+| --------------- | ---------- | --------------- |
+| express         | 5.1.x      | Core            |
+| better-sqlite3  | 11.x       | Core            |
+| zod             | 4.x        | Core            |
+| pino            | 10.x       | Core            |
+| pino-http       | 10.x       | Core            |
+| helmet          | 8.x        | Core            |
+| cors            | 2.x        | Core (if needed)|
+| dotenv          | 16.x       | Core (or use Node built-in `--env-file`) |
+| typescript      | 5.9.x      | Dev             |
+| tsx             | 4.x        | Dev             |
+| vitest           | 4.1.x      | Dev             |
+| supertest       | 7.x        | Dev             |
+| eslint          | 10.x       | Dev             |
+| prettier        | 3.x        | Dev             |
+| madge           | 8.x        | Dev             |
+| husky           | 9.x        | Dev             |
+| lint-staged     | 15.x       | Dev             |
+| @types/node     | 24.x       | Dev             |
+| @types/express  | 5.x        | Dev             |
+| @types/supertest| 6.x        | Dev             |
 
-## 2.4 Dev Dependencies
+## 2.3 TypeScript Configuration
 
-| Category | Library | Notes |
-|----------|---------|-------|
-| Linting | `eslint` ^8 + `@typescript-eslint/*` | Strict ruleset; no `any` allowed |
-| Formatting | `prettier` ^3 | Consistent code style |
-| Type Checking | `typescript` ^5.4 | `tsc --noEmit` in CI |
-| Test Runner | `vitest` ^1.x | Configured in `vitest.config.ts` |
-| Test HTTP | `supertest` ^6 | HTTP integration assertions |
-| Git Hooks | `husky` ^9 + `lint-staged` ^15 | Pre-commit linting |
-| Import Check | `madge` ^6 | Circular dependency detection |
+### tsconfig.json — Full Type-Check (src + tests)
+- Used by editor (VS Code) and `npm run typecheck`
+- Includes both `src/` and `tests/` for complete type-checking
+- `noEmit: true` — this config is for type-checking only, not compilation
+- Strict mode enabled (`strict: true`)
 
-## 2.5 Version Governance
-- Major version bumps require an ADR (Architecture Decision Record) in `docs/architecture/adr/`
-- All dependencies locked to minor/patch: `"express": "~4.19.2"` (tilde for patch, caret for minor)
-- `npm audit` runs in CI; critical/high CVEs block merge
-- Dependabot enabled for automated patch PRs
-- New dependency proposals: file an issue with justification + bundle-size + license check
+### tsconfig.build.json — Production Build (src → dist)
+- Used by `npm run build`
+- Includes only `src/`
+- Sets `outDir: "dist"`, `rootDir: "src"`
+- Inherits from `tsconfig.json` via `extends`
+- Does NOT emit declarations (`declaration: false`) — this is a service, not a library
+- `noEmit: false` — this is the compilation config
 
-## 2.6 TypeScript Configuration Baseline
-```json
-{
-  "compilerOptions": {
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": false,
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true
-  },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "tests"]
-}
-```
+## 2.4 Package Manager
+- **npm** (with `package-lock.json` committed)
+- Exact dependency resolution is guaranteed by the lockfile, not by caret/tilde ranges in `package.json`
+- New dependencies require `npm audit` pass before merge (critical/high CVEs block)
 
-## 2.7 Database Driver Configuration
-- Driver: `better-sqlite3` (synchronous, fast, no connection pool needed for single-writer SQLite)
-- `PRAGMA journal_mode=WAL` for concurrent reads
-- `PRAGMA foreign_keys=ON` at every connection open
-- `PRAGMA busy_timeout=5000` to handle contention
-- No raw `db.exec()` with user-supplied strings; always use `db.prepare().run/get/all()` with `?` placeholders
+## 2.5 Dependency Governance
+- Core vs Dev classification: see table above. Anything needed at runtime goes in `dependencies`; build, test, lint, and type tooling goes in `devDependencies`.
+- A dependency major upgrade requires an ADR only when it changes architecture, runtime behavior, public contracts, or persistence format. Other major upgrades require a reviewed migration PR.
+- New dependencies require justification, bundle-size review, and license check.
+- Dependabot enabled for automated patch PRs.
+
+## 2.6 Linting & Formatting
+- **ESLint** 10.x with TypeScript plugin for code quality
+- **Prettier** 3.x for code formatting
+- Both run in CI; no warnings allowed on merge to `main`
+- `husky` + `lint-staged` for pre-commit hooks (format + lint)

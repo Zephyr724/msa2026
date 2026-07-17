@@ -1,3 +1,6 @@
+---
+alwaysApply: true
+---
 # 06 — Development Workflow
 
 ## 6.1 Git Branch Strategy
@@ -15,11 +18,18 @@
 - Example: `fix(tasks): handle null dueDate in updateTask`
 
 ## 6.3 Pull Request Requirements
-- PR title matches Conventional Commits format
-- Description includes: what changed, why, testing performed
-- CI must pass (lint, type-check, tests, audit)
-- At least one approving review required for merge
-- No merge commits with unresolved conversations
+
+### Solo Mode (current)
+- PR required
+- CI required (lint, type-check, tests, audit)
+- Agent self-review checklist required
+- Human final diff review required
+- No approval count requirement
+
+### Team Mode (when collaborators join)
+- PR required
+- CI required
+- At least one independent approval required
 
 ## 6.4 Code Quality Gates
 - `npm run lint` passes (ESLint, no errors, no warnings)
@@ -32,14 +42,15 @@
 - Start each task by reading relevant context files before modifying
 - Make focused, minimal changes; avoid unrelated refactoring in feature PRs
 - Run lint + type-check after each change set; fix issues before proceeding
-- When tests fail, fix the source code — do not modify test assertions unless the contract changed
+- When tests fail, first identify the root cause: implementation bug, incorrect test assumption, stale fixture, or environment issue. Fix the source code when the implementation is wrong. Only modify test assertions when the contract has demonstrably changed, and explain why in the task summary.
 - Commit logical units of work; avoid monolith commits
 
 ## 6.6 Code Review Checklist
 - [ ] Does the change follow the layered architecture (routes → services → db)?
 - [ ] Are all SQL queries parameterized?
 - [ ] Is all user input validated with Zod before reaching services?
-- [ ] Are new functions/types/dependencies exported and documented?
+- [ ] Are public APIs documented?
+- [ ] Are symbols exported only when another module actually needs them?
 - [ ] Do tests cover happy path and error cases?
 - [ ] Are any dangerous patterns introduced into runtime code?
 - [ ] Did CI pass all checks?

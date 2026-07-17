@@ -1,4 +1,14 @@
+---
+alwaysApply: true
+---
+
 # 00 — Project Context, Language Policy & Quick Reference
+
+## Boundary Declaration
+These files steer agent behavior; they are not security boundaries.
+- Destructive command blocking is enforced by Cline hooks or approval policies.
+- Code quality is enforced by CI.
+- Repository permissions are enforced by GitHub branch protection.
 
 ## Meta Information
 - **Project**: msa2026 — Task & Project Management API
@@ -11,7 +21,7 @@
 - **Testing**: Vitest + Supertest
 - **Logging**: pino (structured JSON)
 - **Validation**: Zod
-- **Runtime**: Node.js 24 LTS (minimum: Node.js 22 LTS during migration)
+- **Runtime**: Node.js 24 LTS (≥24.0.0, <25.0.0)
 
 ## Language Policy
 - **User-facing communication (replies, explanations, task summaries)**: Chinese
@@ -29,7 +39,7 @@
 - `.clinerules/` — agent steering rules (this directory)
 
 ### What's Next (Priority Order)
-1. Initialize Node.js + TypeScript project (`package.json`, `tsconfig.json`)
+1. Initialize Node.js + TypeScript project (`package.json`, `tsconfig.json`, `tsconfig.build.json`)
 2. Set up directory structure per `01-architecture.md`
 3. Implement database connection layer with `better-sqlite3`
 4. Implement User CRUD (service + routes + tests)
@@ -43,7 +53,7 @@
 ## Quick Reference: Key Principles
 1. **Never** concatenate user input into SQL strings — always parameterized queries
 2. **Never** use `any` type — use `unknown` + type guards
-3. **Never** log credentials, tokens, or PII
+3. **Never** log credentials, tokens, or unmasked PII
 4. **Never** `git push --force` to protected branches
 5. **Always** validate input with Zod before it reaches service layer
 6. **Always** propagate errors to centralized error middleware (don't catch locally unless recovering)

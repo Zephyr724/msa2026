@@ -1,3 +1,10 @@
+---
+paths:
+  - "src/db/**"
+  - "scripts/migrations/**"
+  - "init_db.sql"
+  - "tests/integration/db/**"
+---
 # 03 — Database Rules
 
 ## 3.1 Schema Source of Truth
@@ -20,15 +27,21 @@
 - Write transactions should be kept short; avoid holding write locks across async boundaries
 
 ## 3.4 Schema Design Principles
-- All tables have an auto-increment `INTEGER PRIMARY KEY` column named `id`
-- Timestamps use ISO 8601 text format (`TEXT` with `CURRENT_TIMESTAMP` default)
+- Each table SHOULD have a primary key. Use `INTEGER PRIMARY KEY` (which aliases SQLite's rowid) for most tables; only use `AUTOINCREMENT` when rowid reuse must be prevented (e.g., security-sensitive identifiers).
+- Timestamps use an explicit ISO 8601-compatible format. Default via expression:
+  ```sql
+  created_at TEXT NOT NULL
+    DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  ```
 - Foreign keys are explicitly declared with `REFERENCES` clauses
-- Soft deletes are preferred over hard deletes for user-facing data (add `deleted_at TIMESTAMP NULL`)
-- Unique constraints are declared at the column level where applicable
+- Soft deletes (add `deleted_at TIMESTAMP NULL`) are decided per-entity, not applied uniformly to all user data. Consider privacy deletion requirements and unique constraint impact before choosing soft delete.
+- Unique constraints may be column-level or table-level; composite uniqueness must use a named table constraint or unique index.
 
 ## 3.5 Migration Rules
-- Migration files are idempotent where possible (`IF NOT EXISTS`, `IF EXISTS` for drops)
-- Each migration wrapped in a transaction (`BEGIN ... COMMIT`)
+- Migrations are deterministic and applied exactly once. The migration runner records applied versions and checksums.
+- A migration must fail loudly when its expected precondition is not met.
+- `IF NOT EXISTS` / `IF EXISTS` are only allowed for explicitly documented recovery or bootstrap scenarios.
+- Each migration is wrapped in a transaction (`BEGIN ... COMMIT`)
 - Migrations must not contain application-level seed data; seeds live in `src/db/seed.ts`
 - No destructive migration (DROP COLUMN, DROP TABLE for existing data) without an explicit review
 - Test migrations run against an in-memory or temporary database file

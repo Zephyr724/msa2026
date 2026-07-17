@@ -1,39 +1,63 @@
-# 05 — Testing Rules
+---
+paths:
+  - "tests/**"
+  - "vitest.config.ts"
+  - "package.json"
+---
+# 05 — Testing Strategy
 
-## 5.1 Testing Strategy
-- **Unit tests**: `tests/unit/` — pure function tests, no I/O, no database
-- **Integration tests**: `tests/integration/` — service + database, route + service layers
-- **E2E tests**: `tests/e2e/` — full API lifecycle tests (future: when deployment target exists)
-- Test runner: Vitest with `vitest.config.ts`
+## 5.1 Test Types & Boundaries
 
-## 5.2 Test Principles
-- Tests must be independent and not rely on execution order
-- Each test sets up its own fixture data; no shared mutable state between tests
-- Integration tests use a temporary SQLite database (in-memory or temp file), never the development database
-- Use `supertest` for HTTP integration assertions against the Express app
-- Coverage thresholds: ≥80% lines, ≥80% branches (enforced in CI)
+| Type                    | Scope                                               | Database        |
+| ----------------------- | --------------------------------------------------- | --------------- |
+| Unit                    | Pure business rules, transformers, permission logic, I/O-free functions | None (no I/O)   |
+| Repository integration  | Real SQLite queries, constraints, transactions      | Real SQLite (file or `:memory:`) |
+| API integration         | Express app + services + test DB + Supertest        | Real SQLite (file or `:memory:`) |
+| E2E                     | Full user scenarios                                 | Real SQLite     |
 
-## 5.3 What Must Be Tested
-- All service-layer functions must have unit tests
-- All API endpoints must have at least one integration test (happy path + validation error)
-- Validation schemas (Zod) must be tested independently: valid input passes, invalid input fails with correct errors
-- Database query functions must have integration tests against real SQLite
+- Unit tests: test functions that have no I/O dependencies (pure logic, validation, transformation)
+- Repository integration tests: verify SQL queries, constraints, and transactions against a real SQLite database
+- API integration tests: use Supertest against the app (imported from `src/app.ts`, not a running server)
+- E2E tests: cover complete user flows; can run locally or in CI against a temporary database
 
-## 5.4 What Should NOT Be Tested
-- Third-party library internals (test your usage, not the library)
-- Express/Node.js built-in behavior
-- Database driver (`better-sqlite3`) internals
-- Trivial getters/setters without logic
+## 5.2 Test Commands
 
-## 5.5 Test Naming Convention
-- Unit tests: `tests/unit/<layer>/<module>.test.ts`
-- Integration tests: `tests/integration/<layer>/<module>.test.ts`
-- E2E tests: `tests/e2e/<scenario>.test.ts`
-- Test descriptions: `describe('<module>', () => { it('should <expected behavior> when <condition>', ...) })`
+```json
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}
+```
 
-## 5.6 Running Tests
-- `npm test` — runs unit + integration (default CI command)
-- `npm run test:unit` — unit tests only (fast feedback loop)
-- `npm run test:integration` — integration tests only
-- `npm run test:e2e` — E2E tests (when available)
-- All tests must pass before merging to `main`
+- `npm test` — runs all tests once (unit + integration), suitable for CI
+- `npm run test:watch` — watch mode for local development
+
+## 5.3 Database in Tests
+- Repository and API integration tests use a real SQLite database (file or `:memory:`)
+- `:memory:` databases are acceptable for most constraints and query tests
+- Use a temporary file database when testing WAL behavior, locking, or multi-connection scenarios
+- Each test suite should set up and tear down its own data (migrations + seeds as needed)
+
+## 5.4 Coverage Requirements
+- Happy path and error cases for every service function
+- Input validation edge cases (empty strings, boundary values, SQL-injection attempts)
+- Authorization checks (user A cannot access user B's resources)
+
+## 5.5 Test File Organization
+```
+tests/
+├── unit/
+│   └── services/        # Pure logic tests (no DB)
+├── integration/
+│   ├── db/              # Repository integration tests (real SQLite)
+│   └── api/             # API integration tests (app + Supertest)
+└── e2e/                 # Full scenario tests
+```
+
+## 5.6 When Tests Fail
+1. Identify root cause: implementation bug, incorrect test assumption, stale fixture, or environment issue
+2. Fix the source code when the implementation is wrong
+3. Only modify test assertions when the contract has demonstrably changed — explain why in the task summary
+4. If a test is incorrect or based on a stale assumption, document the correction and update the test
