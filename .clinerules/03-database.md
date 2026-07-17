@@ -1,10 +1,3 @@
----
-paths:
-  - "src/db/**"
-  - "scripts/migrations/**"
-  - "init_db.sql"
-  - "tests/integration/db/**"
----
 # 03 — Database Rules
 
 ## 3.1 Schema Source of Truth
@@ -27,21 +20,31 @@ paths:
 - Write transactions should be kept short; avoid holding write locks across async boundaries
 
 ## 3.4 Schema Design Principles
-- Each table SHOULD have a primary key. Use `INTEGER PRIMARY KEY` (which aliases SQLite's rowid) for most tables; only use `AUTOINCREMENT` when rowid reuse must be prevented (e.g., security-sensitive identifiers).
-- Timestamps use an explicit ISO 8601-compatible format. Default via expression:
+- Each table MUST have a primary key. Use `INTEGER PRIMARY KEY` (which aliases SQLite's rowid) by default.
+- Use `AUTOINCREMENT` only when the application has a documented requirement that committed row IDs must never be reused. `AUTOINCREMENT` does not make IDs unpredictable and is not an access control measure; it also adds overhead.
+- Do not treat integer IDs as security boundaries. Use opaque public identifiers (UUID/ULID) when exposing predictable integer IDs would be undesirable.
+- Timestamps use an explicit ISO 8601-compatible format in `TEXT` columns. Default via expression:
   ```sql
   created_at TEXT NOT NULL
     DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   ```
+- All timestamp columns use `TEXT`, not `TIMESTAMP`. SQLite's type affinity system does not treat `TIMESTAMP` as a distinct temporal type, so using it creates a misleading schema style.
 - Foreign keys are explicitly declared with `REFERENCES` clauses
-- Soft deletes (add `deleted_at TIMESTAMP NULL`) are decided per-entity, not applied uniformly to all user data. Consider privacy deletion requirements and unique constraint impact before choosing soft delete.
+- Soft deletes:
+  ```sql
+  deleted_at TEXT NULL
+  ```
+  Soft deletes are decided per-entity, not applied uniformly. Consider privacy deletion requirements and unique constraint impact before choosing soft delete.
 - Unique constraints may be column-level or table-level; composite uniqueness must use a named table constraint or unique index.
 
 ## 3.5 Migration Rules
-- Migrations are deterministic and applied exactly once. The migration runner records applied versions and checksums.
+- The migration runner owns transaction boundaries. Migration files contain schema statements only; they do NOT include `BEGIN`, `COMMIT`, or `ROLLBACK`.
+- Applied migrations are stored in `schema_migrations` with: `version`, `filename`, `checksum`, `applied_at`.
+- An applied migration file is immutable. Checksum mismatch is a hard failure.
+- Only one instance may run migrations concurrently. The runner must acquire an advisory lock or use a single-process design to prevent concurrent application.
+- Migrations are deterministic and applied exactly once.
 - A migration must fail loudly when its expected precondition is not met.
 - `IF NOT EXISTS` / `IF EXISTS` are only allowed for explicitly documented recovery or bootstrap scenarios.
-- Each migration is wrapped in a transaction (`BEGIN ... COMMIT`)
 - Migrations must not contain application-level seed data; seeds live in `src/db/seed.ts`
 - No destructive migration (DROP COLUMN, DROP TABLE for existing data) without an explicit review
 - Test migrations run against an in-memory or temporary database file

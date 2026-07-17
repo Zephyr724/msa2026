@@ -1,6 +1,3 @@
----
-alwaysApply: true
----
 # 06 — Development Workflow
 
 ## 6.1 Git Branch Strategy

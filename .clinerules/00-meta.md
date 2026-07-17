@@ -1,14 +1,17 @@
----
-alwaysApply: true
----
-
 # 00 — Project Context, Language Policy & Quick Reference
 
-## Boundary Declaration
-These files steer agent behavior; they are not security boundaries.
-- Destructive command blocking is enforced by Cline hooks or approval policies.
-- Code quality is enforced by CI.
-- Repository permissions are enforced by GitHub branch protection.
+## Enforcement Status
+
+These rules steer agent behavior and are not security boundaries.
+
+- Until Cline hooks or approval policies are implemented and tested,
+  destructive operations require explicit human approval.
+- Until CI is active, quality gates must be run locally and reported.
+- Until GitHub branch protection is active, the user must manually prevent
+  direct pushes to protected branches.
+
+When each control becomes operational, update the status table in
+`PROJECT_STATUS.md`.
 
 ## Meta Information
 - **Project**: msa2026 — Task & Project Management API
@@ -30,34 +33,19 @@ These files steer agent behavior; they are not security boundaries.
 - **API documentation, JSDoc, OpenAPI/Swagger specs**: English
 - **Variable names, function names, type/interface names**: English (camelCase/PascalCase per `01-architecture.md`)
 
-## Current State (2026-07-17)
-
-### What Exists
-- `init_db.sql` — baseline schema for users, projects, tasks (3 tables)
-- `msa2026.db` — SQLite database with seed data (2 users, 2 projects, 3 tasks)
-- `docs/` — architecture ADRs, operations runbooks, security docs
-- `.clinerules/` — agent steering rules (this directory)
-
-### What's Next (Priority Order)
-1. Initialize Node.js + TypeScript project (`package.json`, `tsconfig.json`, `tsconfig.build.json`)
-2. Set up directory structure per `01-architecture.md`
-3. Implement database connection layer with `better-sqlite3`
-4. Implement User CRUD (service + routes + tests)
-5. Implement Project CRUD (service + routes + tests)
-6. Implement Task CRUD (service + routes + tests)
-7. Add input validation (Zod schemas)
-8. Add structured logging (pino)
-9. Configure Vitest and write initial test suite
-10. Set up CI/CD pipeline (`.github/workflows`)
+## Project Status
+- Read `PROJECT_STATUS.md` when planning roadmap or selecting the next task.
+- Do not treat status claims as authoritative without checking the repository.
+- Code, migrations, tests, and GitHub Issues are the authoritative sources of project state.
 
 ## Quick Reference: Key Principles
 1. **Never** concatenate user input into SQL strings — always parameterized queries
-2. **Never** use `any` type — use `unknown` + type guards
+2. **Never** use `any` type — use `unknown` + type guards (explicit, commented exceptions allowed at compatibility boundaries)
 3. **Never** log credentials, tokens, or unmasked PII
 4. **Never** `git push --force` to protected branches
 5. **Always** validate input with Zod before it reaches service layer
 6. **Always** propagate errors to centralized error middleware (don't catch locally unless recovering)
-7. **Always** run `npm audit` before adding dependencies; critical/high CVEs block merge
+7. **Always** run `npm audit` before adding dependencies; critical/high CVEs block merge per audit policy in `06-development-workflow.md`
 
 ## Quick Reference: Before Any Code Change
 ```
