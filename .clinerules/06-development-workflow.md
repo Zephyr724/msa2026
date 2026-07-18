@@ -1,10 +1,17 @@
 # 06 — Development Workflow
 
 ## 6.1 Git Branch Strategy
+
+### Target Policy (once controls are active)
 - `main` — protected, requires PR + review + CI pass
 - Feature branches: `feature/<description>` or `fix/<description>`
 - Branch naming: lowercase, hyphens for separators
 - No direct commits to `main`; all changes via pull request
+
+### Current State
+- Follow the same workflow manually.
+- Until branch protection and CI are active, do not claim they are technically
+  enforced. See `PROJECT_STATUS.md` for control status.
 
 ## 6.2 Commit Convention
 - Follow [Conventional Commits](https://www.conventionalcommits.org/) 1.0
@@ -29,11 +36,17 @@
 - At least one independent approval required
 
 ## 6.4 Code Quality Gates
+- `npm run format:check` passes (Prettier)
 - `npm run lint` passes (ESLint, no errors, no warnings)
 - `npm run typecheck` passes (`tsc --noEmit`)
 - `npm test` passes (unit + integration)
-- `npm audit` returns no critical or high CVEs
+- `npm run build` passes for production source changes and release candidates
+- No untriaged critical/high vulnerability may remain
+- Reachable critical/high CVEs in production dependencies block merge
+- Approved temporary exceptions must comply with `04c-dependency-security.md`
 - Circular dependency check passes (`madge`)
+- `npm run db:baseline` regenerates `init_db.sql`; CI regenerates and fails if
+  Git diff is non-empty (see `03-database.md`)
 
 ## 6.5 Agent Workflow Guidelines
 - Start each task by reading relevant context files before modifying

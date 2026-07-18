@@ -1,13 +1,16 @@
 # 04a — Security Baseline
 
-This rule is always active and applies to all files.
+This rule is always active and applies to all files. It extends the security
+baseline in `00-harness-core.md` §6 with project-specific operational rules.
 
 ## Hard Rules (never violate)
 
 1. **Never** log credentials, tokens, secrets, or unmasked PII.
-2. **Never** concatenate user input into SQL, shell commands, HTML, or any
-   interpreted language. Use parameterized queries, structured builders, or
-   safe templating.
+2. **Never** interpolate untrusted input into executable or interpreted contexts.
+   - SQL: parameterized queries (`?` placeholders)
+   - Shell: fixed executables + argument arrays (never `exec()` with interpolated input)
+   - HTML: framework escaping or a vetted sanitizer
+   - Dynamic identifiers (table/column names): strict allowlists
 3. **Never** run unvalidated or unsanitized user input as code.
 4. **Never** hard-code secrets in source code. Load secrets from environment
    variables or a secrets manager at runtime.

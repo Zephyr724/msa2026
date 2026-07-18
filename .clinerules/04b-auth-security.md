@@ -4,6 +4,7 @@ paths:
   - "src/services/**"
   - "src/routes/**"
   - "src/config/**"
+  - "src/policies/**"
   - "tests/**"
 ---
 # 04b — Authentication & Authorization
@@ -28,8 +29,11 @@ accepted. ADR-002 must resolve:
   - `memoryCost: 19456` (19 MiB)
   - `timeCost: 2`
   - `parallelism: 1`
-- Run a startup benchmark on target hardware and cap verification latency
-  at an acceptable threshold (e.g. < 500 ms).
+- Calibrate Argon2id parameters during deployment/performance validation
+  on representative target hardware. Store the approved parameters in
+  validated configuration. Do not automatically lower password hashing
+  parameters during startup.
+- Monitor real authentication latency and resource consumption.
 - Login failure responses must use a **single** generic message; never
   distinguish between "user not found" and "wrong password".
 
@@ -78,6 +82,14 @@ Service / Authorization policy layer:
 - Escalation: a non-admin user cannot access admin-only endpoints.
 - Cross-tenant isolation: when multi-tenancy is introduced, replicate all
   of the above across tenant boundaries.
+
+## Reverse Proxy Trust
+
+- `trust proxy` must match the actual deployment topology.
+- Never enable unrestricted `trust proxy: true` without verifying that the
+  last trusted proxy overwrites all forwarded headers.
+- Rate limiting and audit logging may use forwarded client IPs only after
+  proxy trust is configured and tested.
 
 ## Rate Limiting & DoS Protection
 

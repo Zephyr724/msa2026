@@ -5,13 +5,16 @@
 msa2026/
 ├── src/
 │   ├── db/              # Connection management, query functions, seed data
-│   ├── routes/          # Express route handlers (HTTP parameter parsing only)
-│   ├── services/        # Business logic layer
+│   ├── repositories/    # Data access layer (parameterized queries, SQL only)
+│   ├── policies/        # Authorization policy functions
+│   ├── services/        # Business logic layer (depends on repositories + policies)
+│   ├── routes/          # Express route handlers (depends on services only)
 │   ├── middleware/       # Auth, logging, rate-limiting, error handling
 │   ├── schemas/         # Zod validation schemas
 │   ├── types/           # TypeScript type definitions
 │   ├── utils/           # Shared utilities
 │   ├── config/          # Environment-based configuration
+│   ├── composition/     # Dependency wiring (create_dependencies.ts)
 │   ├── app.ts           # Express app creation & configuration (no listen)
 │   └── server.ts        # Entry point: imports app, calls app.listen()
 ├── tests/
@@ -45,26 +48,46 @@ msa2026/
 The application MUST use a composition root pattern. No module may import a
 global singleton database connection or configuration directly.
 
+Assembly order:
+
+```
+Database
+  → Repositories
+  → Authorization policies
+  → Services
+  → Routes
+  → Express app
+```
+
 ```typescript
 // src/app.ts
 interface AppDependencies {
-  db: Database;
+  userService: UserService;
+  projectService: ProjectService;
+  taskService: TaskService;
   logger: Logger;
   config: AppConfig;
 }
 
 const createApp = (deps: AppDependencies): Express => {
-  // wire middleware, routes, error handler
+  // Middleware and routes receive services, never the raw database.
 };
 ```
 
-- **Production entry** (`server.ts`): creates real dependencies, calls `createApp()`.
-- **Test entry**: creates test database / silent logger / test config, calls `createApp()`.
-- **Jobs, CLI adapters, MCP tools**: receive their own `deps`, never import a
-  global singleton.
+- **Production entry** (`server.ts`): creates real dependencies via a
+  composition module (`src/composition/create_dependencies.ts`), calls
+  `createApp()`.
+- **Test entry**: creates test database / silent logger / test config, calls
+  `createApp()` with test service instances.
+- **Jobs, CLI adapters, MCP tools**: receive their own service instances via
+  the composition module; never import a global singleton.
 - The database connection may be a single long-lived connection for the
-  application lifetime, but it must be passed via `deps`, not imported as a
-  module-level global.
+  application lifetime, but it must be wired through the composition root,
+  not imported as a module-level global.
+- Only the composition root and repository implementations may receive the
+  raw database connection. Routes and middleware MUST NOT receive or import
+  the raw database.
+- Services depend on repository interfaces, not `better-sqlite3` directly.
 
 ## 1.4 API Architecture
 - **Style**: REST via Express (decided by ADR-001 in `docs/architecture/adr/`)
@@ -117,7 +140,12 @@ Service / Authorization policy layer:
 - Route handlers must propagate errors to the centralized error middleware; do not catch errors locally unless the handler can meaningfully recover or add context before rethrowing
 - Express error middleware signature: `(err, req, res, next)` with four parameters
 - Error responses follow a consistent JSON envelope: `{ error: { code: string, message: string } }`
-- Stack traces must never be exposed in error responses (production: `NODE_ENV=production` strips them)
+- The centralized error middleware MUST explicitly construct the client
+  response from an allowlisted error shape. It MUST never serialize `Error`,
+  `error.stack`, SQL errors, filesystem paths, or dependency error objects.
+  `NODE_ENV=production` is not considered sufficient enforcement.
+- Express 5 async handlers may throw; rejected Promises are forwarded to the
+  error middleware automatically.
 
 ## 1.8 API Response Conventions
 - Success responses use HTTP 2xx with JSON body

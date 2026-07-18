@@ -1,3 +1,12 @@
+---
+paths:
+  - "package.json"
+  - "package-lock.json"
+  - "tsconfig*.json"
+  - "eslint.config.*"
+  - "prettier.config.*"
+  - ".prettierrc*"
+---
 # 02 — Technology Stack & Toolchain
 
 ## 2.1 Runtime
@@ -10,31 +19,48 @@
 - Exact resolved versions are defined by `package-lock.json`.
 - Before project initialization or dependency upgrades, verify current
   compatible releases against Node.js 24 and the project test suite.
-- The table below records the last validated baselines, including validation date.
-- Do not treat this table as an authoritative live version registry.
+- The table below records the **Last Validated Baselines**, including
+  validation date. Do not treat it as an authoritative live version registry;
+  the lockfile is the canonical source of truth.
 
-| Package          | Last Validated Baseline | Validated On | Category |
-| ---------------- | ----------------------- | ------------ | -------- |
-| express          | 5.2.x                   | 2026-07-17   | Core     |
-| better-sqlite3   | 12.12.x                 | 2026-07-17   | Core     |
-| zod              | 4.x                     | 2026-07-17   | Core     |
-| pino             | 10.x                    | 2026-07-17   | Core     |
-| pino-http        | 11.x                    | 2026-07-17   | Core     |
-| helmet           | 8.x                     | 2026-07-17   | Core     |
-| cors             | 2.x                     | 2026-07-17   | Core     |
-| dotenv           | 16.x                    | 2026-07-17   | Core     |
-| typescript       | 5.9.x                   | 2026-07-17   | Dev      |
-| tsx              | 4.x                     | 2026-07-17   | Dev      |
-| vitest           | 4.1.x                   | 2026-07-17   | Dev      |
-| supertest        | 7.x                     | 2026-07-17   | Dev      |
-| eslint           | 10.x                    | 2026-07-17   | Dev      |
-| prettier         | 3.x                     | 2026-07-17   | Dev      |
-| madge            | 8.x                     | 2026-07-17   | Dev      |
-| husky            | 9.x                     | 2026-07-17   | Dev      |
-| lint-staged      | 15.x                    | 2026-07-17   | Dev      |
-| @types/node      | 24.x                    | 2026-07-17   | Dev      |
-| @types/express   | 5.x                     | 2026-07-17   | Dev      |
-| @types/supertest | 6.x                     | 2026-07-17   | Dev      |
+| Package              | Last Validated Baseline | Validated On | Category |
+| -------------------- | ----------------------- | ------------ | -------- |
+| express              | 5.2.x                   | 2026-07-17   | Core     |
+| better-sqlite3       | 12.12.x                 | 2026-07-17   | Core     |
+| zod                  | 4.x                     | 2026-07-17   | Core     |
+| pino                 | 10.x                    | 2026-07-17   | Core     |
+| pino-http            | 11.x                    | 2026-07-17   | Core     |
+| helmet               | 8.x                     | 2026-07-17   | Core     |
+| cors                 | 2.x                     | 2026-07-17   | Core     |
+| dotenv               | 16.x                    | 2026-07-17   | Core     |
+| typescript           | 5.9.x                   | 2026-07-17   | Dev      |
+| tsx                  | 4.x                     | 2026-07-17   | Dev      |
+| vitest               | 4.1.x                   | 2026-07-17   | Dev      |
+| @vitest/coverage-v8  | same minor as vitest    | 2026-07-17   | Dev      |
+| supertest            | 7.x                     | 2026-07-17   | Dev      |
+| eslint               | 10.x                    | 2026-07-17   | Dev      |
+| typescript-eslint    | 8.64.x                  | 2026-07-17   | Dev      |
+| prettier             | 3.x                     | 2026-07-17   | Dev      |
+| madge                | 8.x                     | 2026-07-17   | Dev      |
+| husky                | 9.x                     | 2026-07-17   | Dev      |
+| lint-staged          | 15.x                    | 2026-07-17   | Dev      |
+| @types/node          | 24.x                    | 2026-07-17   | Dev      |
+| @types/express       | 5.x                     | 2026-07-17   | Dev      |
+| @types/supertest     | 6.x                     | 2026-07-17   | Dev      |
+
+A version is considered **validated** only after all of the following pass
+on Node.js 24:
+
+1. `npm install` / `npm ci` succeeds
+2. `npm run typecheck` passes
+3. `npm run lint` passes
+4. `npm test` passes
+5. `npm run build` passes
+6. Native modules load without error
+
+After validation, `package-lock.json` must be committed. The table contains
+candidate baselines. A row becomes validated only after the verification
+procedure succeeds and the lockfile/CI evidence exists.
 
 ## 2.3 TypeScript Configuration
 

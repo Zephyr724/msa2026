@@ -33,28 +33,37 @@ When each control becomes operational, update the status table in
 - **API documentation, JSDoc, OpenAPI/Swagger specs**: English
 - **Variable names, function names, type/interface names**: English (camelCase/PascalCase per `01-architecture.md`)
 
-## Project Status
-- Read `PROJECT_STATUS.md` when planning roadmap or selecting the next task.
-- Do not treat status claims as authoritative without checking the repository.
-- Code, migrations, tests, and GitHub Issues are the authoritative sources of project state.
-
 ## Quick Reference: Key Principles
-1. **Never** concatenate user input into SQL strings — always parameterized queries
-2. **Never** use `any` type — use `unknown` + type guards (explicit, commented exceptions allowed at compatibility boundaries)
-3. **Never** log credentials, tokens, or unmasked PII
-4. **Never** `git push --force` to protected branches
-5. **Always** validate input with Zod before it reaches service layer
-6. **Always** propagate errors to centralized error middleware (don't catch locally unless recovering)
-7. **Always** run `npm audit` before adding dependencies; critical/high CVEs block merge per audit policy in `06-development-workflow.md`
 
-## Quick Reference: Before Any Code Change
-```
-INJECTION? → EXPOSURE? → PERSISTENCE? → DESTRUCTION? → PRIVILEGE?
-   ❌           ❌           ❌              ❌             ❌
-   If any ❌ is actually ✅ → STOP and re-evaluate
+### Injection Prevention
+- Never interpolate untrusted input into executable or interpreted contexts.
+  - SQL: parameterized queries (`?` placeholders)
+  - Shell: fixed executables + argument arrays (never `exec()` with interpolated input)
+  - HTML: framework escaping or a vetted sanitizer
+  - Dynamic identifiers (table/column names): strict allowlists
 
-INJECTION:   Is user input reaching SQL/shell/HTML without sanitization?
-EXPOSURE:    Could this leak secrets, PII, tokens, or internal paths?
-PERSISTENCE: Could this create a backdoor or alter auth flows?
-DESTRUCTION: Could this irreversibly delete data?
-PRIVILEGE:   Does this escalate permissions or change access controls?
+### Type Safety
+- Never use `any` type — use `unknown` + type guards (explicit, commented exceptions allowed at compatibility boundaries)
+
+### Secrets & Logging
+- Never log credentials, tokens, or unmasked PII
+- Never hard-code secrets in source; load from environment variables
+
+### Git Safety
+- Never `git push --force` to protected branches
+
+### Input Validation
+- Validate input with Zod before it reaches the service layer
+- Every external adapter validates its own input before invoking a service:
+  - HTTP route → Zod HTTP schema
+  - CLI adapter → CLI input schema
+  - MCP tool → MCP input schema
+  - Job/event handler → event schema
+
+### Error Handling
+- Propagate errors to centralized error middleware (don't catch locally unless recovering)
+
+### Dependency Security
+- No untriaged critical/high vulnerability may remain
+- Reachable critical/high CVEs in production dependencies block merge
+- Approved temporary exceptions must comply with `04c-dependency-security.md`

@@ -29,8 +29,9 @@ paths:
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:external": "vitest run --project external",
+    "test:coverage": "vitest run --project unit --project integration --coverage",
+    "test:watch": "vitest --project unit --project integration"
   }
 }
 ```
@@ -39,9 +40,31 @@ paths:
 - `npm run test:unit` — unit tests only (no I/O, fast)
 - `npm run test:integration` — repository + API integration tests (real SQLite)
 - `npm run test:e2e` — full end-to-end scenario tests
+- `npm run test:external` — external integration tests (`.ext.test.ts`, real networks)
 - `npm run test:coverage` — run with coverage reporting
 - `npm run test:watch` — watch mode for local development
 - E2E tests are NOT included in `npm test` by default; they run separately or in CI on demand.
+
+### Vitest Project Configuration
+
+- `vitest.config.ts` MUST define named projects: `unit`, `integration`, `e2e`, and `external`.
+- Each project MUST have an explicit `include` pattern matching its test directory.
+- External integration tests (`*.ext.test.ts`) MUST be excluded from all normal projects and placed in a separate `external` project.
+- If `--project` names used in npm scripts do not match the vitest config, vitest will error at startup.
+
+### Coverage Configuration
+
+- Coverage provider MUST be `v8` (`@vitest/coverage-v8`).
+- `coverage.include` MUST explicitly list `src/**/*.ts` so that unimported source files still appear in coverage reports.
+- `coverage.exclude` MUST exclude `src/server.ts` and `src/**/*.d.ts` at minimum.
+- Example:
+  ```typescript
+  coverage: {
+    provider: 'v8',
+    include: ['src/**/*.ts'],
+    exclude: ['src/server.ts', 'src/**/*.d.ts'],
+  }
+  ```
 
 ## 5.3 Database in Tests
 

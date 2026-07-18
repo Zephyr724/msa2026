@@ -1,3 +1,12 @@
+---
+paths:
+  - "src/db/**"
+  - "src/repositories/**"
+  - "scripts/migrations/**"
+  - "scripts/migrate.*"
+  - "init_db.sql"
+  - "tests/integration/db/**"
+---
 # 03 — Database Rules
 
 ## 3.1 Schema Source of Truth
@@ -10,12 +19,19 @@
 - **Always** use parameterized queries: `db.prepare().run/get/all()` with `?` placeholders
 - **Never** concatenate user input into SQL strings — this is a hard rule
 - **Never** use `db.exec()` with user-supplied strings
-- All query functions live in `src/db/` and are the ONLY modules that import `better-sqlite3`
+- Only these infrastructure boundaries may import `better-sqlite3`:
+  - `src/db/**`
+  - `src/repositories/**`
+  - the migration runner
+  - the test database factory
+- Routes, services, middleware, policies, and general utilities MUST NOT import
+  `better-sqlite3` or contain SQL statements.
 
 ## 3.3 Connection Management
 - Single long-lived database connection for the application lifetime
 - Enable `PRAGMA foreign_keys = ON` at every connection open
-- Enable `PRAGMA journal_mode = WAL` for concurrent read support
+- For file-backed application databases, enable `PRAGMA journal_mode = WAL` for concurrent read support and verify that the returned journal mode is `wal`.
+- `:memory:` databases use `memory` journal mode; do not require WAL for in-memory databases. WAL-specific behavior, locking, and multi-connection tests must use temporary file-backed databases.
 - Set `PRAGMA busy_timeout = 5000` to handle write contention gracefully
 - Write transactions should be kept short; avoid holding write locks across async boundaries
 
@@ -39,15 +55,17 @@
 
 ## 3.5 Migration Rules
 - The migration runner owns transaction boundaries. Migration files contain schema statements only; they do NOT include `BEGIN`, `COMMIT`, or `ROLLBACK`.
+- Migrations are applied in timestamp order by the migration runner, which wraps each migration in its own transaction.
 - Applied migrations are stored in `schema_migrations` with: `version`, `filename`, `checksum`, `applied_at`.
 - An applied migration file is immutable. Checksum mismatch is a hard failure.
-- Only one instance may run migrations concurrently. The runner must acquire an advisory lock or use a single-process design to prevent concurrent application.
+- Only one instance may run migrations concurrently. The migration runner acquires a SQLite write reservation (`BEGIN IMMEDIATE`) before checking and applying pending migrations. The migration and the corresponding `schema_migrations` insert occur in the same transaction. A UNIQUE constraint on `version` prevents duplicate application.
 - Migrations are deterministic and applied exactly once.
 - A migration must fail loudly when its expected precondition is not met.
 - `IF NOT EXISTS` / `IF EXISTS` are only allowed for explicitly documented recovery or bootstrap scenarios.
 - Migrations must not contain application-level seed data; seeds live in `src/db/seed.ts`
 - No destructive migration (DROP COLUMN, DROP TABLE for existing data) without an explicit review
 - Test migrations run against an in-memory or temporary database file
+- `npm run db:baseline` regenerates `init_db.sql` from migrations. CI regenerates the baseline and fails if Git diff is non-empty.
 
 ## 3.6 Agent Database Access
 - Agent may use MCP SQLite tools for **read-only** inspection during development
