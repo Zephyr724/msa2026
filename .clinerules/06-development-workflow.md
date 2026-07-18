@@ -23,18 +23,18 @@
 
 ## 6.3 Pull Request Requirements
 
-### Solo Mode (current)
+### Solo Mode — target policy
 - PR required
 - CI required (lint, type-check, tests, audit)
 - Agent self-review checklist required
 - Human final diff review required
 - No approval count requirement
 
-### Solo Mode — before CI is operational
-- Use a PR or feature branch for review.
-- Run equivalent gates locally and record the results in the task/PR summary.
+### Solo Mode — current state before CI is operational
+- Use a feature branch or PR for review.
+- Run equivalent gates locally.
+- Record observed results in the task or PR summary.
 - Do not claim that CI passed.
-- All other Solo Mode requirements apply.
 
 ### Team Mode (when collaborators join)
 - PR required
@@ -67,14 +67,19 @@
   without executing `git commit`.
 
 ## 6.6 Code Review Checklist
-- [ ] Does the change follow the layered architecture (routes → services → db)?
-- [ ] Are all SQL queries parameterized?
+- [ ] Does the change follow the dependency direction:
+  routes → services → repository interfaces,
+  with services also using authorization policies?
+- [ ] Are SQL statements restricted to repository implementations?
+- [ ] Are resource-level authorization decisions enforced by policies
+  called from services?
 - [ ] Is all user input validated with Zod before reaching services?
 - [ ] Are public APIs documented?
 - [ ] Are symbols exported only when another module actually needs them?
 - [ ] Do tests cover happy path and error cases?
 - [ ] Are any dangerous patterns introduced into runtime code?
-- [ ] Did CI pass all checks?
+- [ ] Did all applicable local or CI gates pass, and were their results
+  observed?
 
 ## 6.7 Release Process
 - Version bumps follow SemVer

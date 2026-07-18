@@ -29,7 +29,7 @@ paths:
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",
-    "test:external": "vitest run --project external",
+    "test:external": "RUN_EXTERNAL_TESTS=1 vitest run --project external",
     "test:coverage": "vitest run --project unit --project integration --coverage",
     "test:watch": "vitest --project unit --project integration"
   }
@@ -85,13 +85,12 @@ paths:
 ## 5.4 Network & External Dependencies
 
 - Tests MUST NOT access real external networks (APIs, external services) unless the test file is explicitly marked as an external integration test with a `.ext.test.ts` suffix.
-- External tests are opt-in and require `RUN_EXTERNAL_TESTS=1`. Normal local
-  and CI test commands must not execute them.
-- When `RUN_EXTERNAL_TESTS=1` is set, unavailable external dependencies are
-  failures unless the test contract explicitly defines a supported skip
-  condition.
+- Normal test commands never run external tests.
+- When `RUN_EXTERNAL_TESTS=1` is explicitly enabled, unavailable required
+  dependencies are failures.
+- A test may skip only when its documented contract explicitly treats the
+  dependency as optional.
 - Time, random numbers, and UUIDs should be injectable or freezable. Use dependency injection or mocking to control non-deterministic values.
-- Tests that require external services must be skippable when those services are unavailable.
 
 ## 5.5 Authorization Test Requirements
 

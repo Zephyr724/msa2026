@@ -104,7 +104,8 @@ Key highlights:
 - Core vs Dev classification: see table above. Anything needed at runtime goes in `dependencies`; build, test, lint, and type tooling goes in `devDependencies`.
 - A dependency major upgrade requires an ADR only when it changes architecture, runtime behavior, public contracts, or persistence format. Other major upgrades require a reviewed migration PR.
 - New dependencies require justification, bundle-size review, and license check.
-- Dependabot enabled for automated patch PRs.
+- Target policy: enable Dependabot for npm and GitHub Actions.
+- Current enforcement status is recorded in `PROJECT_STATUS.md`.
 
 ## 2.7 Linting & Formatting
 - **ESLint** 10.x with TypeScript plugin for code quality

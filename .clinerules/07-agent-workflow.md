@@ -47,16 +47,8 @@ Per `00-harness-core.md` §9, apply checks proportionally. For this project:
 Before marking any task as complete, verify only the items relevant to the
 actual change. Mark non-applicable items as N/A.
 
-- [ ] Does the change follow the layered architecture (routes → services → db)?
-- [ ] Are all SQL queries parameterized (`?` placeholders, no string concatenation)?
-- [ ] Is all user input validated with Zod before reaching services?
-- [ ] Are error responses consistent with the API envelope format?
-- [ ] Do new functions include JSDoc for public APIs?
-- [ ] Are symbols exported only when another module needs them?
-- [ ] Do tests cover both happy path and error cases?
-- [ ] Are any dangerous patterns (`eval`, `exec`, raw HTML) introduced?
-- [ ] Has `npm run typecheck` passed?
-- [ ] Has `npm run lint` passed?
+- [ ] Has the project code review checklist in `06-development-workflow.md`
+  been applied to the actual change?
 - [ ] Have all applicable gates selected from Section 7.1 passed?
 - [ ] Do not leave newly introduced TODO/FIXME markers unless they include an
   issue reference, owner, or explicit follow-up explanation.

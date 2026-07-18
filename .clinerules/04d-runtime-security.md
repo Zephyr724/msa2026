@@ -1,10 +1,13 @@
 ---
 paths:
   - "src/app.ts"
+  - "src/routes/**"
+  - "src/services/**"
   - "src/middleware/**"
   - "src/integrations/**"
   - "src/utils/**"
   - "src/config/**"
+  - "src/composition/**"
   - "tests/integration/**"
 ---
 # 04d — Runtime Security

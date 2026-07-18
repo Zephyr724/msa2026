@@ -90,8 +90,11 @@ paths:
 
 ### Baseline Regeneration
 
-- `npm run db:baseline` regenerates `init_db.sql` from all applied migrations.
-  CI regenerates the baseline and fails if Git diff is non-empty.
+- `npm run db:baseline` creates a clean temporary database, applies the full
+  ordered migration set from the repository, and exports the resulting schema
+  to `init_db.sql`.
+- It must not derive the baseline from the mutable development database.
+- CI regenerates the baseline and fails when the resulting Git diff is non-empty.
 
 ## 3.6 Agent Database Access
 - Agent may use MCP SQLite tools for **read-only** inspection during development
