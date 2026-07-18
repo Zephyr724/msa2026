@@ -3,34 +3,6 @@
 This rule is always active and applies to all files. It extends the security
 baseline in `00-harness-core.md` §6 with project-specific operational rules.
 
-## Hard Rules (never violate)
-
-1. **Never** log credentials, tokens, secrets, or unmasked PII.
-2. **Never** interpolate untrusted input into executable or interpreted contexts.
-   - SQL: parameterized queries (`?` placeholders)
-   - Shell: fixed executables + argument arrays (never `exec()` with interpolated input)
-   - HTML: framework escaping or a vetted sanitizer
-   - Dynamic identifiers (table/column names): strict allowlists
-3. **Never** run unvalidated or unsanitized user input as code.
-4. **Never** hard-code secrets in source code. Load secrets from environment
-   variables or a secrets manager at runtime.
-5. **Never** bypass authentication or authorization checks, even temporarily
-   for debugging.
-
-## Before Every Change — Five Questions
-
-```
-INJECTION? → EXPOSURE? → PERSISTENCE? → DESTRUCTION? → PRIVILEGE?
-   ❌           ❌           ❌              ❌             ❌
-   If any ❌ is actually ✅ → STOP and re-evaluate
-
-INJECTION:   Is user input reaching SQL/shell/HTML without sanitization?
-EXPOSURE:    Could this leak secrets, PII, tokens, or internal paths?
-PERSISTENCE: Could this create a backdoor or alter auth flows?
-DESTRUCTION: Could this irreversibly delete data?
-PRIVILEGE:   Does this escalate permissions or change access controls?
-```
-
 ## High-Risk Operations
 
 For any of the following, STOP and request explicit human approval:
@@ -39,14 +11,14 @@ For any of the following, STOP and request explicit human approval:
 - Modifying database schema outside a migration file
 - Deleting or destructively modifying data
 - Changing environment variable handling or secret loading
-- Modifying rate-limiting, CORS, CSRF, or security headers
+- Modifying rate-limiting, CORS, CSRF, security headers, or proxy trust
 
-## Cryptography
+## Project-Specific Security References
 
-- Only use well-audited standard library or platform crypto modules.
-- Never implement custom cryptographic algorithms or protocols.
-- Use cryptographically secure random number generators for tokens and IDs.
-- Password hashing parameters: see `04b-auth-security.md`.
+- Authentication & authorization: `04b-auth-security.md`
+- Dependency & supply-chain: `04c-dependency-security.md`
+- Database rules: `03-database.md`
+- Runtime security (SSRF, path traversal, CORS, body limits): `04d-runtime-security.md`
 
 ## Secrets & Configuration
 

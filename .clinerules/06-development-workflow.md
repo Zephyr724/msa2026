@@ -30,6 +30,12 @@
 - Human final diff review required
 - No approval count requirement
 
+### Solo Mode — before CI is operational
+- Use a PR or feature branch for review.
+- Run equivalent gates locally and record the results in the task/PR summary.
+- Do not claim that CI passed.
+- All other Solo Mode requirements apply.
+
 ### Team Mode (when collaborators join)
 - PR required
 - CI required
@@ -51,9 +57,14 @@
 ## 6.5 Agent Workflow Guidelines
 - Start each task by reading relevant context files before modifying
 - Make focused, minimal changes; avoid unrelated refactoring in feature PRs
-- Run lint + type-check after each change set; fix issues before proceeding
+- Agent execution follows `00-harness-core.md` and `07-agent-workflow.md`.
+- Run the applicable targeted checks after each coherent source-code change
+  set, according to the Quality Gate Matrix in `07-agent-workflow.md` §7.1.
+  Run full applicable gates once before completion.
 - When tests fail, first identify the root cause: implementation bug, incorrect test assumption, stale fixture, or environment issue. Fix the source code when the implementation is wrong. Only modify test assertions when the contract has demonstrably changed, and explain why in the task summary.
-- Commit logical units of work; avoid monolith commits
+- When the user has explicitly approved committing, group changes into logical
+  commits. Otherwise, prepare the working tree and propose commit messages
+  without executing `git commit`.
 
 ## 6.6 Code Review Checklist
 - [ ] Does the change follow the layered architecture (routes → services → db)?

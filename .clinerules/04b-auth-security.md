@@ -39,8 +39,9 @@ accepted. ADR-002 must resolve:
 
 ### Token & Session Rules (apply after ADR-002 is accepted)
 
-- JWT: verify `alg` against an allowlist; do **not** accept tokens that
-  self-report their signing algorithm via the `alg` header.
+- JWT: Do not treat the token's `alg` header as the server's algorithm
+  policy. Configure the verifier with an explicit algorithm allowlist
+  selected by ADR-002, and reject all algorithms outside that allowlist.
 - Cookies: `HttpOnly`, `Secure` (production), `SameSite` set per the
   outcome of ADR-002 (`Lax` or `Strict` depending on cross-site flow
   needs).
@@ -83,30 +84,14 @@ Service / Authorization policy layer:
 - Cross-tenant isolation: when multi-tenancy is introduced, replicate all
   of the above across tenant boundaries.
 
-## Reverse Proxy Trust
-
-- `trust proxy` must match the actual deployment topology.
-- Never enable unrestricted `trust proxy: true` without verifying that the
-  last trusted proxy overwrites all forwarded headers.
-- Rate limiting and audit logging may use forwarded client IPs only after
-  proxy trust is configured and tested.
-
-## Rate Limiting & DoS Protection
+## Authentication Throttling
 
 - Rate-limit login, registration, and password-reset endpoints.
-- Apply a global request body size limit (`express.json({ limit: '100kb' })`).
-- Consider per-IP rate limiting for public endpoints.
+- Throttling should consider both normalized account identifiers and
+  trusted client IPs (see `04d-runtime-security.md` for proxy trust).
 
-## HTTP Security Headers
+## Related Rules
 
-- Use `helmet` middleware for security headers.
-- Enable CORS with explicit allowed origins (not `*`) if cross-origin
-  requests are needed.
-
-## Additional Protections
-
-- SSRF protection: validate and restrict outbound HTTP requests from the
-  server.
-- Path traversal protection: resolve and validate file paths before file
-  operations.
-- CSRF protection if cookie-based sessions are used.
+- Runtime security (proxy trust, CORS, SSRF, CSRF, path traversal, body
+  limits): `04d-runtime-security.md`
+- Error serialization: `01-architecture.md` §1.7

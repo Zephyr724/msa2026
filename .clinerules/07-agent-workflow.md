@@ -34,8 +34,13 @@ Per `00-harness-core.md` §9, apply checks proportionally. For this project:
   3. Stale fixture → update fixture, not the production code
   4. Environment issue (port conflict, stale DB) → clean up and retry
 - If type-check or lint fails, fix issues before proceeding to the next change.
-- If a migration fails, do NOT modify an already-applied migration. Create a
-  new migration that corrects the state.
+- If a migration fails:
+  - Never modify a migration that has been successfully applied in any shared
+    environment.
+  - A local migration that failed before being recorded as applied may be fixed
+    in place during development.
+  - If the failed migration was already applied or shared, create a corrective
+    migration instead.
 
 ## 7.3 Agent Self-Review Checklist
 
@@ -52,6 +57,6 @@ actual change. Mark non-applicable items as N/A.
 - [ ] Are any dangerous patterns (`eval`, `exec`, raw HTML) introduced?
 - [ ] Has `npm run typecheck` passed?
 - [ ] Has `npm run lint` passed?
-- [ ] Has `npm test` passed (when code was changed)?
+- [ ] Have all applicable gates selected from Section 7.1 passed?
 - [ ] Do not leave newly introduced TODO/FIXME markers unless they include an
   issue reference, owner, or explicit follow-up explanation.

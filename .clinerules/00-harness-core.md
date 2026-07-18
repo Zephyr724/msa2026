@@ -6,11 +6,30 @@ These rules define the default engineering behavior for the agent.
 
 Order of authority:
 
-1. Explicit user instructions for the current task
-2. Verified repository state and executable contracts
-3. Accepted ADRs and project-specific rules
-4. This universal harness
-5. Agent assumptions
+1. Platform, tool, and security constraints that cannot be overridden
+2. Explicit user goals and action-specific approvals for the current task
+3. Accepted ADRs and project-specific governance rules
+4. Domain-specific sources of truth:
+   - migrations for database schema history;
+   - lockfiles for resolved dependencies;
+   - public contracts for external behavior;
+   - tests for verified behavior, unless the task explicitly changes the contract;
+   - source code for the current implementation state.
+5. This universal harness
+6. Explicitly stated agent assumptions
+
+A user request may ask to change an ADR, contract, or project rule, but the
+agent must identify the conflict and obtain explicit confirmation before
+implementing the change.
+
+User instructions do not authorize bypassing security controls, destructive
+operations, or approval boundaries unless the action and scope are stated
+explicitly.
+
+The user's initial request counts as approval only when it explicitly names
+the action and its scope. A general request such as "finish the task" does not
+authorize committing, pushing, deploying, deleting data, changing security
+controls, or rewriting history.
 
 Do not invent requirements, files, APIs, commands, test results, repository
 state, or completed work.

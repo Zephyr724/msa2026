@@ -72,7 +72,9 @@ paths:
 - Each parallel vitest worker MUST use an independent temporary database.
 - Do NOT share the production `msa2026.db` file across tests.
 - `:memory:` databases are isolated per connection; separate connections do not share the same in-memory database.
-- Use a temporary file database (`:memory:` or temp file via `tmpdir()`) for each test suite.
+- For file-backed test databases, create a unique database filepath inside
+  `tmpdir()` for each test worker or suite. Do not use the directory path
+  itself as the database filename.
 - The composition root pattern (see `01-architecture.md` Section 1.3) MUST be used to inject the test database into the app. Never import a global singleton database connection from test code.
 
 ### Setup & Teardown
@@ -83,6 +85,11 @@ paths:
 ## 5.4 Network & External Dependencies
 
 - Tests MUST NOT access real external networks (APIs, external services) unless the test file is explicitly marked as an external integration test with a `.ext.test.ts` suffix.
+- External tests are opt-in and require `RUN_EXTERNAL_TESTS=1`. Normal local
+  and CI test commands must not execute them.
+- When `RUN_EXTERNAL_TESTS=1` is set, unavailable external dependencies are
+  failures unless the test contract explicitly defines a supported skip
+  condition.
 - Time, random numbers, and UUIDs should be injectable or freezable. Use dependency injection or mocking to control non-deterministic values.
 - Tests that require external services must be skippable when those services are unavailable.
 
@@ -98,8 +105,12 @@ paths:
 - Happy path and error cases for every service function
 - Input validation edge cases (empty strings, boundary values, SQL-injection attempts)
 - Authorization checks (user A cannot access user B's resources, including reads)
-- Critical paths MUST be covered; overall coverage must not regress from baseline.
-- Coverage thresholds are enforced per-project in `vitest.config.ts`; do not chase arbitrary percentage targets at the expense of meaningful tests.
+- Critical paths MUST be covered.
+- Coverage regression is enforced only after a CI coverage baseline mechanism
+  exists. Until then, use explicit thresholds in `vitest.config.ts` and report
+  coverage changes manually.
+- Do not chase arbitrary percentage targets at the expense of meaningful
+  tests.
 
 ## 5.7 Test File Organization
 ```

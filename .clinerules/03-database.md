@@ -58,14 +58,40 @@ paths:
 - Migrations are applied in timestamp order by the migration runner, which wraps each migration in its own transaction.
 - Applied migrations are stored in `schema_migrations` with: `version`, `filename`, `checksum`, `applied_at`.
 - An applied migration file is immutable. Checksum mismatch is a hard failure.
-- Only one instance may run migrations concurrently. The migration runner acquires a SQLite write reservation (`BEGIN IMMEDIATE`) before checking and applying pending migrations. The migration and the corresponding `schema_migrations` insert occur in the same transaction. A UNIQUE constraint on `version` prevents duplicate application.
+
+### Migration Concurrency
+
+- Production migrations SHOULD run as a dedicated pre-start step before the
+  application begins accepting traffic.
+- For each pending migration:
+  1. acquire a SQLite write reservation (`BEGIN IMMEDIATE`);
+  2. re-read `schema_migrations` after the lock is acquired;
+  3. verify filename and checksum;
+  4. apply the migration;
+  5. insert the migration record;
+  6. commit both operations in the same transaction.
+- A concurrent runner may wait for the lock, but after acquiring it MUST
+  re-evaluate pending migrations instead of using a stale pre-lock list.
+- The UNIQUE constraint on `version` in `schema_migrations` is a final
+  safeguard, not the primary concurrency mechanism.
+
+### Migration Integrity
+
 - Migrations are deterministic and applied exactly once.
 - A migration must fail loudly when its expected precondition is not met.
 - `IF NOT EXISTS` / `IF EXISTS` are only allowed for explicitly documented recovery or bootstrap scenarios.
 - Migrations must not contain application-level seed data; seeds live in `src/db/seed.ts`
 - No destructive migration (DROP COLUMN, DROP TABLE for existing data) without an explicit review
 - Test migrations run against an in-memory or temporary database file
-- `npm run db:baseline` regenerates `init_db.sql` from migrations. CI regenerates the baseline and fails if Git diff is non-empty.
+- Never modify a migration that has been successfully applied in any shared
+  environment. A local migration that failed before being recorded as applied
+  may be fixed in place during development. If the failed migration was already
+  applied or shared, create a corrective migration instead.
+
+### Baseline Regeneration
+
+- `npm run db:baseline` regenerates `init_db.sql` from all applied migrations.
+  CI regenerates the baseline and fails if Git diff is non-empty.
 
 ## 3.6 Agent Database Access
 - Agent may use MCP SQLite tools for **read-only** inspection during development

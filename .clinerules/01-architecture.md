@@ -4,8 +4,8 @@
 ```
 msa2026/
 ├── src/
-│   ├── db/              # Connection management, query functions, seed data
-│   ├── repositories/    # Data access layer (parameterized queries, SQL only)
+│   ├── db/              # Connection management, transaction helpers, seed data (no domain queries)
+│   ├── repositories/    # Data access layer (domain-specific parameterized queries, SQL only)
 │   ├── policies/        # Authorization policy functions
 │   ├── services/        # Business logic layer (depends on repositories + policies)
 │   ├── routes/          # Express route handlers (depends on services only)
@@ -104,12 +104,26 @@ const createApp = (deps: AppDependencies): Express => {
 - Collection-level `DELETE` and `PUT` are NOT supported unless explicitly required by a new ADR.
 
 ## 1.5 Layering Principle (Strictly Enforced)
-- **Routes layer** — parameter parsing & HTTP response only; zero business logic
-- **Services layer** — all business logic; called by routes, and may also be called by jobs, tests, CLI adapters, and other entry points
-- **Database layer** — exposes parameterized query functions only; NEVER concatenates user input into SQL
-- **Middleware layer** — cross-cutting concerns: authentication, logging, rate-limiting, CORS
-- **Forbidden cross-layer calls**: Routes → DB direct is a violation; must route through Services
-- **Forbidden circular dependencies**: detected via `madge` or ESLint import rules
+
+```
+Routes ──→ Services ──→ Repository Interfaces
+                │
+                └──→ Authorization Policies
+                         │
+              Repository Implementations
+                         │
+                   SQLite Connection
+```
+
+- **Routes layer** — parameter parsing & HTTP response only; zero business logic. Depends only on service interfaces and HTTP middleware.
+- **Services layer** — all business logic; called by routes, and may also be called by jobs, tests, CLI adapters, and other entry points. Depends on repository interfaces and authorization policies.
+- **Authorization policies** — resource ownership and action-level checks. Must not depend on HTTP request objects.
+- **Repository implementations** — domain-specific parameterized SQL queries and row mapping. Depend on the database adapter.
+- **`src/db/**`** — connection management, transactions, and test database creation. Contains NO domain-specific queries.
+- **Middleware layer** — cross-cutting concerns: authentication, logging, rate-limiting, CORS.
+- Only repository implementations, migration tooling, and database factories may import `better-sqlite3`.
+- **Forbidden cross-layer calls**: Routes → DB direct is a violation; must route through Services.
+- **Forbidden circular dependencies**: detected via `madge` or ESLint import rules.
 
 ## 1.6 Authorization Architecture
 
