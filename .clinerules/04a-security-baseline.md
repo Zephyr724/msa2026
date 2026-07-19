@@ -5,7 +5,9 @@ baseline in `00-harness-core.md` §6 with project-specific operational rules.
 
 ## High-Risk Operations
 
-For any of the following, STOP and request explicit human approval:
+When the current task explicitly authorizes the action and its scope,
+proceed. Otherwise STOP and request explicit human approval for:
+
 - Installing or removing dependencies
 - Changing authentication or authorization logic
 - Creating or modifying schema migrations
@@ -20,6 +22,10 @@ For any of the following, STOP and request explicit human approval:
 - Deleting or destructively modifying data
 - Changing environment variable handling or secret loading
 - Modifying rate-limiting, CORS, CSRF, security headers, or proxy trust
+
+Security weakening, destructive behavior, ambiguous scope, and history
+rewriting still require explicit confirmation even when the task context
+appears related.
 
 ## Project-Specific Security References
 

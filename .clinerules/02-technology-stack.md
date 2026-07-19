@@ -26,6 +26,19 @@
 - canvas-confetti
 - @vis.gl/react-google-maps
 
+Do not include shadcn/ui initially.
+
+State ownership rules:
+
+- `apiFetch` owns HTTP transport.
+- TanStack Query owns authoritative server state.
+- Zustand owns only small cross-component UI state.
+- React state owns local component state.
+- URL search parameters own filters, sorting, pagination, and view state.
+- Do not duplicate Quest, user, XP, achievement, completion, or leaderboard
+  server data in Zustand.
+- Initial stores: `useUiStore`, `useRewardStore`.
+
 ### Backend
 
 - .NET 10+
@@ -35,15 +48,13 @@
 - ASP.NET Core Identity
 - SignalR
 - Scalar
-- System.Text.Json
 
-### Testing
-
-| Type | Frontend | Backend |
-| ---- | -------- | ------- |
-| Unit | Vitest + React Testing Library | xUnit v3 |
-| Integration | — | xUnit + WebApplicationFactory + Testcontainers |
-| E2E | Cypress | Cypress |
+| Type | Tool |
+| ---- | ---- |
+| Frontend unit/integration | Vitest + React Testing Library |
+| Backend unit | xUnit v3 |
+| Backend integration | xUnit + WebApplicationFactory + Testcontainers |
+| Full-stack E2E | Cypress |
 
 ## 2.3 Resolved Versions
 
@@ -60,11 +71,12 @@ persistence format. Other major upgrades require a reviewed migration PR.
 - Exact dependency resolution will be proven by committed lockfiles once
   configured.
 
-## 2.5 Local Infrastructure
+## 2.5 Local Infrastructure (accepted target)
 
-- Docker Compose runs PostgreSQL and Mailpit.
+- The accepted baseline specifies Docker Compose for PostgreSQL and Mailpit.
 - Frontend dev server proxies `/api/*` and `/hubs/*` to the .NET backend.
-- See `docker-compose.yml` for service definitions.
+- Do not claim Docker Compose is running unless the file exists and the
+  services have been verified.
 
 ## 2.6 Dependency Governance
 - New dependencies require justification, bundle-size review (frontend),

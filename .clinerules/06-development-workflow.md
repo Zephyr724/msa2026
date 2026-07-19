@@ -25,7 +25,7 @@
 
 ### Solo Mode — target policy
 - PR required
-- CI required (lint, type-check, tests, audit)
+- CI required (all currently configured gates)
 - Agent self-review checklist required
 - Human final diff review required
 - No approval count requirement
@@ -97,10 +97,18 @@ Quality Gate Matrix in `07-agent-workflow.md` §7.1.
 - [ ] Did all applicable local or CI gates pass, and were their results
   observed?
 
-## 6.7 Release Process
-- Version bumps follow SemVer
-- Changelog updated before release
-- Tag releases: `v<major>.<minor>.<patch>`
-- Release and deployment sources follow the accepted deployment ADR.
-- Until a deployment ADR exists, do not assume tag-based or branch-based
-  deployment.
+## 6.7 Deployment and Submission
+
+- Deployment procedure remains governed by an accepted deployment
+  specification or ADR.
+- Do not create tags, releases, or changelog requirements unless explicitly
+  adopted.
+- Frontend and backend deployment must remain publicly accessible for marking.
+- Before submission, verify public access in a private/incognito browser.
+- Do not commit after the confirmed MSA submission deadline.
+
+## 6.8 Commit History Requirements
+
+- Maintain small, meaningful commits throughout development.
+- Do not combine the entire assessment into one final commit.
+- Agents still require explicit approval before committing.

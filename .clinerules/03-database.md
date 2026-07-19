@@ -42,8 +42,7 @@
 
 ## 3.5 Migration Rules
 - EF Core migrations are generated via `dotnet ef migrations add`.
-- Migrations are applied via `dotnet ef database update` or programmatic
-  migration at startup.
+- Migrations are applied via `dotnet ef database update`.
 - Applied migrations are stored in the `__EFMigrationsHistory` table.
 - A migration must not be edited after it has been applied to a shared
   environment or relied upon by another branch or developer. Use a
@@ -62,7 +61,7 @@
   without an explicit review.
 - Tests and local development may apply migrations automatically when
   explicitly configured. The production migration procedure remains
-  undecided until the deployment specification or ADR is accepted.
+  undecided until a deployment specification or ADR is accepted.
 - Test migrations run against a temporary PostgreSQL database via
   Testcontainers.
 

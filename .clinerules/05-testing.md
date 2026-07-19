@@ -25,8 +25,7 @@ repository configuration, has run successfully, and is recorded in
 {
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:watch": "vitest"
   }
 }
 ```
@@ -37,11 +36,13 @@ repository configuration, has run successfully, and is recorded in
 dotnet test
 ```
 
-### E2E (planned — run through committed npm scripts after Cypress config exists)
+### E2E (planned — run from `frontend/` after Cypress config exists)
 
 ```bash
 npm run test:e2e
 ```
+
+All npm commands run from `frontend/`.
 
 ## 5.3 Database in Tests (Backend)
 
@@ -79,12 +80,29 @@ npm run test:e2e
   unauthenticated requests should be rejected at the middleware boundary.
 
 ## 5.6 Coverage Requirements
-- Happy path and error cases for every service function
+- Cover critical behavior, changed behavior, security boundaries, and meaningful
+  failure cases. Do not create low-value tests solely to cover every method.
 - Validation tests for structural input constraints
 - Authorization checks (user A cannot access user B's resources)
 - Critical paths MUST be covered
 - Coverage regression is enforced only after a CI baseline exists
 - Do not chase arbitrary percentage targets at the expense of meaningful tests
+
+### Product-Critical Coverage Areas
+
+- CRUD and permissions
+- capacity and duplicate registration
+- completion code
+- claim review
+- XP, level, rank
+- duplicate XP prevention
+- achievements
+- streak
+- external source review
+- evidence purge
+- auth, CSRF, rate limiting, and authorization
+- share card
+- Member, Organizer, Admin journeys
 
 ## 5.7 Test File Organization
 
@@ -101,10 +119,10 @@ frontend/tests/
 ├── unit/                  # Pure logic, hooks, stores
 └── integration/           # Rendered components with user interaction
 
-e2e/
-└── cypress/
-    ├── e2e/               # Cypress spec files
-    └── fixtures/          # Test data
+frontend/cypress/
+├── e2e/                   # Cypress spec files
+├── fixtures/              # Test data
+└── support/               # Cypress support files
 ```
 
 ## 5.8 When Tests Fail

@@ -8,7 +8,7 @@
 
 ## 7.1 Quality Gate Matrix
 
-Per `00-harness-core.md` §9, apply checks proportionally. A command is active
+Per `00-harness-core.md` §10, apply checks proportionally. A command is active
 only after it exists in repository configuration, has been executed
 successfully at least once, and is marked active in `PROJECT_STATUS.md`.
 
@@ -37,11 +37,19 @@ successfully at least once, and is marked active in `PROJECT_STATUS.md`.
   1. Implementation bug → fix the source code
   2. Incorrect test assumption → verify contract before modifying test
   3. Stale fixture → update fixture, not the production code
-  4. Environment issue (port conflict, stale DB) → clean up and retry
-- If type-check or lint fails, fix issues before proceeding to the next change.
+  4. Environment issue (port conflict, stale DB) → perform only
+     non-destructive cleanup within the approved task scope. Database
+     reset, container-volume deletion, process termination outside the
+     task, or destructive cleanup requires approval.
+- If type-check or lint fails:
+  - If the failure was introduced by the current change, fix it before
+    proceeding to the next change.
+  - If it clearly predates the task or is unrelated, do not expand scope
+    silently; record the failure, preserve evidence, and request direction
+    when it blocks verification.
 - If a migration fails:
   - Never modify a migration that has been successfully applied in any shared
-    environment.
+    environment or relied upon by another branch or developer.
   - A local migration that failed before being recorded as applied may be fixed
     in place during development.
   - If the failed migration was already applied or shared, create a corrective

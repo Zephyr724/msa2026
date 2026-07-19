@@ -19,7 +19,6 @@ msa2026/
 │   ├── public/
 │   ├── package.json
 │   ├── vite.config.ts
-│   ├── tailwind.config.ts
 │   └── tsconfig.json
 ├── backend/
 │   ├── src/
@@ -97,14 +96,17 @@ The composition root is `Program.cs` in `Kiwimpact.Api`.
   `AddScoped`, `AddSingleton`, `AddTransient` calls.
 - The composition root is the only place that wires concrete implementations
   to interfaces.
-- Infrastructure and Core projects may provide registration extension methods
-  invoked from `Program.cs`, but `Program.cs` retains final control.
-- No project outside of `Kiwimpact.Api` may reference the DI container
-  directly.
+- Infrastructure may expose registration extension methods invoked from
+  `Program.cs`, but `Program.cs` retains final control.
+- Core must not reference `IServiceCollection`, `ServiceProvider`, or any
+  other DI abstraction.
+- No library project may call `BuildServiceProvider`.
+- `Kiwimpact.Api/Program.cs` is the sole composition root.
 
 ## 1.4 API Architecture
 
-- **Style**: REST/JSON via ASP.NET Core (decided by ADR in `specs/adr/`)
+- **Style**: REST/JSON via ASP.NET Core (accepted by planning baseline;
+  precise conventions defined by the API contract in `specs/` once created)
 - **URL convention**:
   ```
   GET    /api/v1/<resource>          # List resources
@@ -114,11 +116,21 @@ The composition root is `Program.cs` in `Kiwimpact.Api`.
   DELETE /api/v1/<resource>/{id}     # Delete resource (soft or hard)
   ```
 - Controllers should be thin: parameter mapping and HTTP response only.
-- Use `PATCH` for partial updates, not `PUT`. `PUT` is only appropriate for
-  full replacement operations.
+- Update semantics (partial vs full replacement) are decided by the API
+  contract on a per-resource basis. Do not mandate `PATCH` for all updates
+  unless the API contract explicitly defines the partial-update format
+  (JSON Patch, Merge Patch, or update DTO).
 - Collection-level `DELETE` and `PUT` are NOT supported unless explicitly
   required by a new ADR.
 - API documentation uses Scalar.
+
+### API Conventions (accepted baseline)
+
+- Base path: `/api/v1`
+- Timestamps: ISO 8601 UTC
+- Pagination: page-number, default page size 12, maximum page size 50
+- Error responses: Problem Details (`application/problem+json`)
+- Success responses: HTTP 2xx with JSON body
 
 ## 1.5 Layering Principle (Strictly Enforced)
 

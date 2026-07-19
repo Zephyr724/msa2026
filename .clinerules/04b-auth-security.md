@@ -10,11 +10,30 @@ paths:
 ## Authentication
 
 Kiwimpact uses ASP.NET Core Identity with HttpOnly cookie authentication
-(see ADR-0002 in `specs/adr/`).
+(accepted by planning baseline; see `specs/Kiwimpact_Final_Planning_Baseline_v1.0.md` §16).
 
 Supported methods:
 1. email/password;
 2. Google external login.
+
+### Required MVP Authentication Flows
+
+Email/password:
+
+- registration
+- email confirmation
+- resend confirmation
+- login
+- logout
+- forgot password
+- reset password
+- change password
+
+Google:
+
+- Google external login
+- authenticated account linking
+- pure-Google-user password behaviour (no Change Password unless a local password exists)
 
 ### Identity Configuration
 
@@ -38,6 +57,8 @@ Supported methods:
 - Secure=false for local development (HTTP), Secure=true for production
 - Every POST/PUT/PATCH/DELETE request uses ASP.NET Core antiforgery
   protection. The client sends `X-CSRF-TOKEN`.
+- The antiforgery token issuance and refresh flow must be defined in the
+  accepted authentication/API specification before implementation.
 
 ### Google External Login
 
@@ -46,6 +67,14 @@ Supported methods:
 - Same-email accounts are not automatically linked.
 - Linking requires an authenticated settings flow.
 - Pure Google users do not see Change Password unless a local password exists.
+
+### Auth Endpoint Implementation
+
+- Implement thin custom auth endpoints around `UserManager` and
+  `SignInManager`; do not expose Identity persistence entities as API
+  contracts.
+- External-login and post-login return URLs must be local or explicitly
+  allowlisted to prevent open redirects.
 
 ### Login Failure Responses
 

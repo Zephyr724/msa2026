@@ -149,7 +149,38 @@ changed before rerunning the test.
 Never rerun an unchanged failed command without explaining why the next
 attempt may succeed.
 
-## 8. Context management
+## 8. Terminal command reliability
+
+- Every repository inspection or verification command must produce explicit
+  completion output.
+- Commands that may succeed with empty stdout must print a completion marker
+  while preserving the original exit code.
+- Do not treat empty stdout as evidence that a command failed or was skipped.
+- Avoid long shell pipelines using `head`, `tail`, `grep`, or `awk` when the
+  same operation can be performed in separate commands.
+- Do not use `|| true` to suppress failures.
+- If a terminal command appears as `Skipped` or remains pending after it
+  should have completed, stop waiting and retry it as a short standalone
+  command with an explicit completion marker.
+
+**Completion marker pattern:**
+
+```bash
+cd /path/to/project && {
+  <command>
+  rc=$?
+  printf '\n__CLINE_COMMAND_DONE__ exit=%d\n' "$rc"
+  exit "$rc"
+}
+```
+
+When there is no diff, this still produces:
+
+```
+__CLINE_COMMAND_DONE__ exit=0
+```
+
+## 9. Context management
 
 - Load the minimum context required for the task.
 - Prefer targeted search and selective file reads over broad repository reads.
@@ -163,7 +194,7 @@ attempt may succeed.
 
 More context is not automatically better; relevant context is the goal.
 
-## 9. Quality gates
+## 10. Quality gates
 
 Discover actual project commands from repository configuration. Do not invent
 commands that do not exist.
@@ -192,7 +223,7 @@ If a required check cannot run, state:
 - what remains unverified;
 - what the human should do next.
 
-## 10. Final diff review
+## 11. Final diff review
 
 Before completion, review the final changes for:
 
@@ -209,7 +240,7 @@ Before completion, review the final changes for:
 Apply only the checks relevant to the actual change. Mark unrelated checks as
 not applicable rather than performing unnecessary work.
 
-## 11. Completion report
+## 12. Completion report
 
 Every completion report must include:
 
@@ -224,7 +255,7 @@ Every completion report must include:
 Never claim that a command, test, build, deployment, or external operation
 succeeded unless its result was observed.
 
-## 12. Task handoff
+## 13. Task handoff
 
 When the task must move to a new session, produce a HANDOFF containing:
 
@@ -240,7 +271,7 @@ When the task must move to a new session, produce a HANDOFF containing:
 
 A new task must verify the repository and Git diff before trusting the HANDOFF.
 
-## 13. Enforcement boundary
+## 14. Enforcement boundary
 
 These instructions guide agent behavior but are not security boundaries.
 

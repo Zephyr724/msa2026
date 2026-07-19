@@ -24,7 +24,9 @@ paths:
 
 ## HTTP Security Headers
 
-- Use ASP.NET Core security headers middleware or equivalent.
+- Configure required security headers explicitly using application middleware,
+  reverse-proxy configuration, or an explicitly approved dependency. Do not
+  add a new security-header package without approval.
 - Enable CORS with explicit allowed origins (not `*`) if cross-origin
   requests are needed.
 
@@ -33,6 +35,20 @@ paths:
 - CORS uses explicit origins only; never wildcard origin with credentials.
 - Local Vite proxies `/api/*` and `/hubs/*` with WebSocket support to the
   .NET backend.
+
+## Curated External Source URLs
+
+- Treat provider URLs as untrusted external links.
+- Do not scrape, preview, fetch, or follow them from the backend.
+- Open them with `noopener` and `noreferrer`.
+- The official provider page remains authoritative.
+
+## Google Maps Browser Key
+
+- The browser Maps key is not a backend secret, but it must use HTTP-referrer
+  restrictions and Maps JavaScript API restrictions.
+- Store it in `frontend/.env.local`; never commit the real value.
+- The Google OAuth client secret remains backend-only and separate.
 
 ## Outbound HTTP & SSRF
 

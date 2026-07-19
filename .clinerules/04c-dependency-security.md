@@ -3,6 +3,16 @@ paths:
   - "frontend/package.json"
   - "frontend/package-lock.json"
   - "backend/**/*.csproj"
+  - "Directory.Packages.props"
+  - "Directory.Build.props"
+  - "Directory.Build.targets"
+  - "global.json"
+  - "NuGet.config"
+  - ".config/dotnet-tools.json"
+  - "Dockerfile"
+  - "backend/**/Dockerfile"
+  - "frontend/**/Dockerfile"
+  - "docker-compose*.yml"
   - ".github/**"
 ---
 # 04c — Dependency & Supply-Chain Security
@@ -14,14 +24,17 @@ paths:
 - Before adding a new frontend dependency:
   1. Verify the package is actively maintained.
   2. Review its license for compatibility.
-  3. Check for known vulnerabilities (`npm audit`).
+  3. Check for known vulnerabilities.
   4. Assess bundle-size impact for the runtime.
 - Before adding a new backend NuGet package:
   1. Verify the package is actively maintained.
   2. Review its license for compatibility.
-  3. Check for known vulnerabilities (`dotnet list package --vulnerable`).
-- Run `npm audit` and `dotnet list package --vulnerable` before any
-  dependency merge.
+  3. Check for known vulnerabilities.
+- Vulnerability scanning commands (`npm audit`,
+  `dotnet list package --vulnerable`) are candidate gates. They become
+  active only after they are verified to work in the repository and are
+  marked active in `PROJECT_STATUS.md`. Do not treat them as currently
+  mandatory.
 
 ## Vulnerability Triage
 

@@ -18,12 +18,13 @@ When each control becomes operational, update the status table in
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS + daisyUI
 - **Backend**: C# .NET 10+ + ASP.NET Core Web API
 - **Database**: PostgreSQL (via Entity Framework Core + Npgsql)
-- **API Style**: REST/JSON via ASP.NET Core (see ADRs in `specs/adr/`)
+- **API Style**: REST/JSON via ASP.NET Core
 - **ORM**: Entity Framework Core
 - **Package Managers**: npm (frontend), NuGet (backend)
 - **Testing**: Vitest + React Testing Library (frontend), xUnit v3 + Testcontainers (backend), Cypress (E2E)
 - **Logging**: ASP.NET Core logging (structured)
-- **Validation**: Zod (frontend), DataAnnotations (backend)
+- **Validation**: Zod for frontend UX validation; DataAnnotations for request
+  shape; application/domain validation remains authoritative.
 - **Runtimes**: Node.js 24 LTS (frontend), .NET 10+ (backend)
 
 ## Language Policy
@@ -57,13 +58,15 @@ When each control becomes operational, update the status table in
 - Frontend: validate with Zod (React Hook Form) before API calls
 - Backend: validate with DataAnnotations (request DTOs) + domain validation in Core layer
 - Every external adapter validates its own input before invoking a service:
-  - HTTP route → ASP.NET Core model binding + DataAnnotations
-  - CLI adapter → CLI input schema
-  - MCP tool → MCP input schema
-  - Background service → event schema
+  - HTTP request DTO → ASP.NET Core model binding + DataAnnotations
+  - OAuth callback/input → validated payload
+  - Seed/import data → validated input schema
+  - Background job data from database and configuration → validated on read
+  - External service responses → validated at the adapter boundary
 
 ### Error Handling
-- Frontend: TanStack Query error boundaries + per-request error handling
+- Frontend: explicit query mutation/error states, route or component error
+  boundaries where appropriate, and controlled user-facing fallback states.
 - Backend: propagate to ASP.NET Core exception middleware (Problem Details)
 
 ### Dependency Security
