@@ -13,12 +13,13 @@ Per `00-harness-core.md` §9, apply checks proportionally. For this project:
 | Change Type          | Required Gates                                                     |
 | -------------------- | ----------------------------------------------------------------- |
 | Markdown/doc only    | Document review, Git diff                                          |
-| TypeScript source    | Targeted test, `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm run build` |
-| Route/service        | Targeted test, API integration, `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm run build` |
-| Database/migration   | Migration test, repository integration, `npm run db:baseline`, baseline diff review, `npm run typecheck`, `npm run lint`, `npm run build` |
-| Dependency/lockfile  | `npm ci`, audit triage, `npm run format:check`, `npm run typecheck`, `npm run lint`, full test, `npm run build` |
+| Frontend source      | Targeted test, `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm run build` |
+| Backend source       | Targeted test, `dotnet format --verify-no-changes`, `dotnet build`, `dotnet test` |
+| Route/service        | Targeted test, API integration, `npm run typecheck`, `npm run lint`, `npm run build`, `dotnet build`, `dotnet test` |
+| Database/migration   | Migration test, repository integration, `dotnet build`, `dotnet test` |
+| Dependency/lockfile  | Frontend: `npm ci`, audit triage; Backend: `dotnet restore`; full test, `npm run build`, `dotnet build` |
 | CI/config            | Config syntax validation, dry run of affected commands             |
-| Architecture/import boundary | Targeted tests, `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm run build`, circular-dependency check |
+| Architecture/import boundary | Targeted tests, `npm run typecheck`, `npm run lint`, `npm run build`, `dotnet build`, circular-dependency check |
 | Release candidate    | All gates including E2E and coverage                               |
 
 - When a change matches more than one category, apply the union of all
@@ -26,8 +27,7 @@ Per `00-harness-core.md` §9, apply checks proportionally. For this project:
 - Run targeted checks after a coherent change set.
 - Run full applicable gates once before completion.
 - Do not repeatedly run an unchanged failing command.
-- If a required command is not defined in `package.json`, report it rather
-  than inventing one.
+- If a required command is not defined, report it rather than inventing one.
 
 ## 7.2 Error Recovery
 

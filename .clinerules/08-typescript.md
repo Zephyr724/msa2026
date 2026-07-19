@@ -1,13 +1,15 @@
 ---
 paths:
-  - "src/**/*.ts"
-  - "tests/**/*.ts"
+  - "frontend/src/**/*.ts"
+  - "frontend/src/**/*.tsx"
+  - "frontend/tests/**/*.ts"
+  - "frontend/tests/**/*.tsx"
 ---
 # 08 — TypeScript Coding Rules
 
 ## 8.1 Module System
-- Use ESM with `module` and `moduleResolution` set to `NodeNext`.
-- Use `.js` extensions in relative imports emitted for Node.js.
+- Vite handles module resolution; follow the Vite defaults.
+- Use `.ts` and `.tsx` extensions in imports.
 
 ## 8.2 Type Safety
 - Use `unknown` for untrusted data and narrow it before use.

@@ -1,7 +1,9 @@
 ---
 paths:
-  - "package.json"
-  - "package-lock.json"
+  - "frontend/package.json"
+  - "frontend/package-lock.json"
+  - "backend/src/**/*.csproj"
+  - "backend/src/**/packages.lock.json"
   - ".github/**"
 ---
 # 04c — Dependency & Supply-Chain Security
@@ -10,14 +12,19 @@ paths:
 
 - New dependencies require explicit approval; do not install or add them
   without authorization.
-- Before adding a new dependency:
+- Before adding a new frontend dependency:
   1. Verify the package is actively maintained.
   2. Review its license for compatibility.
   3. Check for known vulnerabilities (`npm audit`).
   4. Assess bundle-size impact for the runtime.
-- Run `npm audit` before any dependency merge.
+- Before adding a new backend NuGet package:
+  1. Verify the package is actively maintained.
+  2. Review its license for compatibility.
+  3. Check for known vulnerabilities (`dotnet list package --vulnerable`).
+- Run `npm audit` and `dotnet list package --vulnerable` before any
+  dependency merge.
 
-## npm audit Triage
+## Vulnerability Triage
 
 - Critical / high vulnerabilities in **reachable production dependencies**
   block merge.
@@ -30,23 +37,22 @@ paths:
   - Owner (who approved the exception);
   - Expiration date (when the exception must be re-evaluated).
 - Exceptions must not be silently ignored; the record must live in
-  `docs/security/` or an issue tracker.
+  `specs/security/` or an issue tracker.
 
 ## CI / Secrets
 
 - CI workflows in `.github/workflows/` must not echo or log secrets.
 - Secrets are injected via environment variables or GitHub Secrets; never
   committed to workflow files.
-- Target policy: Dependabot is enabled for npm and GitHub Actions after the
-  configuration is committed and verified. See `PROJECT_STATUS.md` for current
-  status.
+- Target policy: Dependabot is enabled for npm, NuGet, and GitHub Actions
+  after the configuration is committed and verified. See `PROJECT_STATUS.md`
+  for current status.
 
 ## Supply-Chain Hygiene
 
-- `package-lock.json` is required for reproducible installations.
-- SemVer ranges in `package.json` must follow the project's dependency update
-  policy; they do not replace lockfile review.
-- CI uses `npm ci`, not `npm install`.
+- `package-lock.json` (frontend) and `packages.lock.json` (backend) are
+  required for reproducible installations.
+- CI uses `npm ci` (frontend) and `dotnet restore --locked-mode` (backend).
 - Lockfile changes must be reviewed alongside the manifest change that caused
   them.
 - Prefer dependencies with a history of security responsiveness.

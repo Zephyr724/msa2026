@@ -1,77 +1,73 @@
 ---
 paths:
-  - "src/middleware/**"
-  - "src/services/**"
-  - "src/routes/**"
-  - "src/config/**"
-  - "src/policies/**"
-  - "src/repositories/**"
-  - "src/schemas/**"
-  - "src/types/**"
-  - "src/composition/**"
-  - "tests/**"
+  - "backend/src/**"
+  - "backend/tests/**"
+  - "frontend/src/**"
+  - "frontend/tests/**"
 ---
 # 04b — Authentication & Authorization
 
 ## Authentication
 
-**Gate:** Authentication implementation MUST NOT begin until ADR-002 is
-accepted. ADR-002 must resolve:
+Kiwimpact uses ASP.NET Core Identity with HttpOnly cookie authentication
+(see ADR-0002 in `specs/adr/`).
 
-- Cookie session vs JWT (Bearer token);
-- Access / refresh token lifetimes;
-- Logout and revocation strategy;
-- CSRF strategy;
-- Cross-origin requirements;
-- Key rotation schedule;
-- `issuer`, `audience`, and allowed signature algorithms;
-- Multi-device login policy.
+Supported methods:
+1. email/password;
+2. Google external login.
 
-### Password Handling
+### Identity Configuration
 
-- Hash passwords with **Argon2id**:
-  - `memoryCost: 19456` (19 MiB)
-  - `timeCost: 2`
-  - `parallelism: 1`
-- Calibrate Argon2id parameters during deployment/performance validation
-  on representative target hardware. Store the approved parameters in
-  validated configuration. Do not automatically lower password hashing
-  parameters during startup.
-- Monitor real authentication latency and resource consumption.
-- Login failure responses must use a **single** generic message; never
-  distinguish between "user not found" and "wrong password".
+- ASP.NET Core Identity manages user accounts, password hashing, and
+  external login providers.
+- Password hashing uses Identity's default implementation (PBKDF2 with
+  HMAC-SHA256, 100,000 iterations for .NET 10+).
+- Identity's built-in account lockout is enabled.
+- Email confirmation is required before normal login.
+- Confirmation token lifetime: ~24 hours.
+- Reset token lifetime: ~30–60 minutes.
 
-### Token & Session Rules (apply after ADR-002 is accepted)
+### Cookie Configuration
 
-- JWT: Do not treat the token's `alg` header as the server's algorithm
-  policy. Configure the verifier with an explicit algorithm allowlist
-  selected by ADR-002, and reject all algorithms outside that allowlist.
-- Cookies: `HttpOnly`, `Secure` (production), `SameSite` set per the
-  outcome of ADR-002 (`Lax` or `Strict` depending on cross-site flow
-  needs).
-- Tokens must have a reasonable expiration configured at the service
-  level, not hard-coded.
+- HttpOnly only
+- SameSite=Lax
+- Secure=false for local development (HTTP), Secure=true for production
+- Every POST/PUT/PATCH/DELETE request uses ASP.NET Core antiforgery
+  protection. The client sends `X-CSRF-TOKEN`.
+
+### Google External Login
+
+- Google authenticates; Kiwimpact creates/locates a local Identity user.
+- Kiwimpact issues its own HttpOnly cookie.
+- Same-email accounts are not automatically linked.
+- Linking requires an authenticated settings flow.
+- Pure Google users do not see Change Password unless a local password exists.
+
+### Login Failure Responses
+
+- Forgot-password response does not reveal account existence.
+- Login failure returns a single generic message.
 
 ## Authorization Architecture
 
 ```
-Route middleware:
-- Authentication (verify identity)
-- Coarse role checks (if applicable)
+ASP.NET Core Middleware:
+- Authentication (cookie, Identity)
+- Coarse role checks ([Authorize(Roles = "...")])
 - HTTP-specific checks (CSRF, CORS, rate limiting)
 
-Service / Authorization policy layer:
+Application Service layer:
 - Resource ownership verification
-- Action-level authorization (can this actor perform this action?)
-- Tenant boundaries
+- Action-level authorization
 - Domain invariants
 ```
 
-- Authentication and coarse role checks may run in route middleware.
-- Resource-level authorization **MUST** be enforced through centralized
-  authorization policy functions called by the service layer.
+- Authentication and coarse role checks may use ASP.NET Core attributes.
+- Resource-level authorization **MUST** be enforced in application services,
+  not assumed from HTTP middleware.
 - Services **MUST NOT** assume that callers have passed through HTTP
-  middleware. Jobs, CLI adapters, and MCP tools may call services directly.
+  middleware. Background services and other non-HTTP callers may invoke
+  services directly.
 - Every read and mutation involving owned resources **MUST** evaluate:
   `actor + action + resource`.
 - Reading another user's private resources (IDOR) is a violation
@@ -84,9 +80,10 @@ Service / Authorization policy layer:
 - Unauthorized mutation: one user cannot modify another user's resources.
 - Unauthorized read (IDOR): one user cannot read another user's private
   resources.
-- Escalation: a non-admin user cannot access admin-only endpoints.
-- Cross-tenant isolation: when multi-tenancy is introduced, replicate all
-  of the above across tenant boundaries.
+- Escalation: a Member user cannot access Organizer or Admin endpoints.
+- Missing authentication returns 401.
+- Invalid/expired authentication returns 401.
+- Authenticated but unauthorized returns 403.
 
 ## Authentication Throttling
 

@@ -14,54 +14,57 @@ When each control becomes operational, update the status table in
 `PROJECT_STATUS.md`.
 
 ## Meta Information
-- **Project**: msa2026 — Task & Project Management API
-- **Tech Stack**: Node.js + TypeScript + SQLite
-- **Database Driver**: `better-sqlite3` (synchronous, parameterized queries)
-- **Database File**: msa2026.db (SQLite 3)
-- **API Style**: REST via Express (see ADR-001 in `docs/architecture/adr/`)
-- **ORM/DAL**: Raw parameterized SQL (no ORM)
-- **Package Manager**: npm
-- **Testing**: Vitest + Supertest
-- **Logging**: pino (structured JSON)
-- **Validation**: Zod
-- **Runtime**: Node.js 24 LTS (≥24.0.0, <25.0.0)
+- **Project**: msa2026 → **Kiwimpact** — Community eco quests across New Zealand
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS + daisyUI
+- **Backend**: C# .NET 10+ + ASP.NET Core Web API
+- **Database**: PostgreSQL (via Entity Framework Core + Npgsql)
+- **API Style**: REST/JSON via ASP.NET Core (see ADRs in `specs/adr/`)
+- **ORM**: Entity Framework Core
+- **Package Managers**: npm (frontend), NuGet (backend)
+- **Testing**: Vitest + React Testing Library (frontend), xUnit v3 + Testcontainers (backend), Cypress (E2E)
+- **Logging**: ASP.NET Core logging (structured)
+- **Validation**: Zod (frontend), DataAnnotations + FluentValidation (backend)
+- **Runtimes**: Node.js 24 LTS (frontend), .NET 10+ (backend)
 
 ## Language Policy
 - **User-facing communication (replies, explanations, task summaries)**: Chinese
 - **Source code comments, documentation files (.md), inline annotations**: English
 - **Git commit messages**: English (Conventional Commits, see `06-development-workflow.md`)
-- **API documentation, JSDoc, OpenAPI/Swagger specs**: English
+- **API documentation, Scalar specs**: English
 - **Variable names, function names, type/interface names**: English (camelCase/PascalCase per `01-architecture.md`)
 
 ## Quick Reference: Key Principles
 
 ### Injection Prevention
 - Never interpolate untrusted input into executable or interpreted contexts.
-  - SQL: parameterized queries (`?` placeholders)
-  - Shell: fixed executables + argument arrays (never `exec()` with interpolated input)
-  - HTML: framework escaping or a vetted sanitizer
-  - Dynamic identifiers (table/column names): strict allowlists
+  - SQL: EF Core parameterized queries / LINQ
+  - Shell: fixed executables + argument arrays (never `Process.Start` with interpolated input)
+  - HTML: React's JSX auto-escaping
+  - Dynamic identifiers (table/column names): strict allowlists only
 
 ### Type Safety
-- Never use `any` type — use `unknown` + type guards (explicit, commented exceptions allowed at compatibility boundaries)
+- Frontend: never use `any` — use `unknown` + type guards
+- Backend: never suppress nullable reference type warnings without justification
 
 ### Secrets & Logging
 - Never log credentials, tokens, or unmasked PII
-- Never hard-code secrets in source; load from environment variables
+- Never hard-code secrets in source; load from environment variables / .NET User Secrets
 
 ### Git Safety
 - Never `git push --force` to protected branches
 
 ### Input Validation
-- Validate input with Zod before it reaches the service layer
+- Frontend: validate with Zod (React Hook Form) before API calls
+- Backend: validate with DataAnnotations (request DTOs) + domain validation in Core layer
 - Every external adapter validates its own input before invoking a service:
-  - HTTP route → Zod HTTP schema
+  - HTTP route → ASP.NET Core model binding + DataAnnotations
   - CLI adapter → CLI input schema
   - MCP tool → MCP input schema
-  - Job/event handler → event schema
+  - Background service → event schema
 
 ### Error Handling
-- Propagate errors to centralized error middleware (don't catch locally unless recovering)
+- Frontend: TanStack Query error boundaries + per-request error handling
+- Backend: propagate to ASP.NET Core exception middleware (Problem Details)
 
 ### Dependency Security
 - No untriaged critical/high vulnerability may remain

@@ -1,141 +1,103 @@
----
-paths:
-  - "tests/**"
-  - "vitest.config.ts"
-  - "package.json"
----
 # 05 — Testing Strategy
 
 ## 5.1 Test Types & Boundaries
 
-| Type                    | Scope                                               | Database        |
-| ----------------------- | --------------------------------------------------- | --------------- |
-| Unit                    | Pure business rules, transformers, permission logic, I/O-free functions | None (no I/O)   |
-| Repository integration  | Real SQLite queries, constraints, transactions      | Real SQLite (file or `:memory:`) |
-| API integration         | Express app + services + test DB + Supertest        | Real SQLite (file or `:memory:`) |
-| E2E                     | Full user scenarios                                 | Real SQLite     |
-
-- Unit tests: test functions that have no I/O dependencies (pure logic, validation, transformation)
-- Repository integration tests: verify SQL queries, constraints, and transactions against a real SQLite database
-- API integration tests: use Supertest against the app (imported from `src/app.ts`, not a running server)
-- E2E tests: cover complete user flows; can run locally or in CI against a temporary database
+| Type | Scope | Database |
+| ---- | ----- | -------- |
+| Frontend Unit (Vitest) | Pure React components, hooks, utilities, Zustand stores | None (no I/O) |
+| Frontend Integration (Vitest + RTL) | Component rendering, user interaction, form validation | Mocked API (MSW or similar) |
+| Backend Unit (xUnit v3) | Pure domain logic, business rules, validation | None |
+| Backend Integration (xUnit + Testcontainers) | Repository queries, service orchestration, auth, API endpoints | Real PostgreSQL (Testcontainers) |
+| E2E (Cypress) | Full user journeys across frontend + backend | Real PostgreSQL (Testcontainers or Docker Compose) |
 
 ## 5.2 Test Commands
+
+### Frontend
 
 ```json
 {
   "scripts": {
-    "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "vitest run --project unit",
-    "test:integration": "vitest run --project integration",
-    "test:e2e": "vitest run --project e2e",
-    "test:external": "RUN_EXTERNAL_TESTS=1 vitest run --project external",
-    "test:coverage": "vitest run --project unit --project integration --coverage",
-    "test:watch": "vitest --project unit --project integration"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   }
 }
 ```
 
-- `npm test` — runs unit + integration tests, suitable for CI
-- `npm run test:unit` — unit tests only (no I/O, fast)
-- `npm run test:integration` — repository + API integration tests (real SQLite)
-- `npm run test:e2e` — full end-to-end scenario tests
-- `npm run test:external` — external integration tests (`.ext.test.ts`, real networks)
-- `npm run test:coverage` — run with coverage reporting
-- `npm run test:watch` — watch mode for local development
-- E2E tests are NOT included in `npm test` by default; they run separately or in CI on demand.
+### Backend
 
-### Vitest Project Configuration
+```bash
+dotnet test                                    # Run all tests
+dotnet test --filter "Category=Unit"           # Unit tests only
+dotnet test --filter "Category=Integration"    # Integration tests only
+dotnet test /p:CollectCoverage=true            # With coverage
+```
 
-- `vitest.config.ts` MUST define named projects: `unit`, `integration`, `e2e`, and `external`.
-- Each project MUST have an explicit `include` pattern matching its test directory.
-- External integration tests (`*.ext.test.ts`) MUST be excluded from all normal projects and placed in a separate `external` project.
-- If `--project` names used in npm scripts do not match the vitest config, vitest will error at startup.
+### E2E
 
-### Coverage Configuration
+```bash
+npx cypress run       # Headless
+npx cypress open      # Interactive
+```
 
-- Coverage provider MUST be `v8` (`@vitest/coverage-v8`).
-- `coverage.include` MUST explicitly list `src/**/*.ts` so that unimported source files still appear in coverage reports.
-- `coverage.exclude` MUST exclude `src/server.ts` and `src/**/*.d.ts` at minimum.
-- Example:
-  ```typescript
-  coverage: {
-    provider: 'v8',
-    include: ['src/**/*.ts'],
-    exclude: ['src/server.ts', 'src/**/*.d.ts'],
-  }
-  ```
+## 5.3 Database in Tests (Backend)
 
-## 5.3 Database in Tests
+- Integration tests use Testcontainers to spin up a real PostgreSQL instance.
+- Each test class or collection gets a fresh database.
+- EF Core migrations run automatically as part of test setup.
+- Minimum seed data is inserted per test; avoid sharing mutable state.
+- The development `msa2026.db` (SQLite) file is NOT used by any Kiwimpact test.
 
-### Isolation
-- Each parallel vitest worker MUST use an independent temporary database.
-- Do NOT share the production `msa2026.db` file across tests.
-- `:memory:` databases are isolated per connection; separate connections do not share the same in-memory database.
-- For file-backed test databases, create a unique database filepath inside
-  `tmpdir()` for each test worker or suite. Do not use the directory path
-  itself as the database filename.
-- The composition root pattern (see `01-architecture.md` Section 1.3) MUST be used to inject the test database into the app. Never import a global singleton database connection from test code.
+## 5.4 Frontend Test Principles
 
-### Setup & Teardown
-- Run migrations before each relevant test suite to ensure a clean, up-to-date schema.
-- Seed minimal data needed for each test case; avoid sharing mutable state between tests.
-- Use `beforeEach`/`afterEach` to reset state; do not rely on test execution order.
-
-## 5.4 Network & External Dependencies
-
-- Tests MUST NOT access real external networks (APIs, external services) unless the test file is explicitly marked as an external integration test with a `.ext.test.ts` suffix.
-- Normal test commands never run external tests.
-- When `RUN_EXTERNAL_TESTS=1` is explicitly enabled, unavailable required
-  dependencies are failures.
-- A test may skip only when its documented contract explicitly treats the
-  dependency as optional.
-- Time, random numbers, and UUIDs should be injectable or freezable. Use dependency injection or mocking to control non-deterministic values.
+- Components should be tested from the user's perspective (React Testing Library).
+- API calls are mocked at the network level (MSW) or via TanStack Query test utilities.
+- Zustand stores are tested as pure functions where possible.
+- Form validation is tested with `user-event` and Zod schemas.
+- Accessibility checks use `jest-dom` matchers.
 
 ## 5.5 Authorization Test Requirements
 
-### Service / policy tests
+### Backend service/API tests
 - Owner is allowed to access and mutate their own resources.
 - Another user is denied access (both read and write, IDOR prevention).
-- Role or tenant escalation is denied.
-
-### API integration tests
+- Role escalation is denied (Member cannot access Organizer endpoints).
 - Missing authentication returns 401.
-- Invalid authentication returns 401.
-- Authenticated but unauthorized access returns 403 or the resource-specific
-  privacy response.
+- Invalid/expired authentication returns 401.
+- Authenticated but unauthorized returns 403.
 
 ### Authorization principles
-- Authorization tests apply to both mutations AND reads. Reading another
-  user's private resources is a violation equivalent to unauthorized mutation.
-- Services should not accept `actor | null` solely for authorization testing;
-  unauthenticated requests should be rejected at the HTTP middleware boundary.
+- Authorization tests apply to both mutations AND reads.
+- Services should not accept nullable actor for authorization shortcuts;
+  unauthenticated requests should be rejected at the middleware boundary.
 
 ## 5.6 Coverage Requirements
 - Happy path and error cases for every service function
-- Validation tests cover structural input constraints such as type, length,
-  range, required fields, and normalization.
-- Repository/API tests verify that SQL-like payloads are treated as ordinary
-  data and cannot alter query structure.
-- Do not implement SQL keyword or character blacklists as injection defense.
-- Authorization checks (user A cannot access user B's resources, including reads)
-- Critical paths MUST be covered.
-- Coverage regression is enforced only after a CI coverage baseline mechanism
-  exists. Until then, use explicit thresholds in `vitest.config.ts` and report
-  coverage changes manually.
-- Do not chase arbitrary percentage targets at the expense of meaningful
-  tests.
+- Validation tests for structural input constraints
+- Authorization checks (user A cannot access user B's resources)
+- Critical paths MUST be covered
+- Coverage regression is enforced only after a CI baseline exists
+- Do not chase arbitrary percentage targets at the expense of meaningful tests
 
 ## 5.7 Test File Organization
+
 ```
-tests/
-├── unit/
-│   └── services/        # Pure logic tests (no DB)
-├── integration/
-│   ├── db/              # Repository integration tests (real SQLite)
-│   └── api/             # API integration tests (app + Supertest)
-├── e2e/                 # Full scenario tests
-└── external/            # Opt-in external integration tests (*.ext.test.ts)
+backend/tests/
+├── Kiwimpact.UnitTests/
+│   └── Core/              # Domain logic tests (no DB)
+└── Kiwimpact.IntegrationTests/
+    ├── Repositories/      # EF Core query tests (real PostgreSQL via Testcontainers)
+    ├── Services/          # Service orchestration tests
+    └── Api/               # WebApplicationFactory + HTTP client tests
+
+frontend/tests/
+├── unit/                  # Pure logic, hooks, stores
+└── integration/           # Rendered components with user interaction
+
+e2e/
+└── cypress/
+    ├── e2e/               # Cypress spec files
+    └── fixtures/          # Test data
 ```
 
 ## 5.8 When Tests Fail
