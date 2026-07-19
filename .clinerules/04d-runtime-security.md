@@ -8,7 +8,7 @@ paths:
   - "src/utils/**"
   - "src/config/**"
   - "src/composition/**"
-  - "tests/integration/**"
+  - "tests/**"
 ---
 # 04d — Runtime Security
 

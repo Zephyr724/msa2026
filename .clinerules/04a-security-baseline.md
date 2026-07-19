@@ -8,7 +8,11 @@ baseline in `00-harness-core.md` §6 with project-specific operational rules.
 For any of the following, STOP and request explicit human approval:
 - Installing or removing dependencies
 - Changing authentication or authorization logic
-- Modifying database schema outside a migration file
+- Creating or modifying schema migrations
+- If a task requests a schema change outside the migration system, STOP and
+  report the governance conflict. Human approval alone does not bypass the
+  migration requirement; the applicable project rule or ADR must first be
+  explicitly changed.
 - Deleting or destructively modifying data
 - Changing environment variable handling or secret loading
 - Modifying rate-limiting, CORS, CSRF, security headers, or proxy trust

@@ -42,6 +42,11 @@
 - At least one independent approval required
 
 ## 6.4 Code Quality Gates
+
+The following gates are available project quality controls. The required
+subset for a task is selected by the Quality Gate Matrix in
+`07-agent-workflow.md` §7.1.
+
 - `npm run format:check` passes (Prettier)
 - `npm run lint` passes (ESLint, no errors, no warnings)
 - `npm run typecheck` passes (`tsc --noEmit`)
@@ -85,4 +90,6 @@
 - Version bumps follow SemVer
 - Changelog updated before release
 - Tag releases: `v<major>.<minor>.<patch>`
-- Deploy from tag, not from branch head
+- Release and deployment sources follow the accepted deployment ADR.
+- Until a deployment ADR exists, do not assume tag-based or branch-based
+  deployment.

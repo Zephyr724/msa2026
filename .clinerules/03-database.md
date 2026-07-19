@@ -13,7 +13,7 @@ paths:
 - **`scripts/migrations/`** is the canonical schema history
 - **`init_db.sql`** is a generated baseline snapshot (not manually maintained alongside migrations)
 - All schema changes go through timestamp-named migration files: `scripts/migrations/YYYYMMDDHHmmss_description.sql`
-- `init_db.sql` is regenerated from migrations when the schema stabilizes
+- `init_db.sql` is regenerated whenever the ordered migration set changes
 
 ## 3.2 Query Rules
 - **Always** use parameterized queries: `db.prepare().run/get/all()` with `?` placeholders

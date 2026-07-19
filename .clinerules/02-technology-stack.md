@@ -108,7 +108,11 @@ Key highlights:
 - Current enforcement status is recorded in `PROJECT_STATUS.md`.
 
 ## 2.7 Linting & Formatting
-- **ESLint** 10.x with TypeScript plugin for code quality
-- **Prettier** 3.x for code formatting
-- Both run in CI; no warnings allowed on merge to `main`
-- `husky` + `lint-staged` for pre-commit hooks (format + lint)
+- **ESLint** 10.x with TypeScript plugin is the target linting baseline.
+- **Prettier** 3.x is the target formatting baseline.
+- Target policy: lint and format checks run in CI with no warnings allowed
+  on merge to `main`.
+- Before CI is operational, run the equivalent checks locally and report
+  their observed results.
+- Target policy: use `husky` + `lint-staged` for pre-commit format and lint
+  checks after the hooks are configured and verified.
