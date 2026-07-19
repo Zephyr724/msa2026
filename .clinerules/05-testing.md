@@ -140,6 +140,15 @@ frontend/cypress/
 
 ## 5.8 When Tests Fail
 1. Identify root cause: implementation bug, incorrect test assumption, stale fixture, or environment issue
-2. Fix the source code when the implementation is wrong
+2. If the implementation is wrong, fix only failures introduced by the current task.
 3. Only modify test assertions when the contract has demonstrably changed — explain why in the task summary
 4. If a test is incorrect or based on a stale assumption, document the correction and update the test
+5. Report unrelated or pre-existing failures without silently expanding scope.
+
+### SignalR Coverage Areas
+
+- hub authentication and authorization
+- leaderboard broadcasting correctness
+- reconnect behavior
+- cross-user data isolation
+- deployed WebSocket transport verification

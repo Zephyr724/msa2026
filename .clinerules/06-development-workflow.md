@@ -76,7 +76,7 @@ Quality Gate Matrix in `07-agent-workflow.md` §7.1.
   Run full applicable gates once before completion.
 - Fix implementation and test failures introduced by the current task.
 - Report unrelated or pre-existing failures without silently expanding scope.
-- When tests fail, first identify the root cause: implementation bug, incorrect test assumption, stale fixture, or environment issue. Fix the source code when the implementation is wrong. Only modify test assertions when the contract has demonstrably changed, and explain why in the task summary.
+- When tests fail, first identify the root cause: implementation bug, incorrect test assumption, stale fixture, or environment issue. Only modify test assertions when the contract has demonstrably changed, and explain why in the task summary.
 - When the user has explicitly approved committing, group changes into logical
   commits. Otherwise, prepare the working tree and propose commit messages
   without executing `git commit`.
@@ -85,8 +85,8 @@ Quality Gate Matrix in `07-agent-workflow.md` §7.1.
 - [ ] Does the change follow the dependency direction:
   controllers → application services → repository interfaces,
   with services also using domain rules?
-- [ ] Are EF Core queries restricted to repository implementations
-  in `Kiwimpact.Infrastructure`?
+- [ ] Are EF Core queries restricted to approved Infrastructure persistence
+  components in `Kiwimpact.Infrastructure`?
 - [ ] Are resource-level authorization decisions enforced in application
   services, not assumed from HTTP middleware?
 - [ ] Is user input validated before reaching services?

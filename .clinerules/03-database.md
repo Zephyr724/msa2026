@@ -8,6 +8,10 @@
   development.
 - Migration files are immutable after they have been applied to any shared
   environment.
+- The `dotnet ef` commands shown in this rule are generic forms, not
+  verified repository commands. After scaffold, discover the exact working
+  directory, `--project`, and `--startup-project` arguments. Record the
+  verified commands in `PROJECT_STATUS.md` before activating them.
 
 ## 3.2 Query Rules
 - **Always** use EF Core LINQ or parameterized raw SQL.

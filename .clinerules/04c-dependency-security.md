@@ -18,6 +18,8 @@ paths:
   - "compose*.yml"
   - "compose*.yaml"
   - ".github/**"
+  - "specs/security/**"
+  - "specs/adr/**"
 ---
 # 04c — Dependency & Supply-Chain Security
 

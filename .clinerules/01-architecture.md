@@ -16,9 +16,15 @@ msa2026/
 │   │   ├── stores/
 │   │   ├── types/
 │   │   └── App.tsx
+│   ├── tests/
+│   ├── cypress/
+│   │   ├── e2e/
+│   │   ├── fixtures/
+│   │   └── support/
 │   ├── public/
 │   ├── package.json
 │   ├── vite.config.ts
+│   ├── cypress.config.ts
 │   └── tsconfig.json
 ├── backend/
 │   ├── src/
@@ -96,8 +102,11 @@ The composition root is `Program.cs` in `Kiwimpact.Api`.
   `AddScoped`, `AddSingleton`, `AddTransient` calls.
 - The composition root is the only place that wires concrete implementations
   to interfaces.
-- Infrastructure may expose registration extension methods invoked from
-  `Program.cs`, but `Program.cs` retains final control.
+- Infrastructure may expose registration extension methods as part of the
+  composition-root boundary delegated from `Program.cs`.
+  `Program.cs` retains final control.
+- These extension methods must not resolve services, call
+  `BuildServiceProvider`, or contain runtime application behavior.
 - Core must not reference `IServiceCollection`, `ServiceProvider`, or any
   other DI abstraction.
 - No library project may call `BuildServiceProvider`.
@@ -132,7 +141,8 @@ The composition root is `Program.cs` in `Kiwimpact.Api`.
 - Timestamps: ISO 8601 UTC
 - Pagination: page-number, default page size 12, maximum page size 50
 - Error responses: Problem Details (`application/problem+json`)
-- Success responses: HTTP 2xx with JSON body
+- Success responses: HTTP 2xx with JSON body where permitted by the status
+  code and contract. `204 No Content` has no body.
 
 ## 1.5 Layering Principle (Strictly Enforced)
 
@@ -219,7 +229,8 @@ Application Service layer:
 
 ## 1.9 API Response Conventions
 
-- Success responses use HTTP 2xx with JSON body
+- Success responses use HTTP 2xx with JSON body where permitted by the status
+  code and contract. `204 No Content` has no body.
 - 201 for resource creation; include `Location` header with the new resource URL
 - 204 for successful deletes (soft or hard, depending on resource policy)
 - 400 for validation errors; 401 for missing/invalid authentication;

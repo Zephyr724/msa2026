@@ -13,6 +13,11 @@ paths:
   - "infra/**"
   - "deploy/**"
   - ".github/**"
+  - "frontend/cypress/**"
+  - "frontend/cypress.config.*"
+  - "specs/security/**"
+  - "specs/architecture/**"
+  - "specs/adr/**"
 ---
 # 04b — Authentication & Authorization
 

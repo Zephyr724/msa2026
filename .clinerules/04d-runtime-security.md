@@ -14,6 +14,12 @@ paths:
   - "infra/**"
   - "deploy/**"
   - ".github/**"
+  - "frontend/tests/**"
+  - "frontend/cypress/**"
+  - "frontend/cypress.config.*"
+  - "specs/security/**"
+  - "specs/architecture/**"
+  - "specs/adr/**"
 ---
 # 04d — Runtime Security
 
@@ -104,6 +110,12 @@ paths:
 - Use request IDs or correlation IDs for request tracing.
 - Log internal stable identifiers only when operationally necessary.
 - Never rely solely on developers remembering to remove sensitive fields.
+
+## Rendered HTML Safety
+
+- Never use `dangerouslySetInnerHTML` with untrusted content.
+- Prefer plain text and normal JSX for user-visible content.
+- Rich HTML requires an approved sanitizer and targeted XSS tests.
 
 ## Error Serialization
 

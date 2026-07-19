@@ -33,6 +33,10 @@ When each control becomes operational, update the status table in
 - **Git commit messages**: English (Conventional Commits, see `06-development-workflow.md`)
 - **API documentation, Scalar specs**: English
 - **Variable names, function names, type/interface names**: English (camelCase/PascalCase per `01-architecture.md`)
+- **Exact AI prompt transcripts and quoted source material**: preserve their
+  original language and wording. English metadata or summaries may be added,
+  but the original prompt must not be translated, rewritten, or silently
+  corrected.
 
 ## Quick Reference: Key Principles
 

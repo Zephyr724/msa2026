@@ -23,7 +23,7 @@ configuration, lockfiles, and tests prove the currently implemented behavior.
 A mismatch must be reported and resolved explicitly.
 
 An explicit current user request that names the artifact, the intended
-change, and its scope counts as approval to modify an ADR, contract, or
+change, and its scope counts as approval to modify an ADR, accepted specification, contract, or
 project rule. Indirect, ambiguous, or accidental conflicts still require
 confirmation before implementation.
 
