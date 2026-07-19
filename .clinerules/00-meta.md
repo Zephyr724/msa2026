@@ -44,7 +44,8 @@ When each control becomes operational, update the status table in
   - Dynamic identifiers (table/column names): strict allowlists only
 
 ### Type Safety
-- Frontend: never use `any` — use `unknown` + type guards
+- Frontend: never use `any` — use `unknown` + type guards. Compatibility and
+  test exceptions follow `08-typescript.md` §8.6.
 - Backend: never suppress nullable reference type warnings without justification
 
 ### Secrets & Logging
@@ -67,7 +68,10 @@ When each control becomes operational, update the status table in
 ### Error Handling
 - Frontend: explicit query mutation/error states, route or component error
   boundaries where appropriate, and controlled user-facing fallback states.
-- Backend: propagate to ASP.NET Core exception middleware (Problem Details)
+- Backend: expected validation, authorization, not-found, and conflict
+  outcomes should use typed application results or controlled domain
+  exceptions. Unexpected exceptions propagate to ASP.NET Core exception
+  middleware (Problem Details).
 
 ### Dependency Security
 - No untriaged critical/high vulnerability may remain

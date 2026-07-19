@@ -112,6 +112,7 @@ The composition root is `Program.cs` in `Kiwimpact.Api`.
   GET    /api/v1/<resource>          # List resources
   POST   /api/v1/<resource>          # Create resource
   GET    /api/v1/<resource>/{id}     # Get single resource
+  PUT    /api/v1/<resource>/{id}     # Update (semantics defined per resource)
   PATCH  /api/v1/<resource>/{id}     # Partial update
   DELETE /api/v1/<resource>/{id}     # Delete resource (soft or hard)
   ```
@@ -120,8 +121,10 @@ The composition root is `Program.cs` in `Kiwimpact.Api`.
   contract on a per-resource basis. Do not mandate `PATCH` for all updates
   unless the API contract explicitly defines the partial-update format
   (JSON Patch, Merge Patch, or update DTO).
-- Collection-level `DELETE` and `PUT` are NOT supported unless explicitly
-  required by a new ADR.
+- Collection-level mutation is NOT supported unless explicitly defined by an
+  accepted API contract.
+- Require an ADR only for project-wide architectural changes, not for
+  individual resource-level API design decisions.
 - API documentation uses Scalar.
 
 ### API Conventions (accepted baseline)
@@ -158,6 +161,15 @@ Controllers ──→ Application Services ──→ Repository Interfaces
   violation; must route through Services.
 - **Forbidden circular dependencies**: Core must not reference Infrastructure
   or Api.
+
+### Reference Directions
+
+- **Api** references Core and Infrastructure.
+- **Core** references no other Kiwimpact projects.
+- **Infrastructure** references Core.
+- **UnitTests** references Core; must not reference Infrastructure or Api.
+- **IntegrationTests** references Api, Core, and Infrastructure (for
+  WebApplicationFactory and test setup).
 
 ## 1.6 Transaction Boundaries
 

@@ -12,10 +12,13 @@
 ## 3.2 Query Rules
 - **Always** use EF Core LINQ or parameterized raw SQL.
 - **Never** concatenate user input into SQL strings — this is a hard rule.
-- Only repository implementations in `Kiwimpact.Infrastructure` may access
+- Only approved Infrastructure persistence components may access `DbContext`
+  directly: repositories, Identity stores, migrations, and approved
+  seed/maintenance components.
+- Controllers and application/domain services MUST NOT import or use
   `DbContext` directly.
-- Controllers, services, and middleware MUST NOT import or use `DbContext`
-  directly.
+- Background services should normally use application or persistence
+  abstractions rather than accessing `DbContext` directly.
 
 ## 3.3 Connection Management
 - EF Core manages connection pooling via Npgsql.
@@ -47,8 +50,9 @@
 - A migration must not be edited after it has been applied to a shared
   environment or relied upon by another branch or developer. Use a
   corrective migration.
-- A local migration that failed before being recorded may be fixed in place
-  during development.
+- A local migration that failed before being recorded as applied may be
+  corrected in place during development only if it has not been shared or
+  relied upon elsewhere.
 - Use `dotnet ef migrations remove` to remove the last unapplied migration
   during local development only.
 

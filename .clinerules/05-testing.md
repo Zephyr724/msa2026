@@ -50,7 +50,8 @@ All npm commands run from `frontend/`.
 - Integration tests must be isolated. The accepted testing specification will
   choose database-per-suite, database reset, schema isolation, or another
   verified strategy based on runtime cost and reliability.
-- EF Core migrations run automatically as part of test setup.
+- EF Core migrations run automatically as part of test setup (target;
+  activate and verify after the test infrastructure is in place).
 - Minimum seed data is inserted per test; avoid sharing mutable state.
 
 ## 5.4 Frontend Test Principles
@@ -75,9 +76,13 @@ All npm commands run from `frontend/`.
 - Authenticated but unauthorized returns 403.
 
 ### Authorization principles
+
 - Authorization tests apply to both mutations AND reads.
-- Services should not accept nullable actor for authorization shortcuts;
-  unauthenticated requests should be rejected at the middleware boundary.
+- Protected operations must not accept a nullable actor for authorization
+  shortcuts; unauthenticated requests for protected endpoints should be
+  rejected at the middleware boundary.
+- Anonymous public operations are permitted where the accepted API contract
+  allows them.
 
 ## 5.6 Coverage Requirements
 - Cover critical behavior, changed behavior, security boundaries, and meaningful
@@ -104,7 +109,7 @@ All npm commands run from `frontend/`.
 - share card
 - Member, Organizer, Admin journeys
 
-## 5.7 Test File Organization
+## 5.7 Test File Organization (target structure)
 
 ```
 backend/tests/
@@ -124,6 +129,13 @@ frontend/cypress/
 ├── fixtures/              # Test data
 └── support/               # Cypress support files
 ```
+
+### E2E Test Data and Isolation
+
+- E2E tests that mutate data must use isolated test accounts and test data,
+  never production accounts or shared marker accounts.
+- Do not run destructive Cypress scenarios against production or marking
+  data without explicit approval and verified isolation/cleanup procedures.
 
 ## 5.8 When Tests Fail
 1. Identify root cause: implementation bug, incorrect test assumption, stale fixture, or environment issue

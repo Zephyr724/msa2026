@@ -3,6 +3,10 @@ paths:
   - "backend/src/**"
   - "backend/tests/**"
   - "frontend/src/**"
+  - "frontend/.env.local"
+  - "frontend/vite.config.ts"
+  - "docker-compose*.yml"
+  - ".github/**"
 ---
 # 04d — Runtime Security
 
@@ -49,6 +53,11 @@ paths:
   restrictions and Maps JavaScript API restrictions.
 - Store it in `frontend/.env.local`; never commit the real value.
 - The Google OAuth client secret remains backend-only and separate.
+- Local development referrers:
+  - `http://localhost:5173/*`
+  - `http://127.0.0.1:5173/*`
+- Restrict the development key to Maps JavaScript API.
+- Production origins must be separately reviewed and never committed.
 
 ## Outbound HTTP & SSRF
 
@@ -82,6 +91,7 @@ paths:
   at minimum: authorization headers, cookies, set-cookie headers, password
   fields, tokens, and secrets.
 - Do not log request or response bodies by default.
+- Do not log sensitive query strings by default.
 - Use request IDs or correlation IDs for request tracing.
 - Log internal stable identifiers only when operationally necessary.
 - Never rely solely on developers remembering to remove sensitive fields.

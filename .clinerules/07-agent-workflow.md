@@ -17,12 +17,16 @@ successfully at least once, and is marked active in `PROJECT_STATUS.md`.
 | Markdown/doc only | Document review, broken-reference search, Git diff |
 | Frontend source | Targeted frontend tests + verified frontend scripts |
 | Backend source | Targeted backend tests + verified dotnet commands |
-| Backend API contract only | Backend unit/integration/build gates |
-| Full-stack contract change | Backend gates + affected frontend gates |
+| API specification/documentation only | Backend unit/integration/build gates |
+| Backend API implementation | Backend unit/integration/build gates |
+| Full-stack API implementation | Backend gates + affected frontend gates |
 | Database/migration | Migration application test + PostgreSQL integration tests |
 | Dependency/lockfile | Verified restore/install + vulnerability/license review + affected build/tests |
 | CI/config | Syntax validation + affected command dry run |
 | Release candidate | All configured gates, including Cypress |
+
+Cypress must be configured and passing before the project is described as
+submission-ready.
 
 - When a change matches more than one category, apply the union of all
   applicable gates. Do not select only the least expensive category.

@@ -6,6 +6,8 @@ paths:
   - "frontend/tests/**/*.tsx"
   - "frontend/cypress/**/*.ts"
   - "frontend/cypress/**/*.tsx"
+  - "frontend/*.ts"
+  - "frontend/*.tsx"
 ---
 # 08 — TypeScript Coding Rules
 

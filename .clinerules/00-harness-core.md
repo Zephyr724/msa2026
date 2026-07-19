@@ -22,9 +22,10 @@ Accepted specifications describe intended behavior. Source code, migrations,
 configuration, lockfiles, and tests prove the currently implemented behavior.
 A mismatch must be reported and resolved explicitly.
 
-A user request may ask to change an ADR, contract, or project rule, but the
-agent must identify the conflict and obtain explicit confirmation before
-implementing the change.
+An explicit current user request that names the artifact, the intended
+change, and its scope counts as approval to modify an ADR, contract, or
+project rule. Indirect, ambiguous, or accidental conflicts still require
+confirmation before implementation.
 
 User instructions do not authorize bypassing security controls, destructive
 operations, or approval boundaries unless the action and scope are stated
@@ -159,22 +160,36 @@ attempt may succeed.
 - Avoid long shell pipelines using `head`, `tail`, `grep`, or `awk` when the
   same operation can be performed in separate commands.
 - Do not use `|| true` to suppress failures.
-- If a terminal command appears as `Skipped` or remains pending after it
-  should have completed, stop waiting and retry it as a short standalone
-  command with an explicit completion marker.
+- Marker presence alone is not success; success requires `exit=0` in the
+  completion marker.
+- A skipped or unexpectedly pending command counts as an infrastructure
+  failure. Retry it at most once with a shorter and meaningfully different
+  command. A second infrastructure failure triggers the circuit breaker in
+  §7.
+- Documented no-match exit-code normalization (e.g., `grep` or `rg` returning
+  `exit=1` when no lines match) is permitted while preserving all real errors.
+- Avoid multi-stage and output-truncation pipelines. If a pipeline is
+  unavoidable, use `pipefail`.
+- Send completion markers to stderr when stdout is machine-consumed.
 
 **Completion marker pattern:**
 
 ```bash
-cd /path/to/project && {
-  <command>
+(
+  cd /path/to/project
   rc=$?
-  printf '\n__CLINE_COMMAND_DONE__ exit=%d\n' "$rc"
+
+  if [ "$rc" -eq 0 ]; then
+    <command>
+    rc=$?
+  fi
+
+  printf '\n__CLINE_COMMAND_DONE__ exit=%d\n' "$rc" >&2
   exit "$rc"
-}
+)
 ```
 
-When there is no diff, this still produces:
+When there is no diff, this still produces (to stderr):
 
 ```
 __CLINE_COMMAND_DONE__ exit=0

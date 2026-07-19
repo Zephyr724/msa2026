@@ -13,6 +13,7 @@ paths:
   - "backend/**/Dockerfile"
   - "frontend/**/Dockerfile"
   - "docker-compose*.yml"
+  - "docker-compose*.yaml"
   - ".github/**"
 ---
 # 04c — Dependency & Supply-Chain Security
@@ -63,9 +64,11 @@ paths:
 ## Supply-Chain Hygiene
 
 - `package-lock.json` (frontend) is required for reproducible installations.
-- CI uses `npm ci` (frontend).
+- CI uses `npm ci` (frontend) once the CI workflow is active and verified.
 - Lockfile changes must be reviewed alongside the manifest change that caused
   them.
 - Prefer dependencies with a history of security responsiveness.
 - Periodically review transitive dependencies for abandoned or compromised
   packages.
+- The exact NuGet vulnerability-command syntax must be verified against the
+  installed .NET SDK before the command is activated as a gate.

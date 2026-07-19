@@ -49,6 +49,8 @@ State ownership rules:
 - SignalR
 - Scalar
 
+### Testing
+
 | Type | Tool |
 | ---- | ---- |
 | Frontend unit/integration | Vitest + React Testing Library |
@@ -63,13 +65,15 @@ by `package.json`, `package-lock.json`, project files (`.csproj`), and
 resolved package metadata. Do not invent or manually preselect versions
 without checking compatibility. A dependency major upgrade requires an ADR
 only when it changes architecture, runtime behavior, public contracts, or
-persistence format. Other major upgrades require a reviewed migration PR.
+persistence format. Other major upgrades require a reviewed dependency-upgrade PR with
+  migration notes where applicable.
 
 ## 2.4 Package Managers
 - **Frontend**: npm (with `package-lock.json` committed after scaffold)
 - **Backend**: NuGet
-- Exact dependency resolution will be proven by committed lockfiles once
-  configured.
+- Frontend lockfile (`package-lock.json`) proves resolved dependency versions.
+- Backend project files (`.csproj`) and restored package metadata prove
+  resolved dependency versions. A NuGet lockfile is not currently mandated.
 
 ## 2.5 Local Infrastructure (accepted target)
 

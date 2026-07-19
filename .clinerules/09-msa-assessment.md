@@ -115,7 +115,9 @@ behavior must support the claim.
 
 ## 5. WebSockets Evidence
 
-Kiwimpact implements its WebSockets requirement through ASP.NET Core SignalR.
+Kiwimpact targets its WebSockets requirement through ASP.NET Core SignalR.
+This is a project decision; implementation, deployment verification, and
+evidence are pending until the feature is built, deployed, and tested.
 
 To claim this requirement:
 
@@ -140,6 +142,9 @@ To claim the Cypress advanced requirement:
   integration where appropriate.
 - The final configured Cypress suite must pass before the project is described
   as submission-ready.
+- Cypress tests that exercise the deployed application must use isolated test
+  accounts and test data. They must never target production accounts, shared
+  marker accounts, or live production data.
 - Test commands and observed results must be recorded in repository or
   submission evidence.
 

@@ -92,7 +92,7 @@ Quality Gate Matrix in `07-agent-workflow.md` §7.1.
   application/domain validation are independently authoritative.)
 - [ ] Are public APIs documented?
 - [ ] Are symbols exported only when another module actually needs them?
-- [ ] Do tests cover happy path and error cases?
+- [ ] Do tests cover critical behavior and meaningful failure cases?
 - [ ] Are any dangerous patterns introduced into runtime code?
 - [ ] Did all applicable local or CI gates pass, and were their results
   observed?
@@ -103,7 +103,8 @@ Quality Gate Matrix in `07-agent-workflow.md` §7.1.
   specification or ADR.
 - Do not create tags, releases, or changelog requirements unless explicitly
   adopted.
-- Frontend and backend deployment must remain publicly accessible for marking.
+- Frontend and backend deployment must remain publicly accessible for marking
+  until Phase 2 results are released.
 - Before submission, verify public access in a private/incognito browser.
 - Do not commit after the confirmed MSA submission deadline.
 
