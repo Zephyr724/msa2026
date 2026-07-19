@@ -5,14 +5,21 @@
 | Type | Scope | Database |
 | ---- | ----- | -------- |
 | Frontend Unit (Vitest) | Pure React components, hooks, utilities, Zustand stores | None (no I/O) |
-| Frontend Integration (Vitest + RTL) | Component rendering, user interaction, form validation | Mocked API (MSW or similar) |
+| Frontend Integration (Vitest + RTL) | Component rendering, user interaction, form validation | No real I/O; API calls use an approved test boundary |
 | Backend Unit (xUnit v3) | Pure domain logic, business rules, validation | None |
 | Backend Integration (xUnit + Testcontainers) | Repository queries, service orchestration, auth, API endpoints | Real PostgreSQL (Testcontainers) |
 | E2E (Cypress) | Full user journeys across frontend + backend | Real PostgreSQL (Testcontainers or Docker Compose) |
 
-## 5.2 Test Commands
+Kiwimpact tests must not use SQLite. Backend integration tests use
+PostgreSQL via Testcontainers.
 
-### Frontend
+## 5.2 Test Commands (planned — verify after scaffold)
+
+Commands below are targets. A command is active only after it exists in
+repository configuration, has run successfully, and is recorded in
+`PROJECT_STATUS.md`.
+
+### Frontend (planned)
 
 ```json
 {
@@ -24,37 +31,37 @@
 }
 ```
 
-### Backend
+### Backend (planned — filters depend on test traits)
 
 ```bash
-dotnet test                                    # Run all tests
-dotnet test --filter "Category=Unit"           # Unit tests only
-dotnet test --filter "Category=Integration"    # Integration tests only
-dotnet test /p:CollectCoverage=true            # With coverage
+dotnet test
 ```
 
-### E2E
+### E2E (planned — run through committed npm scripts after Cypress config exists)
 
 ```bash
-npx cypress run       # Headless
-npx cypress open      # Interactive
+npm run test:e2e
 ```
 
 ## 5.3 Database in Tests (Backend)
 
 - Integration tests use Testcontainers to spin up a real PostgreSQL instance.
-- Each test class or collection gets a fresh database.
+- Integration tests must be isolated. The accepted testing specification will
+  choose database-per-suite, database reset, schema isolation, or another
+  verified strategy based on runtime cost and reliability.
 - EF Core migrations run automatically as part of test setup.
 - Minimum seed data is inserted per test; avoid sharing mutable state.
-- The development `msa2026.db` (SQLite) file is NOT used by any Kiwimpact test.
 
 ## 5.4 Frontend Test Principles
 
 - Components should be tested from the user's perspective (React Testing Library).
-- API calls are mocked at the network level (MSW) or via TanStack Query test utilities.
+- Frontend API test isolation must use an explicitly approved test boundary.
+  Do not add MSW or another mocking dependency without approval.
 - Zustand stores are tested as pure functions where possible.
 - Form validation is tested with `user-event` and Zod schemas.
-- Accessibility checks use `jest-dom` matchers.
+- jest-dom provides DOM assertions. Automated accessibility scanning requires
+  a separately approved and configured tool; accessibility must also be
+  reviewed through semantic queries and keyboard-focused tests.
 
 ## 5.5 Authorization Test Requirements
 

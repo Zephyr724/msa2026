@@ -1,6 +1,9 @@
 # 01 — Architecture Constraints
 
-## 1.1 Directory Structure
+## 1.1 Target Directory Structure
+
+This is the accepted target structure. A listed path must not be treated as
+implemented until it exists in the repository.
 
 ```
 msa2026/
@@ -26,7 +29,7 @@ msa2026/
 │   └── tests/
 │       ├── Kiwimpact.UnitTests/
 │       └── Kiwimpact.IntegrationTests/
-├── specs/                  # Current Kiwimpact specifications (the single source of truth)
+├── specs/                  # Approved intended product and architecture specifications
 │   ├── 00-project-profile.md
 │   ├── product/
 │   ├── ux/
@@ -43,6 +46,10 @@ msa2026/
 ├── PROJECT_STATUS.md
 └── README.md
 ```
+
+`/specs` contains the approved intended product and architecture
+specifications. Source code, migrations, configuration, lockfiles, and tests
+prove the current implemented state.
 
 ## 1.2 Clean Architecture Lite / Modular Monolith
 
@@ -90,6 +97,8 @@ The composition root is `Program.cs` in `Kiwimpact.Api`.
   `AddScoped`, `AddSingleton`, `AddTransient` calls.
 - The composition root is the only place that wires concrete implementations
   to interfaces.
+- Infrastructure and Core projects may provide registration extension methods
+  invoked from `Program.cs`, but `Program.cs` retains final control.
 - No project outside of `Kiwimpact.Api` may reference the DI container
   directly.
 
@@ -174,8 +183,9 @@ Application Service layer:
 
 ## 1.8 Error Handling
 
-- Controllers should throw; ASP.NET Core exception middleware handles
-  the response.
+- Unexpected exceptions may propagate to centralized exception handling.
+  Expected validation, authorization, not-found, and conflict outcomes should
+  use typed application results or controlled domain exceptions.
 - Use Problem Details (`ProblemDetails`) for consistent error responses.
 - The exception middleware must construct the client response from
   allowlisted error shapes. It must never serialize raw exceptions,

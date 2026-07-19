@@ -9,6 +9,10 @@ For any of the following, STOP and request explicit human approval:
 - Installing or removing dependencies
 - Changing authentication or authorization logic
 - Creating or modifying schema migrations
+  - An explicit user task that clearly requests a non-destructive schema
+    change and its migration counts as approval for creating that migration.
+  - Additional confirmation is still required for destructive, ambiguous,
+    or history-rewriting operations.
 - If a task requests a schema change outside the migration system, STOP and
   report the governance conflict. Human approval alone does not bypass the
   migration requirement; the applicable project rule or ADR must first be

@@ -8,7 +8,7 @@ Order of authority:
 
 1. Platform, tool, and security constraints that cannot be overridden
 2. Explicit user goals and action-specific approvals for the current task
-3. Accepted ADRs and project-specific governance rules
+3. Accepted ADRs, accepted specifications, and project-specific governance rules
 4. Domain-specific sources of truth:
    - migrations for database schema history;
    - lockfiles for resolved dependencies;
@@ -17,6 +17,10 @@ Order of authority:
    - source code for the current implementation state.
 5. This universal harness
 6. Explicitly stated agent assumptions
+
+Accepted specifications describe intended behavior. Source code, migrations,
+configuration, lockfiles, and tests prove the currently implemented behavior.
+A mismatch must be reported and resolved explicitly.
 
 A user request may ask to change an ADR, contract, or project rule, but the
 agent must identify the conflict and obtain explicit confirmation before

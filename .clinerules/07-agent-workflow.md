@@ -8,19 +8,21 @@
 
 ## 7.1 Quality Gate Matrix
 
-Per `00-harness-core.md` §9, apply checks proportionally. For this project:
+Per `00-harness-core.md` §9, apply checks proportionally. A command is active
+only after it exists in repository configuration, has been executed
+successfully at least once, and is marked active in `PROJECT_STATUS.md`.
 
-| Change Type          | Required Gates                                                     |
-| -------------------- | ----------------------------------------------------------------- |
-| Markdown/doc only    | Document review, Git diff                                          |
-| Frontend source      | Targeted test, `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm run build` |
-| Backend source       | Targeted test, `dotnet format --verify-no-changes`, `dotnet build`, `dotnet test` |
-| Route/service        | Targeted test, API integration, `npm run typecheck`, `npm run lint`, `npm run build`, `dotnet build`, `dotnet test` |
-| Database/migration   | Migration test, repository integration, `dotnet build`, `dotnet test` |
-| Dependency/lockfile  | Frontend: `npm ci`, audit triage; Backend: `dotnet restore`; full test, `npm run build`, `dotnet build` |
-| CI/config            | Config syntax validation, dry run of affected commands             |
-| Architecture/import boundary | Targeted tests, `npm run typecheck`, `npm run lint`, `npm run build`, `dotnet build`, circular-dependency check |
-| Release candidate    | All gates including E2E and coverage                               |
+| Change Type | Required Gates |
+| --- | --- |
+| Markdown/doc only | Document review, broken-reference search, Git diff |
+| Frontend source | Targeted frontend tests + verified frontend scripts |
+| Backend source | Targeted backend tests + verified dotnet commands |
+| Backend API contract only | Backend unit/integration/build gates |
+| Full-stack contract change | Backend gates + affected frontend gates |
+| Database/migration | Migration application test + PostgreSQL integration tests |
+| Dependency/lockfile | Verified restore/install + vulnerability/license review + affected build/tests |
+| CI/config | Syntax validation + affected command dry run |
+| Release candidate | All configured gates, including Cypress |
 
 - When a change matches more than one category, apply the union of all
   applicable gates. Do not select only the least expensive category.

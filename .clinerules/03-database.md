@@ -22,6 +22,9 @@
 - The connection string is loaded from configuration (environment variables,
   .NET User Secrets, or `appsettings.Development.json`).
 - Never hard-code connection strings in source.
+- Actual credentials must use environment variables or .NET User Secrets.
+  Committed `appsettings` files may contain only non-secret defaults or
+  placeholders.
 - Use `Pacific/Auckland` for display and business-week calculations.
 - Timestamps are stored as UTC using PostgreSQL `timestamp with time zone`.
 
@@ -42,8 +45,9 @@
 - Migrations are applied via `dotnet ef database update` or programmatic
   migration at startup.
 - Applied migrations are stored in the `__EFMigrationsHistory` table.
-- An applied migration file is immutable. Do not modify a migration that has
-  been committed and pushed.
+- A migration must not be edited after it has been applied to a shared
+  environment or relied upon by another branch or developer. Use a
+  corrective migration.
 - A local migration that failed before being recorded may be fixed in place
   during development.
 - Use `dotnet ef migrations remove` to remove the last unapplied migration
@@ -56,6 +60,9 @@
   separate seed classes.
 - No destructive migration (DROP COLUMN, DROP TABLE for existing data)
   without an explicit review.
+- Tests and local development may apply migrations automatically when
+  explicitly configured. The production migration procedure remains
+  undecided until the deployment specification or ADR is accepted.
 - Test migrations run against a temporary PostgreSQL database via
   Testcontainers.
 

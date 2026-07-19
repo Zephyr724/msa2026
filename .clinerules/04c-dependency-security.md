@@ -2,8 +2,7 @@
 paths:
   - "frontend/package.json"
   - "frontend/package-lock.json"
-  - "backend/src/**/*.csproj"
-  - "backend/src/**/packages.lock.json"
+  - "backend/**/*.csproj"
   - ".github/**"
 ---
 # 04c — Dependency & Supply-Chain Security
@@ -50,9 +49,8 @@ paths:
 
 ## Supply-Chain Hygiene
 
-- `package-lock.json` (frontend) and `packages.lock.json` (backend) are
-  required for reproducible installations.
-- CI uses `npm ci` (frontend) and `dotnet restore --locked-mode` (backend).
+- `package-lock.json` (frontend) is required for reproducible installations.
+- CI uses `npm ci` (frontend).
 - Lockfile changes must be reviewed alongside the manifest change that caused
   them.
 - Prefer dependencies with a history of security responsiveness.

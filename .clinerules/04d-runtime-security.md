@@ -8,10 +8,11 @@ paths:
 
 ## Reverse Proxy Trust
 
-- The reverse proxy (Vite dev server, or production reverse proxy) must
-  be explicitly trusted.
-- ASP.NET Core's forwarded headers middleware must match the actual
-  deployment topology.
+- Do not enable or trust forwarded client headers merely because the
+  frontend uses a Vite development proxy.
+- ForwardedHeaders configuration is enabled only for a known production
+  proxy topology, with explicit KnownProxies or KnownNetworks
+  configuration and tests.
 - Rate limiting and audit logging may use forwarded client IPs only after
   proxy trust is configured and tested.
 

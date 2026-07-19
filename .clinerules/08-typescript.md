@@ -9,7 +9,8 @@ paths:
 
 ## 8.1 Module System
 - Vite handles module resolution; follow the Vite defaults.
-- Use `.ts` and `.tsx` extensions in imports.
+- Omit `.ts` and `.tsx` extensions in normal internal imports unless the
+  verified TypeScript configuration explicitly requires them.
 
 ## 8.2 Type Safety
 - Use `unknown` for untrusted data and narrow it before use.

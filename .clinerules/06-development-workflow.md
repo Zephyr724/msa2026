@@ -18,8 +18,8 @@
 - Format: `type(scope): description`
 - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`
 - Keep descriptions concise; use body for rationale when needed
-- Example: `feat(users): add createUser service function`
-- Example: `fix(tasks): handle null dueDate in updateTask`
+- Example: `feat(quests): add organizer quest creation`
+- Example: `fix(claims): prevent duplicate XP awards`
 
 ## 6.3 Pull Request Requirements
 
@@ -43,21 +43,29 @@
 
 ## 6.4 Code Quality Gates
 
-The following gates are available project quality controls. The required
-subset for a task is selected by the Quality Gate Matrix in
-`07-agent-workflow.md` §7.1.
+The following gates are planned project quality controls. A gate is active
+only after the corresponding command or tool exists in repository
+configuration, has been executed successfully, and is marked active in
+`PROJECT_STATUS.md`. The required subset for a task is selected by the
+Quality Gate Matrix in `07-agent-workflow.md` §7.1.
 
+### Frontend gates (active after scaffold and verification)
 - `npm run format:check` passes (Prettier)
 - `npm run lint` passes (ESLint, no errors, no warnings)
 - `npm run typecheck` passes (`tsc --noEmit`)
 - `npm test` passes (unit + integration)
 - `npm run build` passes for production source changes and release candidates
+
+### Backend gates (active after scaffold and verification)
+- `dotnet format --verify-no-changes` passes
+- `dotnet build` passes
+- `dotnet test` passes
+- EF Core migrations are up-to-date and verified
+
+### Cross-cutting gates (active after configuration)
 - No untriaged critical/high vulnerability may remain
 - Reachable critical/high CVEs in production dependencies block merge
 - Approved temporary exceptions must comply with `04c-dependency-security.md`
-- Circular dependency check passes (`madge`)
-- `npm run db:baseline` regenerates `init_db.sql`; CI regenerates and fails if
-  Git diff is non-empty (see `03-database.md`)
 
 ## 6.5 Agent Workflow Guidelines
 - Start each task by reading relevant context files before modifying
@@ -73,12 +81,15 @@ subset for a task is selected by the Quality Gate Matrix in
 
 ## 6.6 Code Review Checklist
 - [ ] Does the change follow the dependency direction:
-  routes → services → repository interfaces,
-  with services also using authorization policies?
-- [ ] Are SQL statements restricted to repository implementations?
-- [ ] Are resource-level authorization decisions enforced by policies
-  called from services?
-- [ ] Is all user input validated with Zod before reaching services?
+  controllers → application services → repository interfaces,
+  with services also using domain rules?
+- [ ] Are EF Core queries restricted to repository implementations
+  in `Kiwimpact.Infrastructure`?
+- [ ] Are resource-level authorization decisions enforced in application
+  services, not assumed from HTTP middleware?
+- [ ] Is user input validated before reaching services?
+  (Frontend: Zod forms improve UX; backend: DataAnnotations and
+  application/domain validation are independently authoritative.)
 - [ ] Are public APIs documented?
 - [ ] Are symbols exported only when another module actually needs them?
 - [ ] Do tests cover happy path and error cases?

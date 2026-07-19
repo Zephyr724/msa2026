@@ -20,12 +20,16 @@ Supported methods:
 
 - ASP.NET Core Identity manages user accounts, password hashing, and
   external login providers.
-- Password hashing uses Identity's default implementation (PBKDF2 with
-  HMAC-SHA256, 100,000 iterations for .NET 10+).
+- Use ASP.NET Core Identity's supported password hasher and secure
+  framework defaults. Do not replace it with custom hashing. Any explicit
+  compatibility or iteration configuration must be documented and tested.
 - Identity's built-in account lockout is enabled.
 - Email confirmation is required before normal login.
-- Confirmation token lifetime: ~24 hours.
-- Reset token lifetime: ~30–60 minutes.
+- Confirmation and reset token lifetimes must be recorded in the accepted
+  authentication specification before implementation. Current planning
+  targets:
+  - email confirmation: ~24 hours;
+  - password reset: ~60 minutes.
 
 ### Cookie Configuration
 

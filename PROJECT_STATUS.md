@@ -1,34 +1,17 @@
-# Project Status — msa2026
+# Project Status
 
-> This file is a point-in-time status snapshot. Code, migrations, tests,
-> and GitHub Issues are the authoritative sources of project state.
-> Update this file at the end of each completed task batch.
+Last reviewed: 2026-07-19
 
-## Current State (2026-07-17)
-
-### What Exists
-- `init_db.sql` — baseline schema for users, projects, tasks (3 tables)
-- `msa2026.db` — SQLite database with seed data (2 users, 2 projects, 3 tasks)
-- `docs/` — architecture ADRs, operations runbooks, security docs
-- `.clinerules/` — agent steering rules
-
-### What's Next (Priority Order)
-1. Initialize Node.js + TypeScript project (`package.json`, `tsconfig.json`, `tsconfig.build.json`)
-2. Set up directory structure per `01-architecture.md`
-3. Implement database connection layer with `better-sqlite3`
-4. Implement User CRUD (service + routes + tests)
-5. Implement Project CRUD (service + routes + tests)
-6. Implement Task CRUD (service + routes + tests)
-7. Add input validation (Zod schemas)
-8. Add structured logging (pino)
-9. Configure Vitest and write initial test suite
-10. Set up CI/CD pipeline (`.github/workflows`)
-
-## Enforcement Status
-
-| Control              | Status      | Notes |
-| -------------------- | ----------- | ----- |
-| Command blocking     | Not implemented | Relies on user approval for destructive operations |
-| CI quality gates     | Not implemented | Must run locally: `typecheck`, `lint`, `test`, `audit` |
-| Branch protection    | Not implemented | User must manually prevent direct pushes to `main` |
-| Secret scanning      | Not implemented | Future: integrate gitleaks or similar |
+| Control or component | Status | Evidence / notes |
+| --- | --- | --- |
+| Planning baseline | Accepted | `specs/Kiwimpact_Final_Planning_Baseline_v1.0.md` |
+| Project profile | Present | `specs/00-project-profile.md` |
+| Accepted ADRs | Not created | Seven initial ADRs remain pending |
+| Frontend scaffold | Not implemented | No verified `package.json` or commands |
+| Backend scaffold | Not implemented | No verified `.sln`/`.csproj` files |
+| PostgreSQL local infrastructure | Not implemented | `docker-compose.yml` not verified |
+| Test commands | Not verified | Activate only after scaffold |
+| GitHub Actions | Not active | Add after real commands exist |
+| Branch protection | Not active | Manual control required |
+| Cline hooks | Not implemented | Rules are advisory only |
+| Deployment | Not configured | Deployment decision pending |

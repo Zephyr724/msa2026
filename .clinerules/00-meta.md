@@ -23,7 +23,7 @@ When each control becomes operational, update the status table in
 - **Package Managers**: npm (frontend), NuGet (backend)
 - **Testing**: Vitest + React Testing Library (frontend), xUnit v3 + Testcontainers (backend), Cypress (E2E)
 - **Logging**: ASP.NET Core logging (structured)
-- **Validation**: Zod (frontend), DataAnnotations + FluentValidation (backend)
+- **Validation**: Zod (frontend), DataAnnotations (backend)
 - **Runtimes**: Node.js 24 LTS (frontend), .NET 10+ (backend)
 
 ## Language Policy
