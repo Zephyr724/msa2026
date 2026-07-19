@@ -5,9 +5,13 @@ paths:
   - "frontend/src/**"
   - "frontend/tests/**"
   - "frontend/.env.example"
-  - "frontend/.env.local"
-  - "frontend/vite.config.ts"
+  - "frontend/vite.config.*"
   - "docker-compose*.yml"
+  - "docker-compose*.yaml"
+  - "compose*.yml"
+  - "compose*.yaml"
+  - "infra/**"
+  - "deploy/**"
   - ".github/**"
 ---
 # 04b — Authentication & Authorization

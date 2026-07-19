@@ -12,8 +12,11 @@ paths:
   - "Dockerfile"
   - "backend/**/Dockerfile"
   - "frontend/**/Dockerfile"
+  - "**/Dockerfile.*"
   - "docker-compose*.yml"
   - "docker-compose*.yaml"
+  - "compose*.yml"
+  - "compose*.yaml"
   - ".github/**"
 ---
 # 04c — Dependency & Supply-Chain Security

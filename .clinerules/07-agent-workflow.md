@@ -17,9 +17,9 @@ successfully at least once, and is marked active in `PROJECT_STATUS.md`.
 | Markdown/doc only | Document review, broken-reference search, Git diff |
 | Frontend source | Targeted frontend tests + verified frontend scripts |
 | Backend source | Targeted backend tests + verified dotnet commands |
-| API specification/documentation only | Backend unit/integration/build gates |
-| Backend API implementation | Backend unit/integration/build gates |
-| Full-stack API implementation | Backend gates + affected frontend gates |
+| API specification/documentation only | Document review, contract consistency review, broken-reference search, Git diff |
+| Backend API implementation | Targeted API integration tests + verified backend gates |
+| Full-stack API implementation | Backend API gates + affected frontend gates |
 | Database/migration | Migration application test + PostgreSQL integration tests |
 | Dependency/lockfile | Verified restore/install + vulnerability/license review + affected build/tests |
 | CI/config | Syntax validation + affected command dry run |
@@ -38,10 +38,11 @@ submission-ready.
 ## 7.2 Error Recovery
 
 - If a test fails after a change, identify the root cause:
-  1. Implementation bug → fix the source code
+  1. Implementation bug introduced by the current change → fix the source code
   2. Incorrect test assumption → verify contract before modifying test
   3. Stale fixture → update fixture, not the production code
-  4. Environment issue (port conflict, stale DB) → perform only
+  4. Unrelated pre-existing failure → report it without silently expanding scope
+  5. Environment issue (port conflict, stale DB) → perform only
      non-destructive cleanup within the approved task scope. Database
      reset, container-volume deletion, process termination outside the
      task, or destructive cleanup requires approval.
@@ -54,8 +55,9 @@ submission-ready.
 - If a migration fails:
   - Never modify a migration that has been successfully applied in any shared
     environment or relied upon by another branch or developer.
-  - A local migration that failed before being recorded as applied may be fixed
-    in place during development.
+  - A local migration that failed before being recorded as applied may be
+    corrected in place during development only if it has not been shared or
+    relied upon by another branch or developer.
   - If the failed migration was already applied or shared, create a corrective
     migration instead.
 

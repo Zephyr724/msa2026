@@ -51,7 +51,8 @@ All npm commands run from `frontend/`.
   choose database-per-suite, database reset, schema isolation, or another
   verified strategy based on runtime cost and reliability.
 - EF Core migrations run automatically as part of test setup (target;
-  activate and verify after the test infrastructure is in place).
+  activate and verify after the test infrastructure is in place; not yet
+  implemented).
 - Minimum seed data is inserted per test; avoid sharing mutable state.
 
 ## 5.4 Frontend Test Principles

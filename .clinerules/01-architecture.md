@@ -112,8 +112,7 @@ The composition root is `Program.cs` in `Kiwimpact.Api`.
   GET    /api/v1/<resource>          # List resources
   POST   /api/v1/<resource>          # Create resource
   GET    /api/v1/<resource>/{id}     # Get single resource
-  PUT    /api/v1/<resource>/{id}     # Update (semantics defined per resource)
-  PATCH  /api/v1/<resource>/{id}     # Partial update
+  PUT or PATCH /api/v1/<resource>/{id}  # Method and semantics defined by the accepted API contract
   DELETE /api/v1/<resource>/{id}     # Delete resource (soft or hard)
   ```
 - Controllers should be thin: parameter mapping and HTTP response only.

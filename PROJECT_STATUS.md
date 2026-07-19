@@ -15,3 +15,7 @@ Last reviewed: 2026-07-19
 | Branch protection | Not active | Manual control required |
 | Cline hooks | Not implemented | Rules are advisory only |
 | Deployment | Not configured | Deployment decision pending |
+| Legacy root artifacts | Moved | `init_db.sql` and `msa2026.db` moved to `docs/archive/legacy-task-api/` |
+| Root README | Present | Minimal Kiwimpact README with planning status created |
+| `.gitignore` | Present | Covers secrets, dependencies, build outputs, databases, logs, OS files |
+| `.clineignore` | Present | Covers secrets, dependencies, build/test outputs, archived docs, databases, logs, OS files |

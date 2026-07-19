@@ -74,6 +74,8 @@ Quality Gate Matrix in `07-agent-workflow.md` §7.1.
 - Run the applicable targeted checks after each coherent source-code change
   set, according to the Quality Gate Matrix in `07-agent-workflow.md` §7.1.
   Run full applicable gates once before completion.
+- Fix implementation and test failures introduced by the current task.
+- Report unrelated or pre-existing failures without silently expanding scope.
 - When tests fail, first identify the root cause: implementation bug, incorrect test assumption, stale fixture, or environment issue. Fix the source code when the implementation is wrong. Only modify test assertions when the contract has demonstrably changed, and explain why in the task summary.
 - When the user has explicitly approved committing, group changes into logical
   commits. Otherwise, prepare the working tree and propose commit messages

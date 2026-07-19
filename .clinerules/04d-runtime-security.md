@@ -3,9 +3,16 @@ paths:
   - "backend/src/**"
   - "backend/tests/**"
   - "frontend/src/**"
-  - "frontend/.env.local"
-  - "frontend/vite.config.ts"
+  - "frontend/.env.example"
+  - "frontend/vite.config.*"
+  - "**/Dockerfile"
+  - "**/Dockerfile.*"
   - "docker-compose*.yml"
+  - "docker-compose*.yaml"
+  - "compose*.yml"
+  - "compose*.yaml"
+  - "infra/**"
+  - "deploy/**"
   - ".github/**"
 ---
 # 04d — Runtime Security
@@ -57,7 +64,9 @@ paths:
   - `http://localhost:5173/*`
   - `http://127.0.0.1:5173/*`
 - Restrict the development key to Maps JavaScript API.
-- Production origins must be separately reviewed and never committed.
+- The real Maps API key must never be committed.
+- Production referrer allowlists require explicit review.
+- Non-secret production origins and restriction configuration may be committed.
 
 ## Outbound HTTP & SSRF
 
