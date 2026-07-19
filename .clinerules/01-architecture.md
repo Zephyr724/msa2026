@@ -84,10 +84,15 @@ const createApp = (deps: AppDependencies): Express => {
 - The database connection may be a single long-lived connection for the
   application lifetime, but it must be wired through the composition root,
   not imported as a module-level global.
-- Only the composition root and repository implementations may receive the
-  raw database connection. Routes and middleware MUST NOT receive or import
-  the raw database.
+- Raw database access is restricted to the infrastructure boundaries listed
+  in Section 1.6.
+- Routes, services, middleware, policies, and general application utilities
+  MUST NOT receive or import the raw database connection.
 - Services depend on repository interfaces, not `better-sqlite3` directly.
+
+The dependency example is illustrative, not a required initial shape.
+Do not create placeholder services. `AppDependencies` contains only
+dependencies required by routes that currently exist.
 
 ## 1.4 API Architecture
 - **Style**: REST via Express (decided by ADR-001 in `docs/architecture/adr/`)
@@ -106,13 +111,14 @@ const createApp = (deps: AppDependencies): Express => {
 ## 1.5 Layering Principle (Strictly Enforced)
 
 ```
+
 Routes ──→ Services ──→ Repository Interfaces
-                │
-                └──→ Authorization Policies
-                         │
+               │
+               └──→ Authorization Policies
+                        │
               Repository Implementations
-                         │
-                   SQLite Connection
+                        │
+                  SQLite Connection
 ```
 
 - **Routes layer** — parameter parsing & HTTP response only; zero business logic. Depends only on service interfaces and HTTP middleware.
@@ -125,7 +131,28 @@ Routes ──→ Services ──→ Repository Interfaces
 - **Forbidden cross-layer calls**: Routes → DB direct is a violation; must route through Services.
 - **Forbidden circular dependencies**: detected via `madge` or ESLint import rules.
 
-## 1.6 Authorization Architecture
+## 1.6 Transaction Boundaries
+
+- The service layer owns business transaction boundaries.
+- Services that require atomic work across repositories depend on an injected
+  `TransactionRunner` interface.
+- `TransactionRunner.run()` accepts a synchronous callback and returns its
+  result. The callback MUST NOT return a Promise.
+- Repository implementations are bound to the same application database
+  connection, so calls made inside `run()` participate in the same SQLite
+  transaction.
+- Services, routes, middleware, and policies MUST NOT receive the raw SQLite
+  connection.
+- Raw database access is restricted to:
+  - `src/db/**`;
+  - repository implementations;
+  - migration tooling;
+  - test database factories;
+  - the composition root while wiring dependencies.
+- Do not perform network, filesystem, queue, email, or other asynchronous I/O
+  inside a database transaction.
+
+## 1.7 Authorization Architecture
 
 ```
 Route middleware:
@@ -150,7 +177,7 @@ Service / Authorization policy layer:
 - Reading another user's private resources (IDOR) is a violation equivalent
   to unauthorized mutation.
 
-## 1.7 Error Handling
+## 1.8 Error Handling
 - Route handlers must propagate errors to the centralized error middleware; do not catch errors locally unless the handler can meaningfully recover or add context before rethrowing
 - Express error middleware signature: `(err, req, res, next)` with four parameters
 - Error responses follow a consistent JSON envelope: `{ error: { code: string, message: string } }`
@@ -161,9 +188,10 @@ Service / Authorization policy layer:
 - Express 5 async handlers may throw; rejected Promises are forwarded to the
   error middleware automatically.
 
-## 1.8 API Response Conventions
+## 1.9 API Response Conventions
 - Success responses use HTTP 2xx with JSON body
 - 201 for resource creation; include `Location` header with the new resource URL
 - 204 for successful deletes (soft or hard, depending on resource policy)
-- 400 for validation errors; 404 for not found; 409 for conflicts (e.g., duplicate email)
+- 400 for validation errors; 401 for missing/invalid authentication; 403 for insufficient permissions
+- 404 for not found; 409 for conflicts (e.g., duplicate email); 429 for rate limit exceeded
 - 500 for unexpected server errors (caught by error middleware)

@@ -49,8 +49,18 @@ paths:
 - Enable CSRF protection if cookie-based sessions are used.
 - The CSRF strategy must be resolved by ADR-002.
 
+## Logging Safety
+
+- Configure Pino redaction for sensitive fields, including at minimum:
+  `req.headers.authorization`, `req.headers.cookie`,
+  `res.headers.set-cookie`, password fields, tokens, and secrets.
+- Do not log request or response bodies by default.
+- Use request IDs or correlation IDs for request tracing.
+- Log internal stable identifiers only when operationally necessary.
+- Never rely solely on developers remembering to remove sensitive fields.
+
 ## Error Serialization
 
 - The centralized error middleware must never serialize `Error` objects,
   stack traces, SQL errors, filesystem paths, or dependency error objects.
-- See `01-architecture.md` §1.7 for the complete error handling contract.
+- See `01-architecture.md` §1.8 for the complete error handling contract.

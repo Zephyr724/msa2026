@@ -45,9 +45,11 @@ paths:
 | madge                | 8.x                   | 2026-07-17   | Candidate | —        |
 | husky                | 9.x                   | 2026-07-17   | Candidate | —        |
 | lint-staged          | 15.x                  | 2026-07-17   | Candidate | —        |
-| @types/node          | 24.x                  | 2026-07-17   | Candidate | —        |
-| @types/express       | 5.x                   | 2026-07-17   | Candidate | —        |
-| @types/supertest     | 6.x                   | 2026-07-17   | Candidate | —        |
+| @types/node            | 24.x                  | 2026-07-17   | Candidate | —        |
+| @types/express         | 5.x                   | 2026-07-17   | Candidate | —        |
+| @types/cors            | 2.8.x                 | 2026-07-19   | Candidate | —        |
+| @types/better-sqlite3  | 7.6.x                 | 2026-07-19   | Candidate | —        |
+| @types/supertest       | 6.x                   | 2026-07-17   | Candidate | —        |
 
 A baseline may be marked **Validated** only when:
 
@@ -98,7 +100,11 @@ Key highlights:
 ## 2.5 Package Manager
 - **npm** (with `package-lock.json` committed)
 - Exact dependency resolution is guaranteed by the lockfile, not by caret/tilde ranges in `package.json`
-- New dependencies require `npm audit` pass before merge (see audit exception policy in `06-development-workflow.md`)
+- Dependency changes require `npm audit` and documented triage under
+  `04c-dependency-security.md`.
+- No untriaged critical/high finding may remain.
+- Approved exceptions do not require the raw `npm audit` process exit code
+  to be zero, but the exception record and mitigation must be verified.
 
 ## 2.6 Dependency Governance
 - Core vs Dev classification: see table above. Anything needed at runtime goes in `dependencies`; build, test, lint, and type tooling goes in `devDependencies`.

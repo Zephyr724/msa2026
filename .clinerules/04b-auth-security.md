@@ -5,6 +5,10 @@ paths:
   - "src/routes/**"
   - "src/config/**"
   - "src/policies/**"
+  - "src/repositories/**"
+  - "src/schemas/**"
+  - "src/types/**"
+  - "src/composition/**"
   - "tests/**"
 ---
 # 04b — Authentication & Authorization
@@ -94,4 +98,4 @@ Service / Authorization policy layer:
 
 - Runtime security (proxy trust, CORS, SSRF, CSRF, path traversal, body
   limits): `04d-runtime-security.md`
-- Error serialization: `01-architecture.md` §1.7
+- Error serialization: `01-architecture.md` §1.8

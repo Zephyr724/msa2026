@@ -94,15 +94,30 @@ paths:
 
 ## 5.5 Authorization Test Requirements
 
-- Every service function that performs a read or mutation on owned resources MUST have authorization tests covering:
-  - Actor A CAN access their own resources.
-  - Actor A CANNOT access (read or write) Actor B's resources (IDOR prevention).
-  - Unauthenticated actor CANNOT access protected resources.
-- Authorization tests apply to both mutations AND reads. Reading another user's private resources is a violation equivalent to unauthorized mutation.
+### Service / policy tests
+- Owner is allowed to access and mutate their own resources.
+- Another user is denied access (both read and write, IDOR prevention).
+- Role or tenant escalation is denied.
+
+### API integration tests
+- Missing authentication returns 401.
+- Invalid authentication returns 401.
+- Authenticated but unauthorized access returns 403 or the resource-specific
+  privacy response.
+
+### Authorization principles
+- Authorization tests apply to both mutations AND reads. Reading another
+  user's private resources is a violation equivalent to unauthorized mutation.
+- Services should not accept `actor | null` solely for authorization testing;
+  unauthenticated requests should be rejected at the HTTP middleware boundary.
 
 ## 5.6 Coverage Requirements
 - Happy path and error cases for every service function
-- Input validation edge cases (empty strings, boundary values, SQL-injection attempts)
+- Validation tests cover structural input constraints such as type, length,
+  range, required fields, and normalization.
+- Repository/API tests verify that SQL-like payloads are treated as ordinary
+  data and cannot alter query structure.
+- Do not implement SQL keyword or character blacklists as injection defense.
 - Authorization checks (user A cannot access user B's resources, including reads)
 - Critical paths MUST be covered.
 - Coverage regression is enforced only after a CI coverage baseline mechanism
@@ -119,7 +134,8 @@ tests/
 ├── integration/
 │   ├── db/              # Repository integration tests (real SQLite)
 │   └── api/             # API integration tests (app + Supertest)
-└── e2e/                 # Full scenario tests
+├── e2e/                 # Full scenario tests
+└── external/            # Opt-in external integration tests (*.ext.test.ts)
 ```
 
 ## 5.8 When Tests Fail

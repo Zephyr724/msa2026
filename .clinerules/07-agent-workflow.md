@@ -13,13 +13,16 @@ Per `00-harness-core.md` §9, apply checks proportionally. For this project:
 | Change Type          | Required Gates                                                     |
 | -------------------- | ----------------------------------------------------------------- |
 | Markdown/doc only    | Document review, Git diff                                          |
-| TypeScript source    | Targeted test, `npm run typecheck`, `npm run lint`                 |
-| Route/service        | Targeted test, API integration, `npm run typecheck`, `npm run lint`|
-| Database/migration   | Migration test, repository integration, `npm run typecheck`, `npm run lint` |
-| Dependency/lockfile  | `npm ci`, audit triage, full test, `npm run build`                 |
+| TypeScript source    | Targeted test, `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm run build` |
+| Route/service        | Targeted test, API integration, `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm run build` |
+| Database/migration   | Migration test, repository integration, `npm run db:baseline`, baseline diff review, `npm run typecheck`, `npm run lint`, `npm run build` |
+| Dependency/lockfile  | `npm ci`, audit triage, `npm run format:check`, `npm run typecheck`, `npm run lint`, full test, `npm run build` |
 | CI/config            | Config syntax validation, dry run of affected commands             |
+| Architecture/import boundary | Targeted tests, `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm run build`, circular-dependency check |
 | Release candidate    | All gates including E2E and coverage                               |
 
+- When a change matches more than one category, apply the union of all
+  applicable gates. Do not select only the least expensive category.
 - Run targeted checks after a coherent change set.
 - Run full applicable gates once before completion.
 - Do not repeatedly run an unchanged failing command.

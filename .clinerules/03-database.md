@@ -4,6 +4,7 @@ paths:
   - "src/repositories/**"
   - "scripts/migrations/**"
   - "scripts/migrate.*"
+  - "scripts/seeds/**"
   - "init_db.sql"
   - "tests/integration/db/**"
 ---
@@ -11,7 +12,12 @@ paths:
 
 ## 3.1 Schema Source of Truth
 - **`scripts/migrations/`** is the canonical schema history
-- **`init_db.sql`** is a generated baseline snapshot (not manually maintained alongside migrations)
+- **`init_db.sql`** is a generated review and schema-drift artifact.
+- Application startup, local development, tests, and deployment initialize
+  databases through the migration runner, not by executing `init_db.sql`.
+- `init_db.sql` MUST NOT be used to bypass `schema_migrations`.
+- Any future executable baseline or migration-squashing strategy requires
+  an ADR defining the baseline version, checksum, and migration-state rules.
 - All schema changes go through timestamp-named migration files: `scripts/migrations/YYYYMMDDHHmmss_description.sql`
 - `init_db.sql` is regenerated whenever the ordered migration set changes
 
@@ -80,7 +86,7 @@ paths:
 - Migrations are deterministic and applied exactly once.
 - A migration must fail loudly when its expected precondition is not met.
 - `IF NOT EXISTS` / `IF EXISTS` are only allowed for explicitly documented recovery or bootstrap scenarios.
-- Migrations must not contain application-level seed data; seeds live in `src/db/seed.ts`
+- Migrations must not contain application-level seed data; seeds live in `scripts/seeds/`
 - No destructive migration (DROP COLUMN, DROP TABLE for existing data) without an explicit review
 - Test migrations run against an in-memory or temporary database file
 - Never modify a migration that has been successfully applied in any shared
