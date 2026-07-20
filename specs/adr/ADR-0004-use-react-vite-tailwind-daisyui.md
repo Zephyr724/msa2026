@@ -7,7 +7,6 @@
 - Supersedes: None
 
 > The frontend direction is already accepted in the planning baseline. This ADR
-> remains Proposed until its scope and trade-offs are reviewed.
 
 ## Context
 

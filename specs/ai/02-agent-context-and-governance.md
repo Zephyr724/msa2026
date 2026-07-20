@@ -59,3 +59,25 @@ Current Kiwimpact specifications and ADRs are located in `/specs`. This
 directory is the single source of truth for intended product behavior.
 The `/docs` directory contains only archived legacy materials from the
 superseded Node.js/Express/SQLite project.
+
+Specification precedence is defined in `specs/README.md`. Later accepted
+scope-specific ADRs and specifications override earlier documents only within
+their explicit scope.
+
+## Agent Rule Files
+
+The full agent rule set includes:
+
+- `00-harness-core.md` — Universal harness core
+- `00-meta.md` — Project context and language policy
+- `01-architecture.md` — Architecture constraints
+- `02-technology-stack.md` — Technology stack and toolchain
+- `03-database.md` — Database rules
+- `04a-security-baseline.md` — Security baseline
+- `04b-auth-security.md` — Authentication and authorization
+- `04c-dependency-security.md` — Dependency and supply-chain security
+- `04d-runtime-security.md` — Runtime security
+- `05-testing.md` — Testing strategy
+- `06-development-workflow.md` — Development workflow
+- `07-agent-workflow.md` — Agent task workflow
+- `09-msa-assessment.md` — MSA assessment requirements

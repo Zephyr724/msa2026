@@ -2,7 +2,11 @@
 
 ## Status
 
-Approved Product Baseline
+Status: Accepted Product Overview
+
+> This document supplements the detailed planning baseline
+> (`specs/Kiwimpact_Final_Planning_Baseline_v1.0.md`) and later accepted scope
+> updates. It does not replace them.
 
 ## Overview
 
@@ -87,10 +91,10 @@ Members can:
 
 Organizers can:
 
-- create external activities;
-- manage their submitted quests;
-- review completion claims;
-- monitor participation.
+- create, edit, publish, cancel, and archive owned quests;
+- manage capacity and registration mode;
+- view participants;
+- issue or manage completion codes.
 
 ---
 
@@ -98,10 +102,10 @@ Organizers can:
 
 Administrators can:
 
-- manage platform content;
-- review external activities;
-- moderate community data;
-- maintain system integrity.
+- manage all quests;
+- create curated external quests;
+- review external completion claims;
+- manage source freshness and roles where required.
 
 ---
 
@@ -114,7 +118,7 @@ Users can discover environmental activities through:
 - category filtering;
 - location-based browsing;
 - map exploration;
-- community recommendations.
+- region filtering where available.
 
 Quest examples:
 
@@ -134,7 +138,7 @@ Users can:
 - submit completion evidence when required;
 - receive verified rewards.
 
-Only valid completion should contribute to progression.
+Only verified XP-producing completions contribute to progression.
 
 ---
 
@@ -146,11 +150,9 @@ Kiwimpact uses gamification mechanics including:
 
 Experience points represent verified environmental contribution.
 
-XP is earned through:
-
-- completed quests;
-- verified external activities;
-- community participation.
+XP is earned only through verified XP-producing completions.
+Community participation alone does not award XP.
+Self-reported completions do not award XP.
 
 ---
 
@@ -259,14 +261,22 @@ Location-related features should use:
 
 # External Activities
 
-External activities allow users to participate in real-world events
-organized outside Kiwimpact.
+Kiwimpact supports two types of external activities:
+
+- **Organizer-owned quests:** Organizers create and manage quests with native
+  registration, external registration, or no registration required. Participants
+  join through Kiwimpact.
+- **Admin-curated external quests:** Admin records selected activities from
+  councils, DOC, EcoFest, NGOs, or similar providers. Registration stays on the
+  official provider website. Participants submit completion claims that Admin
+  reviews.
 
 The MVP approach:
 
-- organizers submit activities;
-- users complete them externally;
-- users provide required evidence;
+- Organizers create and manage owned quests with full CRUD;
+- Admin creates curated external quests and reviews completion claims;
+- users complete activities;
+- users provide required evidence for external claims;
 - completion is reviewed when necessary.
 
 ---

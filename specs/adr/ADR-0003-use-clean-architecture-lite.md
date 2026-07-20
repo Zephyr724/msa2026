@@ -7,7 +7,6 @@
 - Supersedes: None
 
 > The architecture direction is already accepted in the planning baseline.
-> This ADR remains Proposed until the boundaries and consequences are reviewed.
 
 ## Context
 

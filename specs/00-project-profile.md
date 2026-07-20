@@ -1,844 +1,519 @@
-# Kiwimpact Final Planning Baseline v1.0
-
-- Status: Accepted planning baseline
-- Date: 2026-07-19
-- Product owner: Zephyr Chen
-- Repository: `msa2026`
-- Product name: **Kiwimpact**
-- Tagline: **Community eco quests across New Zealand**
-
-> This document records accepted product, UX, architecture, security, testing,
-> AI-workflow, and scope decisions. It does not claim that implementation is
-> complete.
-
-## 1. Product definition
-
-Kiwimpact is an Auckland-first gamified community environmental participation
-platform for Aotearoa New Zealand. It helps users discover selected activities
-from multiple providers, participate, verify completion, earn progression
-rewards, build a Personal Impact Passport, and share an achievement card.
-
-Core loop:
-
-`Discover → Understand → Join → Complete → Verify → Earn → Record → Share → Continue`
-
-MVP means a complete, deployable full-stack product with controlled scope, not a
-static demo or hard-coded prototype.
-
-## 2. Users and roles
-
-- **Guest:** browse, filter, use map, view details/leaderboard, open official
-  external links.
-- **Member:** email/password or Google login, join/cancel quests, submit
-  completion, earn XP, view Passport, generate share card.
-- **Organizer:** Member abilities plus CRUD for owned quests, participant view,
-  capacity, completion code, publish/cancel/archive.
-- **Admin:** manage all quests, create curated external quests, review claims,
-  manage source freshness and roles where required.
-
-MVP does not implement a public Organizer application workflow.
-
-## 3. Quest sources and registration
-
-### Curated External Quest
-
-Admin records selected activities from councils, DOC, EcoFest, NGOs, or similar
-providers.
-
-May store:
-
-- title;
-- date/time;
-- location;
-- organiser;
-- category;
-- objective duration/age/difficulty;
-- source URL;
-- source-check date;
-- a short Kiwimpact-written summary.
-
-Do not copy by default:
-
-- full descriptions;
-- photos;
-- logos;
-- posters;
-- long safety text;
-- original illustrations;
-- comments.
-
-Registration stays on the official site. UI shows:
-
-- `View official event`
-- `Registration is managed by the original event provider`
-- `Official source is authoritative`
-- `Last checked: ...`
-
-### Organizer-Published Quest
-
-Registration modes:
-
-- `Native`
-- `External`
-- `NoneRequired`
-
-### Platform Eco Challenge
-
-Flexible self-directed challenges created by Kiwimpact. Kiwimpact does not host
-high-liability public events in the MVP.
-
-## 4. Categories
-
-1. Restore Nature
-2. Protect Wildlife
-3. Clean & Reduce Waste
-4. Grow & Compost
-5. Observe & Measure
-6. Learn & Share
-
-## 5. Quest and external-source states
-
-`QuestStatus`:
-
-- Draft
-- Published
-- Cancelled
-- Archived
-
-`ExternalSourceStatus`:
-
-- Current
-- NeedsReview
-- Changed
-- SourceRemoved
-
-`SourceCheckedAt` records the last manual verification.
-
-`NextCheckDueAt` uses the earlier applicable date:
-
-- `SourceCheckedAt + 14 days`
-- `StartAtUtc - 7 days`
-
-A daily background task marks overdue sources `NeedsReview`. The system does not
-scrape external pages.
-
-Do not make `ExternalSourceUrl` globally unique. Use duplicate detection based
-on provider, normalized URL, start time, or provider event ID.
-
-## 6. Participation and completion
-
-### Native registration
-
-Backend verifies login, status, capacity, date rules, and duplicate
-participation before creating a Participation record.
-
-### Organizer Verified
-
-MVP verification:
-
-- completion code;
-- optional Organizer approval where implemented.
-
-Receives full XP, level, achievements, streak, leaderboard, and verified
-Passport credit.
-
-### Evidence Reviewed
-
-For external activities:
-
-1. Member submits a claim.
-2. Admin reviews.
-3. Approved claims create a verified completion and XP transaction.
-4. Rejected claims show a short reason.
-
-Fields:
-
-- `ParticipationDate`
-- `Description` (about 500 characters maximum)
-- optional `EvidenceUrl`
-- `UserDeclaration`
-
-Evidence URL:
-
-- HTTPS only;
-- owner/Admin only;
-- never public;
-- backend never downloads, previews, follows, or fetches it;
-- full URL not logged;
-- open as an untrusted external link with `noopener` and `noreferrer`.
-
-### Self Reported
-
-Appears in the Passport but receives no XP, leaderboard, streak, or reward
-credit.
-
-## 7. Completion Claim privacy and retention
-
-- Claim owner can view own claim.
-- Admin can review.
-- Organizer cannot view external evidence by default.
-- Other users cannot view it.
-- Share Card and leaderboard contain only the result.
-
-Lifecycle:
-
-- Pending claims can be edited or withdrawn.
-- Withdrawn evidence is cleared immediately.
-- Reviewed claims cannot be edited by the claimant.
-- `EvidencePurgeDueAt = ReviewedAt + 90 days`.
-- Evidence is removed within 24 hours after the retention period.
-
-Remove:
-
-- Description
-- EvidenceUrl
-- detailed ReviewNote
-
-Retain minimal audit:
-
-- ClaimId
-- UserId
-- QuestId
-- Status
-- SubmittedAt
-- ReviewedAt
-- ReviewedBy
-- VerificationLevel
-- XpTransactionId
-- EvidencePurgedAt
-
-Implementation:
-
-- ASP.NET Core `BackgroundService`
-- run shortly after startup
-- run every 24 hours
-- batch size about 100
-- idempotent
-- logs counts/failures, not evidence content
-
-## 8. Gamification
-
-### XP
-
-- Easy: 50
-- Medium: 100
-- Hard: 150
-
-Only verified completion earns XP. The backend calculates XP and writes an
-`XpTransaction`; the frontend never submits a trusted XP value.
-
-A database uniqueness rule prevents duplicate completion XP for the same user
-and quest.
-
-### Level 1–99
-
-Initial cumulative threshold:
-
-`XP(Level L) = 5 × (L - 1) × (L + 7)`
-
-Experience targets:
-
-- one quest: Level 2–3;
-- five medium quests: Level 5–8;
-- sustained participation: Level 20–30;
-- Level 50+: long-term participant;
-- Level 99: long-term honour goal.
-
-### Rank titles
-
-- 1–9: Novice
-- 10–19: Scout
-- 20–29: Adventurer
-- 30–39: Ranger
-- 40–49: Pathfinder
-- 50–59: Guardian
-- 60–69: Vanguard
-- 70–79: Champion
-- 80–89: Hero
-- 90–98: Legend
-- 99: Kiwimpact Legend
-
-Every ten-level boundary triggers a stronger Rank Up reveal.
-
-### Other systems
-
-- 6–8 fixed achievements
-- weekly streak based on one verified quest per New Zealand calendar week
-- weekly/monthly/all-time SignalR leaderboard
-- Personal Impact Passport
-- no invented carbon-equivalent claims
-
-## 9. Gameful UX
-
-Direction:
-
-- friendly eco-adventure;
-- slightly cartoon-like;
-- energetic and rounded, inspired by Discord/Kahoot friendliness without
-  copying them;
-- game-like Quest Cards;
-- clear XP and level progress;
-- accessible rather than childish.
-
-Reward sequence:
-
-1. Quest Completed
-2. stars/particles move toward XP
-3. XP number increases
-4. progress bar fills
-5. Level Up
-6. Rank Up when applicable
-7. Achievement Reveal
-8. Passport/leaderboard refresh
-
-Requirements:
-
-- skippable;
-- respect `prefers-reduced-motion`;
-- lighter on mobile;
-- sound optional and off by default;
-- no default background music.
-
-## 10. Share Card
-
-MVP uses client-side image generation:
-
-- 1080 × 1080 PNG
-- `html-to-image`
-- Web Share API file share when supported
-- download fallback
-- no public profile or public completion page
-
-Default content:
-
-- Display Name
-- Quest name
-- completion date
-- verification label
-- XP
-- current level
-- rank title
-- Kiwimpact branding
-
-`Show my display name` is enabled by default but can be turned off.
-
-Never include email, user ID, evidence, claim text, review note, or precise GPS.
-
-## 11. Social scope
-
-MVP:
-
-- leaderboard
-- display name
-- Personal Impact Passport
-- shareable image card
-
-Deferred:
-
-- Community Pulse
-- Kudos
-- Public Profile
-- posts/comments/follows/friends/chat
-- notifications
-- social image upload and moderation
-
-## 12. Main product areas
-
-1. Landing and Authentication
-2. Discover Quests
-3. Quest Detail
-4. Dashboard / My Quests
-5. Profile / Personal Impact Passport
-6. Leaderboard
-7. Organizer/Admin Console
-
-Every important screen handles loading, empty, success, validation error,
-server error, forbidden, and not-found states.
-
-## 13. Technology
-
-### Frontend
-
-- Node.js 24 LTS
-- npm + committed `package-lock.json`
-- React + TypeScript
-- Vite
-- React Router
-- Tailwind CSS
-- daisyUI
-- Lucide React
-- TanStack Query
-- Zustand
-- React Hook Form
-- Zod
-- Motion for React
-- canvas-confetti
-- html-to-image
-- `@vis.gl/react-google-maps`
-- unDraw for temporary illustrations
+# Kiwimpact Project Profile
+
+- **Status:** Accepted Project Profile
+- **Last updated:** 2026-07-20
+- **Repository:** `msa2026`
+- **Product owner:** Zephyr Chen
+
+> This file is a concise entry point for humans and AI agents.
+>
+> It does not replace the detailed planning baseline, accepted ADRs, or
+> scope-specific specifications. It does not claim that planned functionality
+> has been implemented.
+
+## 1. Project
+
+- **Name:** Kiwimpact
+- **Tagline:** Community eco quests across New Zealand
+- **Theme:** Gamification
+- **Current lifecycle stage:** Planning, specification, and UI design
+- **Primary launch area:** Auckland, with a model that can expand across
+  Aotearoa New Zealand
+
+Kiwimpact is a gamified environmental participation platform that helps people:
+
+1. discover local environmental activities;
+2. join and complete eco quests;
+3. verify eligible completion;
+4. earn XP, levels, ranks, and achievements;
+5. build a Personal Impact Passport;
+6. participate in community and wider regional leaderboards;
+7. share selected achievements through a generated image card.
+
+The product uses game-design principles to encourage meaningful real-world
+environmental participation. It is not intended to be a traditional game.
+
+### Core loop
+
+```text
+Discover
+→ Understand
+→ Join
+→ Complete
+→ Verify
+→ Earn
+→ Record
+→ Share
+→ Continue
+```
+
+## 2. Current Implementation Status
+
+At the time of this profile:
+
+the planning baseline is accepted;
+ADR-0001 through ADR-0008 are accepted decisions;
+product, UX, Community, AI-governance, and review documents are being
+developed;
+frontend application scaffolding has not been verified;
+backend application scaffolding has not been verified;
+PostgreSQL local infrastructure has not been verified;
+application test commands have not been verified;
+GitHub Actions is not active;
+branch protection is not active;
+deployment is not configured;
+Cline rules are advisory because enforcement hooks have not been implemented.
+
+Use PROJECT_STATUS.md for the latest observed implementation and control
+status.
+
+Do not infer implementation completion from this profile, an ADR, or another
+planning document.
+
+## 3. Primary Users and Roles
+Guest
+
+Can browse public quests, use filters and the map, view Quest Details, inspect
+public leaderboard information, and open official external activity links.
+
+Member
+
+Can register or sign in, join or cancel eligible quests, complete quests,
+submit eligible claims, earn verified progression rewards, view the Personal
+Impact Passport, select an optional Home Community, participate in scoped
+leaderboards, and generate a Share Card.
+
+Organizer
+
+Has Member abilities and can manage owned quests, including creation, editing,
+publishing, cancellation, archiving, capacity, participants, registration mode,
+and completion-code workflows.
+
+Admin
+
+Can manage all quests, create curated external quests, review external
+completion claims, manage source-review state, moderate relevant Community
+data, and manage roles where required.
+
+The MVP does not include a public Organizer application workflow.
+
+##  4. Product and UX Priorities
+
+Make the environmental action and its next step immediately understandable.
+Make discovery useful through both a complete list and an optional map.
+Award XP only for accepted XP-producing verified completion.
+Make progression visible through XP, levels, ranks, achievements, streaks,
+Passport records, and leaderboards.
+Use Community identity to support belonging without collecting precise
+residential location.
+Support a broad audience without making the interface childish or
+excessively competitive.
+Provide responsive desktop and mobile layouts.
+Provide keyboard access, semantic structure, reduced-motion behavior, and
+clear loading, empty, success, validation, error, forbidden, and not-found
+states.
+Keep external provider information attributable and direct users to the
+authoritative provider page.
+Deliver a complete, deployable, tested MVP rather than a large collection
+of incomplete features.
+
+## 5. MVP Scope
+
+Included
+email/password authentication;
+Google external login;
+email confirmation and password recovery;
+public Quest discovery and detail;
+Organizer-owned Quest CRUD;
+participation and cancellation;
+completion-code verification;
+external completion claims and Admin review;
+XP, levels, rank titles, achievements, and weekly streaks;
+Personal Impact Passport;
+client-generated Share Card;
+optional Home Community;
+My Community, Auckland, and New Zealand leaderboard scopes;
+Weekly, Monthly, and All-time leaderboard periods;
+SignalR real-time leaderboard updates;
+responsive Light and Dark themes;
+Scalar API documentation;
+frontend, backend, integration, and Cypress testing.
+Excluded from the MVP
+a full social network;
+posts, comments, follows, friends, chat, or public profiles;
+evidence-image upload;
+continuous geolocation;
+scraping or automated provider-page retrieval;
+AI product features;
+payments or real vouchers;
+virtual currency, Wallet, Shop, purchasing, or trading;
+loot boxes or random economic rewards;
+native mobile applications or push notifications;
+microservices;
+MongoDB or mixed application persistence;
+environmental-impact claims without an accepted methodology.
+
+## 6. Technology
+Frontend
+Node.js 24 LTS
+npm with committed package-lock.json
+React
+TypeScript
+Vite
+React Router
+Tailwind CSS
+daisyUI
+TanStack Query
+Zustand
+React Hook Form
+Zod
+Lucide React
+Motion for React
+canvas-confetti
+html-to-image
+@vis.gl/react-google-maps
 
 Do not include shadcn/ui initially.
 
-State ownership:
+Exact package versions are decided and recorded only during verified
+scaffolding.
 
-- shared `apiFetch`: HTTP transport
-- TanStack Query: authoritative server state
-- Zustand: small cross-component UI state
-- React state: local component state
-- URL search params: filters/sorting/pagination/view state
+Backend
+C# with .NET 10 or higher
+ASP.NET Core Web API
+Entity Framework Core
+PostgreSQL
+Npgsql
+ASP.NET Core Identity
+HttpOnly cookie authentication
+SignalR
+Scalar
+Problem Details
+Testing
+Vitest
+React Testing Library
+user-event
+jest-dom
+xUnit v3
+WebApplicationFactory
+Testcontainers PostgreSQL
+Cypress
+Local Infrastructure Target
+React and ASP.NET Core run directly on the development machine.
+Docker Compose provides PostgreSQL and Mailpit.
+Important integration tests use temporary PostgreSQL through Testcontainers.
+
+These remain targets until their files, commands, and observed behavior are
+recorded in PROJECT_STATUS.md.
+
+## 7. Architecture Style
+
+Clean Architecture Lite in a modular monolith.
+
+Target backend projects
+backend/
+├── src/
+│   ├── Kiwimpact.Api/
+│   ├── Kiwimpact.Core/
+│   └── Kiwimpact.Infrastructure/
+└── tests/
+    ├── Kiwimpact.UnitTests/
+    └── Kiwimpact.IntegrationTests/
+Responsibilities
+Kiwimpact.Core
+
+Contains domain and application rules, entities, value objects, policies,
+application services, validation, authorization decisions, and abstractions.
+
+Core must not reference Api or Infrastructure.
+
+Kiwimpact.Infrastructure
+
+Contains EF Core, PostgreSQL migrations, repositories, Identity stores, seed
+implementation, background services, and external-adapter implementations.
+
+Infrastructure may reference Core.
+
+Kiwimpact.Api
+
+Contains HTTP contracts, controllers, dependency-injection composition,
+authentication, antiforgery, CORS, rate limiting, policies, Problem Details,
+SignalR hubs, and Scalar documentation.
+
+Api may reference Core and Infrastructure.
+
+Composition root
+
+Kiwimpact.Api/Program.cs is the sole composition root.
+
+Infrastructure registration extension methods may be invoked from
+Program.cs as part of the composition-root boundary. They must not resolve
+services, call BuildServiceProvider, or contain runtime application behavior.
+
+Persistence boundary
+
+Only approved persistence components in Kiwimpact.Infrastructure may access
+DbContext directly.
+
+Controllers and application/domain services must not access DbContext
+directly.
+
+API style
+REST/JSON
+base path: /api/v1
+ISO 8601 UTC timestamps
+Problem Details errors
+page-number pagination
+default page size: 12
+maximum page size: 50
+Scalar documentation
+
+Exact endpoints and update semantics belong in the accepted API contract.
+
+## 8. State Ownership
+
+apiFetch: HTTP transport and shared request behavior
+TanStack Query: authoritative server state
+Zustand: small cross-component UI and reward state
+React state: local component state
+URL search parameters: filters, sorting, pagination, and list/map view
 
 Initial Zustand stores:
 
-- `useUiStore`
-- `useRewardStore`
-
-Never duplicate authoritative Quest, user, XP, achievement, completion, or
-leaderboard data in Zustand.
-
-### Backend
-
-- C# with .NET 10+
-- ASP.NET Core Web API
-- Entity Framework Core
-- PostgreSQL + Npgsql
-- ASP.NET Core Identity
-- HttpOnly cookie authentication
-- SignalR
-- Scalar API documentation
-- Problem Details
-- custom thin auth endpoints around `UserManager`/`SignInManager`
-
-No MongoDB, mixed persistence, custom JWT system, or microservices.
-
-## 14. Architecture
-
-Clean Architecture Lite / Modular Monolith:
-
-```text
-/frontend
-
-/backend
-  /src
-    /Kiwimpact.Api
-    /Kiwimpact.Core
-    /Kiwimpact.Infrastructure
-  /tests
-    /Kiwimpact.UnitTests
-    /Kiwimpact.IntegrationTests
-
-/specs
-```
-
-Responsibilities:
-
-- **Core:** domain/application rules and abstractions.
-- **Infrastructure:** EF Core, PostgreSQL, Identity storage, migrations, seed,
-  background services, external adapter implementations.
-- **Api:** controllers, contracts, DI composition, auth, CSRF, policies,
-  SignalR, Problem Details, Scalar.
-
-Do not add MediatR, event bus, complex CQRS, microservices, or a repository per
-entity without demonstrated need and approval.
-
-## 15. Database and local infrastructure
-
-- PostgreSQL is the only application database.
-- EF Core migrations are schema history.
-- UTC storage using PostgreSQL `timestamp with time zone`.
-- `Pacific/Auckland` for display/business week calculations.
-
-Local development:
-
-- React and API run directly on the Mac.
-- Docker Compose runs:
-  - PostgreSQL
-  - Mailpit
-- important integration tests use temporary PostgreSQL through Testcontainers.
-- SQLite is not used to imitate critical PostgreSQL behaviour.
-
-## 16. Authentication
-
-Supported methods:
-
-1. email/password;
-2. Google.
-
-Email/password:
-
-- registration
-- email confirmation
-- resend confirmation
-- login/logout
-- forgot/reset password
-- change password
-- account lockout/rate control
-
-Suggested:
-
-- unconfirmed email cannot normally log in;
-- confirmation token about 24 hours;
-- reset token about 30–60 minutes;
-- forgot-password response does not reveal account existence;
-- demo accounts are seeded confirmed.
-
-Google:
-
-- Google authenticates;
-- Kiwimpact creates/locates a local Identity user;
-- Kiwimpact issues its own HttpOnly cookie;
-- same-email accounts are not automatically linked;
-- linking requires an authenticated settings flow;
-- pure Google users do not see Change Password unless a local password exists.
-
-Local confirmation/reset email uses Mailpit. Production email provider is
-deferred to deployment.
-
-## 17. Cookie, CSRF, CORS, proxy
-
-Local Vite proxies:
-
-- `/api/*`
-- `/hubs/*` with WebSocket support
-
-Cookie:
-
-- HttpOnly
-- SameSite=Lax
-- Secure=false only for local HTTP where necessary
-- Secure=true in production
-
-Every POST/PUT/PATCH/DELETE request uses ASP.NET Core antiforgery protection.
-The shared client sends `X-CSRF-TOKEN`.
-
-CORS uses explicit origins only; never wildcard origin with credentials.
-
-## 18. Google Maps
-
-Provider:
-
-- Google Maps
-- `@vis.gl/react-google-maps`
-
-MVP:
-
-- map
-- markers
-- marker summary
-- fit bounds
-- link to detail
-- click map to choose coordinates for Admin/Organizer
-- full list fallback
-
-Excluded:
-
-- Places Autocomplete
-- Directions
-- Street View
-- Distance Matrix
-- traffic
-- continuous geolocation
-
-Local key:
-
-- dedicated development browser key
-- referrers:
-  - `http://localhost:5173/*`
-  - `http://127.0.0.1:5173/*`
-- restrict to Maps JavaScript API
-- save in `/frontend/.env.local`
-- ignore in Git
-
-Google OAuth secret stays on the backend and is separate from the Maps key.
-
-## 19. Validation and API conventions
-
-Frontend:
-
-- React Hook Form + Zod
-
-Backend:
-
-- DataAnnotations for request shape
-- application/domain validation for business rules
-- backend remains authoritative
-
-API:
-
-- REST/JSON
-- `/api/v1`
-- Scalar
-- Problem Details
-- ISO 8601 UTC timestamps
-- page-number pagination
-- default page size 12
-- maximum 50
-
-## 20. Testing
-
-Frontend:
-
-- Vitest
-- React Testing Library
-- user-event
-- jest-dom
-
-Backend unit:
-
-- xUnit v3
-
-Backend integration:
-
-- xUnit
-- WebApplicationFactory
-- Testcontainers PostgreSQL
-
-E2E:
-
-- Cypress
-
-Core coverage:
-
-- CRUD and permissions
-- capacity and duplicate registration
-- completion code
-- claim review
-- XP/level/rank
-- duplicate XP prevention
-- achievements
-- streak
-- external source review
-- evidence purge
-- auth and authorization
-- share card
-- Member/Organizer/Admin journeys
-
-## 21. Seed data
-
-System seed:
-
-- roles
-- categories
-- achievements
-- ranks where stored
-
-Development/demo seed:
-
-- 1 Admin
-- 1 Organizer
-- 3 Members
-- 3–5 organisations
-- 18–24 quests
-- all categories and source types
-- participation/claim states
-- XP, achievements, leaderboard data
-
-Rules:
-
-- idempotent
-- EF migrations, not `EnsureCreated`
-- demo passwords from environment variables
-- demo users confirmed
-- fictional evidence only
-- real external activities normally entered through Admin workflow
-
-## 22. Visual system and assets
-
-Themes:
-
-- Kiwimpact Light
-- Kiwimpact Dark
-
-Initial Light tokens:
-
-- primary `#2F8F5B`
-- secondary `#6C63D9`
-- accent `#F4B740`
-- base `#F8FBF4`
-- content `#183026`
-
-Initial Dark tokens:
-
-- primary `#6FD69A`
-- secondary `#AAA1F5`
-- accent `#FFD166`
-- base `#13211B`
-- content `#F2F7F3`
-
-Geometry:
-
-- button/input radius 14px
-- card 20px
-- modal 24px
-- pill badges
-- spacing 4/8/12/16/24/32/48
-
-Motion:
-
-- fast 120ms
-- normal 220ms
-- emphasis 350ms
-- reward 600–900ms
-
-Resources:
-
-- Lucide for functional icons
-- unDraw for temporary illustrations
-- custom Kiwimpact rank/achievement assets during polish
-- user-selected third-party sound effects
-- asset register records source, author, licence, attribution, date, changes,
-  and use location
-
-## 23. Advanced requirements
-
-Top three in final README:
-
-1. Security Measures
-2. WebSockets using SignalR
-3. Cypress End-to-End Testing
-
-Additional advanced work:
-
-- Zustand state management
-- Light/Dark theme switching
-- Docker local infrastructure
-
-## 24. AI workflow
-
-- **Human:** final decisions and review.
-- **Figma/Figma AI:** visual exploration.
-- **Claude:** read designs; draft tokens, component specs, ADR, ERD, API
-  Contract, Component Plan.
-- **Human review:** accept/reject.
-- **DeepSeek + Cline:** implement accepted written specs in small vertical
-  slices, run verified commands, report failures.
-
-AI chat is not the source of truth. Human-approved `/specs` files and accepted
-ADRs guide implementation. Source code, migrations, lockfiles, config, and tests
-prove current state.
-
-## 25. `/specs` and ADR naming
-
-Suggested structure:
-
-```text
-/specs
-  00-project-profile.md
-  /product
-  /ux
-  /architecture
-  /security
-  /testing
-  /ai
-    /prompts
-  /adr
-```
-
-Normal files:
-
-- numbered lowercase kebab-case, such as
-  `01-product-requirements.md`
-
-ADR files:
-
-- `ADR-0001-use-postgresql.md`
-- statuses: Proposed, Accepted, Superseded, Rejected
-
-Do not create empty placeholder documents.
-
-Initial ADRs:
-
-1. PostgreSQL
-2. Identity + Cookie Authentication
-3. Clean Architecture Lite
-4. React/Vite/Tailwind/daisyUI
-5. TanStack Query + Zustand
-6. Google Maps
-7. PostgreSQL integration tests
-
-## 26. CI and repository controls
-
-GitHub Actions is added immediately after real commands exist.
-
-Initial CI:
-
-Frontend:
-
-- install from lockfile
-- lint
-- type-check
-- unit tests
-- build
-
-Backend:
-
-- restore
-- build
-- unit tests
-- PostgreSQL integration tests
-
-Later add Cypress and security/dependency checks.
-
-After stable CI, protect `main`:
-
-- PR required
-- CI required
-- no force push
-- no branch deletion
-- no mandatory second reviewer for this individual project
-
-Cline Hooks remain unimplemented initially. Deployment protection is configured
-only during the deployment stage.
-
-Agents must not automatically install dependencies, migrate/destruct data,
-commit, push, merge, deploy, alter security, or expand scope.
-
-## 27. MVP exclusions
-
-- full social network
-- Community Pulse, Kudos, Public Profile
-- evidence image upload
-- AI features
-- payments/real vouchers
-- scraping/API sync
-- route/traffic/geolocation expansion
-- native mobile/push
-- complex organisation administration
-- carbon claims without methodology
-- unrestricted Member publishing
-- background music by default
-- MongoDB/mixed databases
-- microservices
-
-## 28. Future roadmap
-
-- **1.1:** image evidence, Organizer approval, QR, batch attendance
-- **1.2:** verified organisations and organisation teams
-- **1.3:** sponsor rewards with stock/redemption and legal review
-- **2.0:** social/community features
-- **2.x:** nationwide and partner integrations
-- **3.0:** recommendations, AI assistance, mobile, Citizen Science, validated
-  impact calculations
-
-## 29. Recommended implementation order
-
-1. Replace/archive incompatible legacy project rules and status.
-2. Add this baseline and accepted project profile to `/specs`.
-3. Create the seven accepted ADRs.
-4. Write product requirements, user journeys, gamification spec, ERD, API
-   contract, auth flow, test strategy, threat model, and AI workflow.
-5. Create Figma information architecture and the key page/component designs.
-6. Scaffold Docker Compose, backend solution, frontend app, and test projects.
-7. Verify commands and immediately add basic GitHub Actions.
-8. Implement vertical slices:
-   - authentication;
-   - public quest discovery/detail;
-   - Organizer CRUD;
-   - participation;
-   - completion code + XP;
-   - levels/ranks/achievements/animations;
-   - Passport;
-   - external quest + claim review;
-   - SignalR leaderboard;
-   - Share Card.
-9. Add Cypress, accessibility, responsive polish, seed data, and error states.
-10. Deploy, finish README/spec evidence/video, and run final submission checks.
+useUiStore
+useRewardStore
+
+Do not duplicate authoritative Quest, user, participation, completion, claim,
+XP, achievement, or leaderboard data in Zustand.
+
+## 9. Data and Time
+
+PostgreSQL is the only application database.
+EF Core migrations are the canonical schema history.
+Application timestamps are stored as UTC using PostgreSQL
+timestamp with time zone.
+Pacific/Auckland is used for display and New Zealand business-week
+calculations.
+Important PostgreSQL behavior is tested against PostgreSQL, not SQLite.
+
+The production migration procedure remains pending a deployment specification
+or ADR.
+
+## 10. Community Identity
+
+Members may optionally select a coarse-grained Home Community.
+
+The accepted conceptual Region hierarchy uses:
+
+Country
+AdministrativeArea
+LocalArea
+
+Initial leaderboard scopes are:
+
+My Community
+Auckland
+New Zealand
+
+Initial periods are:
+
+Weekly
+Monthly
+All-time
+
+Home Community:
+
+is selected manually;
+is not inferred from GPS, IP address, or street address;
+is separate from Quest location;
+may be changed subject to the accepted cooldown rule;
+must not retroactively move historical Community-attributed XP;
+remains hidden from Share Cards.
+
+Conceptual fields include:
+
+UserProfile.HomeCommunityRegionId
+Quest.LocationRegionId
+XpTransaction.CommunityRegionIdAtAward
+
+Only verified XP-producing completion contributes to competitive
+leaderboards. Self-reported completion produces no XP, leaderboard, streak, or
+reward credit.
+
+Virtual currency, Wallet, Shop, and purchasing are excluded from the MVP.
+
+## 11. Security Decisions
+
+Authentication
+ASP.NET Core Identity
+HttpOnly application cookie
+email/password
+Google external login
+email confirmation
+forgot/reset password
+authenticated account linking
+no custom JWT system for the MVP
+Request security
+ASP.NET Core antiforgery protection for state-changing requests
+shared frontend header: X-CSRF-TOKEN
+explicit CORS origins
+no wildcard origin with credentials
+authentication endpoint rate limiting
+allowlisted/local return URLs
+
+The exact antiforgery token-issuance flow belongs in the accepted
+authentication/API specification.
+
+Authorization
+middleware and attributes provide authentication and coarse role checks;
+application services enforce ownership and action-level authorization;
+protected operations evaluate actor + action + resource;
+another user's private resource must not be exposed through IDOR.
+Validation
+Zod and React Hook Form improve frontend input UX;
+DataAnnotations validate backend request shape;
+application/domain validation remains authoritative for business rules.
+Secrets
+no credentials or real API keys in committed source or configuration;
+frontend local Maps key belongs in frontend/.env.local;
+backend secrets use environment variables, .NET User Secrets, or deployment
+secret management;
+sensitive request bodies, cookies, tokens, evidence, and private URLs are not
+logged.
+Location privacy
+do not store a Member's street address for Community identity;
+do not infer Home Community automatically;
+do not create a public user movement history;
+use coarse, user-selected Region identifiers;
+keep Home Community out of Share Cards.
+
+## 12. Accepted ADRs
+
+ADR-0001-use-postgresql.md
+ADR-0002-use-identity-cookie-authentication.md
+ADR-0003-use-clean-architecture-lite.md
+ADR-0004-use-react-vite-tailwind-daisyui.md
+ADR-0005-use-tanstack-query-and-zustand.md
+ADR-0006-use-google-maps.md
+ADR-0007-use-postgresql-integration-tests.md
+ADR-0008-community-identity-local-leaderboards-and-virtual-economy-scope.md
+
+Acceptance records a decision. It does not prove that the decision has been
+implemented.
+
+## 13. MSA Assessment Priorities
+
+The final application must include:
+
+a deployed React frontend;
+a deployed C# .NET 10+ backend;
+React Router or an equivalent routing library;
+Entity Framework Core;
+persistent database-backed CRUD;
+frontend and backend unit tests;
+Scalar API documentation;
+responsive and visually distinctive UI;
+one public repository containing frontend, backend, specifications, and
+assessment files;
+meaningful Git history;
+planning and AI-assisted-development evidence under /specs.
+
+The selected Top 3 advanced requirements are:
+
+Security Measures
+WebSockets using SignalR
+Cypress End-to-End Testing
+
+Do not claim an assessment requirement as complete before implementation and
+evidence have been verified.
+
+## 14. Repository Commands
+
+No application install, development, build, lint, type-check, test, migration,
+or deployment command is currently verified by this profile.
+
+Agents must:
+
+inspect actual repository configuration;
+use only commands that exist;
+observe a successful result;
+record active commands and gates in PROJECT_STATUS.md.
+
+Do not invent commands based on this profile.
+
+## 15. Quality Gates
+
+Quality gates are planned until their tools and commands exist and have run
+successfully.
+
+Expected categories include:
+
+Frontend
+formatting
+linting
+TypeScript checking
+unit/integration testing
+production build
+Backend
+formatting
+build
+unit testing
+PostgreSQL integration testing
+migration verification
+Full stack
+Cypress
+security and authorization verification
+SignalR/WebSocket verification
+public deployment checks
+
+Only gates marked active in PROJECT_STATUS.md are operational project gates.
+
+## 16. Specification Authority
+
+Use the following rules when documents differ:
+
+Platform and security constraints have highest authority.
+Explicit current user decisions override earlier project decisions within
+their stated scope.
+Later accepted ADRs and scope-specific specifications amend earlier
+specifications only within their explicit scope.
+ADR-0008 and its related Community specifications amend the planning
+baseline for Community identity, scoped leaderboards, and virtual-economy
+scope.
+The accepted planning baseline remains authoritative in areas not amended
+by later accepted documents.
+Review documents and AI prompt records are evidence, not normative product
+requirements.
+Source code, migrations, configuration, lockfiles, and tests prove current
+implementation state.
+A mismatch between intended specifications and implementation evidence must
+be reported rather than silently resolved.
+
+## 17. Key References
+
+specs/Kiwimpact_Final_Planning_Baseline_v1.0.md
+specs/product/01-product-requirements.md
+specs/product/02-community-identity-and-gamification-scope-update.md
+specs/adr/
+specs/ux/
+specs/architecture/
+specs/data/
+specs/security/
+specs/testing/
+specs/ai/
+specs/review/
+.clinerules/
+PROJECT_STATUS.md
+
+Before relying on a reference, verify that the file or directory exists and
+contains substantive current content.
+
+## 18. Approval and Change Control
+
+This profile is accepted as a concise project context document.
+
+Update it only when an accepted product, architecture, technology, security,
+testing, assessment, or lifecycle decision changes.
+
+Do not use this file to record detailed requirements that belong in a
+scope-specific specification or ADR.

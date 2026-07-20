@@ -5,9 +5,13 @@
 - **Decider:** Product owner
 - **Decision source:** Product-owner discussion following the first-pass UI review and gamification benchmark
 - **Related documents:**
-  - `specs/product/02-community-identity-and-gamification-scope-update.md`
-  - `specs/ux/04-gamification-product-benchmark-and-ui-direction.md`
-  - `specs/ux/05-figma-ai-second-iteration-ui-revision-spec.md`
+- `specs/product/02-community-identity-and-gamification-scope-update.md`
+- `specs/ux/03-figma-ai-first-pass-ui-review.md`
+- `specs/ux/04-community-identity-leaderboard-and-selector.md`
+- `specs/architecture/01-domain-model-region.md`
+- `specs/data/01-community-identity-data-model.md`
+- `specs/security/01-community-privacy-rules.md`
+- `specs/testing/01-community-leaderboard-and-privacy-tests.md`
 - **Supersedes:** None
 
 > Acceptance of this ADR approves the product and architecture direction. It does not claim that the database, API, UI, SignalR integration, or tests have already been implemented.

@@ -30,9 +30,11 @@ The selector can be implemented as:
 - a horizontal segmented control for time periods;
 - a dropdown or horizontal pill group for geographic scope.
 
-Default state for a signed-in Member: **My Community + Weekly**.
+Default states by user type:
 
-Default state for a Guest (no Home Community): **Auckland + Weekly**.
+- **Member with a Home Community:** My Community + Weekly
+- **Member without a Home Community:** Auckland + Weekly
+- **Guest:** Auckland + Weekly
 
 ### 1.2 Live Status
 

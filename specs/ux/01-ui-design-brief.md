@@ -1,10 +1,11 @@
 # Kiwimpact UI Design Brief
 
-- Status: Draft for product-owner review
-- Date: 2026-07-19
+- Status: Accepted Base UI Brief
+- Date: 2026-07-19 (accepted 2026-07-20)
 - Source: `specs/Kiwimpact_Final_Planning_Baseline_v1.0.md`
 - Purpose: guide the first Figma information-architecture and key-screen pass
 - Scope: MVP design direction only; this document does not claim implementation
+- Community extension: `specs/ux/04-community-identity-leaderboard-and-selector.md`
 
 ## 1. Product experience
 

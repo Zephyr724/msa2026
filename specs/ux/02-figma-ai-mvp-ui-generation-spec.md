@@ -1,6 +1,6 @@
 # Kiwimpact — Figma AI MVP UI Design Brief
 
-- **Document status:** First-pass UI generation brief
+- **Document status:** First-pass UI generation brief (historical)
 - **Version:** 1.0
 - **Date:** 2026-07-19
 - **Product:** Kiwimpact
@@ -8,6 +8,7 @@
 - **Recommended repository path:** `/specs/ux/02-figma-ai-mvp-ui-generation-spec.md`
 - **Purpose:** Generate the first editable, high-fidelity MVP interface in Figma before implementation.
 - **Status**: Accepted
+- **Community extension:** `specs/ux/04-community-identity-leaderboard-and-selector.md` adds community-scoped leaderboards, a community selector, and updated Passport design. This first-pass spec is preserved as a historical prompt artifact and should not be rewritten.
 
 > This brief is for visual exploration and product review. It must not be treated as proof that the application has already been implemented. Human-approved Figma designs and written specifications will become the source of truth for implementation.
 

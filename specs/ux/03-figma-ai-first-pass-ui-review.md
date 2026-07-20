@@ -90,3 +90,13 @@ Page structure, product scope, color direction, flat design, rounded geometry, a
 The next design discussion will compare the current Kiwimpact UI with relevant gamification patterns used by Kahoot and other suitable products.
 
 The goal will be to identify which techniques can strengthen Kiwimpact without making it look like a quiz product or a direct copy of another brand.
+
+## 5. Follow-Up: Community Identity Direction
+
+After this review, ADR-0008 was accepted, introducing community identity,
+scoped leaderboards (My Community, Auckland, New Zealand), a community
+selector, and explicit virtual-currency/shop exclusions.
+
+See:
+- `specs/adr/ADR-0008-community-identity-local-leaderboards-and-virtual-economy-scope.md`
+- `specs/ux/04-community-identity-leaderboard-and-selector.md`

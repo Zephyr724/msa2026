@@ -7,8 +7,7 @@
 - Supersedes: None
 
 > The map-provider decision is already accepted in the planning baseline. This
-> ADR remains Proposed until the MVP scope, fallback, and key restrictions are
-> reviewed.
+d.
 
 ## Context
 

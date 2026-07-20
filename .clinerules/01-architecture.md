@@ -39,8 +39,10 @@ msa2026/
 │   ├── product/
 │   ├── ux/
 │   ├── architecture/
+│   ├── data/
 │   ├── security/
 │   ├── testing/
+│   ├── review/
 │   ├── ai/
 │   │   └── prompts/
 │   └── adr/

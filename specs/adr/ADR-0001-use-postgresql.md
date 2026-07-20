@@ -7,7 +7,7 @@
 - Supersedes: None
 
 > The underlying technology choice is already accepted in the planning
-> baseline. This ADR remains Proposed until its wording and scope are reviewed.
+> baseline. 
 
 ## Context
 

@@ -42,7 +42,7 @@ A coarse, user-selected community identifier is sufficient for local leaderboard
 | Share Card | Never shown | Home Community is excluded from Share Cards. This is not configurable. |
 | Quest Detail | Quest location region may be shown | The quest's general location (e.g. "Waitākere Ranges") is public. This is the quest location, not a user's Home Community. |
 | Account Settings | Visible to the owning Member | The selected Home Community is shown in the settings page. |
-| Admin surfaces | Visible to Admin | Admin may see a Member's Home Community for operational purposes. This is not a public surface. |
+| Admin surfaces | Visible to Admin for authorised operational use | Admin may see a Member's Home Community for authorised operational purposes (e.g. understanding community metrics, investigating reported issues). Admin access is not a public surface and must not be used for unrelated browsing of user data. |
 
 ## 3. Small-Community Leaderboard Protection
 
@@ -81,6 +81,7 @@ A user may belong to one community and complete a Quest in another. The system m
 When a Member changes their Home Community:
 
 - Apply a cooldown period (initially 30 days) before the next change is allowed.
+- The first selection has no cooldown.
 - Do not retroactively move historical XP between communities.
 - Past XP stays attributed to the community in which it was earned (`XpTransaction.CommunityRegionIdAtAward`).
 - The cooldown is enforced server-side in the application service layer, not only in the UI.
@@ -91,18 +92,34 @@ A cooldown reduces leaderboard gaming (switching to a less competitive community
 
 ## 6. Data Retention and Deletion
 
+### Home Community Changes
+
 - When a Member changes their Home Community, the previous selection is overwritten. The system does not retain a history of past community selections.
-- When a Member's account is deleted, the `HomeCommunityRegionId` is removed with the `UserProfile`.
-- Historical `XpTransaction.CommunityRegionIdAtAward` records are retained for leaderboard integrity. They reference a Region by Id and are not deleted when a user changes community or deletes their account.
-- When a Region is deactivated, existing references (XP snapshots, past quest locations) must not be deleted or orphaned.
+- Historical `XpTransaction.CommunityRegionIdAtAward` records are retained for leaderboard integrity. They reference a Region by Id and are not deleted when a user changes community.
+
+### Account Deletion
+
+When a Member's account is deleted:
+
+- Profile data, display name, and authentication information are removed or anonymised.
+- `HomeCommunityRegionId` is removed with the `UserProfile`.
+- Deleted users must not remain identifiable in individual leaderboard rows.
+- Historical `XpTransaction.CommunityRegionIdAtAward` records may be retained only for non-identifiable aggregate metrics and required audit purposes.
+- The final storage mechanism for historical attribution after account deletion is part of the complete account-deletion specification and is not fully defined by this document.
+
+### Region Deactivation
+
+- When a Region is deactivated (via `IsActive = false`), existing references (XP snapshots, past quest locations) must not be deleted or orphaned.
+- Deactivated regions are excluded from the community selector and leaderboard scope options.
 
 ## 7. API Rules
 
 ### Community Selector Endpoint
 
 - The Region list endpoint for the community selector is public (read-only).
-- It returns only active regions.
-- It does not expose internal Region IDs that could be used to enumerate or infer user locations.
+- It returns an opaque stable Region ID, name, type, and parent ID where required for hierarchy navigation.
+- Region IDs are internal identifiers, not secrets.
+- The endpoint does not expose user associations, residential information, or private participant counts.
 
 ### Leaderboard Endpoint
 
@@ -124,8 +141,13 @@ See `specs/testing/01-community-leaderboard-and-privacy-tests.md` for detailed t
 - Share Card exclusion of Home Community;
 - Passport community label toggle;
 - XP snapshot immutability after community change;
+- Unattributed XP behaviour;
 - Leaderboard scope correctness;
-- Unauthorized leaderboard scope access.
+- Unauthorized leaderboard scope access;
+- Deleted user exclusion from leaderboard rows;
+- Community selector response shape;
+- Duplicate Region prevention;
+- Region deletion restriction when historical references exist.
 
 ## 9. Related Documents
 

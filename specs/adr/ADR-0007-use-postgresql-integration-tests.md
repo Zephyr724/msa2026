@@ -7,8 +7,6 @@
 - Supersedes: None
 
 > The testing direction is already accepted in the planning baseline. This ADR
-> remains Proposed until the scope, cost, and verification boundary are
-> reviewed.
 
 ## Context
 

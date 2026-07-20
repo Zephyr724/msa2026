@@ -7,8 +7,6 @@
 - Supersedes: None
 
 > The authentication direction is already accepted in the planning baseline.
-> This ADR remains Proposed until its wording and security boundaries are
-> reviewed.
 
 ## Context
 

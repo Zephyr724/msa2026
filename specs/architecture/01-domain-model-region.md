@@ -65,7 +65,7 @@ UserProfile.HomeCommunityRegionId → Region.Id
 ```
 
 - Nullable. A Member may not have selected a Home Community.
-- Must reference an active Region of type LocalArea (or the most granular supported type).
+- When set, must reference an active Region of type LocalArea (or the most granular supported type).
 - Changing the Home Community must respect the cooldown business rule (see `specs/product/02-community-identity-and-gamification-scope-update.md`).
 
 ### Quest
@@ -84,10 +84,17 @@ Quest.LocationRegionId → Region.Id
 XpTransaction.CommunityRegionIdAtAward → Region.Id
 ```
 
-- Not null for verified XP transactions. Set at the time XP is awarded.
+- Nullable. Set at the time XP is awarded for verified completions only when the user has a Home Community.
 - Snapshots the user's Home Community at the moment of the award.
-- Must not be recalculated or updated when the user later changes community.
-- Leaderboard queries for a community scope use this snapshot field, not the user's current Home Community.
+- **Must not be recalculated or updated** when the user later changes community.
+- Leaderboard queries for community-attribution scopes (My Community, Auckland) use this snapshot field, not the user's current Home Community.
+
+### Unattributed XP Rule
+
+- Verified XP earned without a Home Community keeps a null `CommunityRegionIdAtAward`.
+- Unattributed XP contributes to personal progression (levels, ranks, achievements, Passport) and the **New Zealand** leaderboard.
+- Unattributed XP does **not** contribute to **My Community** or **Auckland** community-attribution leaderboards.
+- Later community selection does not retroactively assign unattributed XP.
 
 ## 4. Seed Data Governance
 

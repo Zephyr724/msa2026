@@ -7,7 +7,6 @@
 - Supersedes: None
 
 > The state-management direction is already accepted in the planning baseline.
-> This ADR remains Proposed until its ownership boundaries are reviewed.
 
 ## Context
 

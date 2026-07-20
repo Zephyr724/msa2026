@@ -1,261 +1,177 @@
 # Community Identity and Gamification Scope Update
 
-## Status
+- **Status:** Accepted
+- **Date:** 2026-07-20
+- **Source:** ADR-0008 Community Identity, Local Leaderboards, and Virtual Economy Scope
+- **Purpose:** Extend the MVP product scope with community identity, geographically scoped leaderboards, and explicit scope exclusions.
 
-Accepted Product Scope Update
+> This document records accepted product decisions. It does not claim that implementation is complete.
 
-## Related Decisions
+## 1. Community Identity — MVP Inclusion
 
-- ADR-0008 Community Identity, Local Leaderboards, and Virtual Economy Scope
+Kiwimpact will support a user-selected, coarse-grained **Home Community** and geographically scoped leaderboards.
 
----
+A Member selects one Home Community from a hierarchical Region model (see `specs/architecture/01-domain-model-region.md`). The selection is:
 
-# Purpose
+- manual and explicit;
+- coarse-grained (LocalArea, not a street or suburb);
+- optional — a Member may not have a Home Community selected;
+- changeable with a configurable cooldown (initially 30 days);
+- not inferred from GPS, IP address, or a precise home address;
+- not tied to a street address;
+- subject to no cooldown for the first selection;
+- subject to an initial 30-day cooldown for subsequent changes.
 
-This document records the product scope update introduced by the Community
-Identity feature.
+The Home Community provides:
 
-The update extends Kiwimpact from an individual progression experience into a
-community-connected environmental action platform.
+- belonging and local identity;
+- a scoped leaderboard that feels more achievable than a national board;
+- community-level collective progress metrics;
+- a foundation for future regional comparison.
 
-The goal is to increase belonging and retention while maintaining privacy and
-keeping MVP complexity controlled.
+## 2. Leaderboard Scopes and Periods
 
----
+### Geographic Scopes
 
-# Background
+1. **My Community** — the Member's selected Home Community (requires authentication and a selected Home Community)
+2. **Auckland** — the Auckland administrative area
+3. **New Zealand** — the national scope
 
-The original MVP already included:
+### Time Periods
 
-- quests;
-- XP;
-- levels;
-- achievements;
-- Personal Impact Passport;
-- leaderboards.
+- **Weekly** (current NZ calendar week, Monday–Sunday, Pacific/Auckland)
+- **Monthly** (current calendar month, Pacific/Auckland)
+- **All-time**
 
-However, individual progression alone may not create enough social identity
-and long-term motivation.
+### Defaults
 
-Community identity introduces a local belonging layer.
+- Member with a Home Community: **My Community + Weekly**
+- Member without a Home Community: **Auckland + Weekly**
+- Guest: **Auckland + Weekly**
 
----
+Only verified XP contributes to competitive leaderboards. Self-reported completions remain visible in the Passport but do not contribute XP, leaderboard ranking, streak, or reward credit.
 
-# Community Identity
+### Small-Community Protection
 
-## Concept
+A community with fewer than 10 active ranked Members (configurable threshold, default 10) must not display a full identifiable ranking. Below the threshold, the UI shows a collective-progress state:
 
-Each member may optionally select a Home Community.
+- verified Quest completions;
+- active contributors;
+- Quest categories represented;
+- a link to the wider Auckland leaderboard.
 
-A Home Community is a coarse-grained geographic identity representing the area
-with which the user chooses to associate.
+The threshold is a configurable product value, not a legal constant.
 
-Examples:
+## 3. Community Progress Metrics
 
+MVP community metrics include:
 
-New Zealand
-└ Auckland
-└ Henderson-Massey
+- verified Quest completions;
+- active contributors;
+- total verified XP;
+- number of Quest categories represented.
 
+The MVP must not claim:
 
----
+- carbon saved;
+- nature restored;
+- environmental improvement scores;
+- verified ecological outcomes
 
-# Purpose
+unless a separately accepted and validated methodology exists.
 
-Community identity supports:
+Future regional comparison should distinguish:
 
-- local belonging;
-- regional recognition;
-- community leaderboard;
-- future community impact comparison.
+1. actions completed **by Members belonging to a region**;
+2. actions completed **at Quest locations within a region**.
 
----
+Future comparisons should include both totals and normalised measures, such as completions per active Member.
 
-# Privacy Boundary
+## 4. Separation of Identity and Quest Location
 
-Community identity is not a location tracking system.
+The system must not treat a user's community and an activity location as the same field:
 
-The system must not:
+- `UserProfile.HomeCommunityRegionId` — the community the Member identifies with for local participation and leaderboard purposes.
+- `Quest.LocationRegionId` — where a Quest takes place.
 
-- store exact home addresses;
-- infer user location automatically;
-- expose precise user locations;
-- track continuous movement.
+A user may belong to one community and complete a Quest in another.
 
-The user chooses their displayed community identity.
+## 5. XP Transaction Snapshot
 
----
+Historical leaderboard attribution must not be recalculated when a user changes community. The XP ledger records `XpTransaction.CommunityRegionIdAtAward` at the time XP is awarded:
 
-# Region Model
-
-The system introduces hierarchical regions.
-
-Example:
-
-
-Country
-|
-Region
-|
-City
-|
-Local Community
-
-
-A region contains:
-
-- name;
-- type;
-- optional parent region.
-
----
-
-# Separation of Concepts
-
-User community identity and quest location are separate concepts.
-
-## User Community
-
-Represents:
-
-"Where does this user want to belong?"
-
-Example:
-
-
-UserProfile.HomeCommunityRegionId
-
-
----
-
-## Quest Location
-
-Represents:
-
-"Where does this activity happen?"
-
-Example:
-
-
-Quest.LocationRegionId
-
-
-These values must not be automatically linked.
-
----
-
-# Community Leaderboards
-
-Leaderboards should support:
-
-- user personal ranking;
-- community ranking;
-- broader regional comparison.
-
-Possible scopes:
-
-
-My Community
-City
-Country
-
-
----
-
-# Leaderboard Principles
-
-The leaderboard should:
-
-- encourage positive participation;
-- show progress clearly;
-- avoid excessive competition;
-- protect privacy.
-
-For small communities:
-
-- avoid exposing sensitive individual comparisons;
-- consider minimum participant thresholds.
-
----
-
-# Gamification Relationship
-
-Community identity strengthens existing gamification loops:
-
-Existing loop:
-
-
-Quest
-↓
-Completion
-↓
-XP
-↓
-Level
-↓
-Achievement
-
-
-Updated loop:
-
-
-Quest
-↓
-Completion
-↓
-XP
-↓
-Level
-↓
-Achievement
-↓
-Community Recognition
-
-
----
-
-# Virtual Economy Scope
-
-## Decision
-
-Virtual currency and shop features are not part of the MVP.
-
-Future possibilities include:
-
-- cosmetic customization;
-- avatar items;
-- passport decorations;
-- achievement displays.
-
----
-
-# Reason
-
-A virtual economy introduces additional complexity:
-
-- currency balance management;
-- transaction history;
-- inventory;
-- purchasing rules;
-- abuse prevention;
-- moderation requirements.
-
-The MVP prioritizes:
-
-- meaningful environmental action;
-- community identity;
-- verified progression.
-
----
-
-# Future Expansion
-
-Future community features may include:
-
-- community challenges;
-- regional environmental goals;
-- community events;
-- cooperative achievements;
-- richer social interaction.
-
-These require additional product decisions before implementation.
+- For verified completions with a Home Community: the snapshot references the Home Community Region ID.
+- For verified completions without a Home Community: the snapshot is null.
+- Past XP stays attributed to the community in which it was earned (or remains unattributed).
+
+### Unattributed XP Rules
+
+- `CommunityRegionIdAtAward` is nullable.
+- Verified XP earned without a Home Community keeps a null snapshot.
+- Unattributed XP contributes to personal progression (levels, ranks, achievements, Passport) and the **New Zealand** leaderboard.
+- Unattributed XP does **not** contribute to **My Community** or **Auckland** community-attribution leaderboards.
+- Later community selection does not retroactively assign unattributed XP.
+
+## 6. Virtual Currency and Shop — Explicit MVP Exclusion
+
+The MVP will **not** implement:
+
+- diamonds, coins, or another spendable virtual currency;
+- Wallet or currency balance;
+- a Shop destination;
+- product prices;
+- purchasing;
+- transaction history for purchases;
+- tradeable or giftable items;
+- loot boxes or random rewards;
+- real-money purchases;
+- power advantages or pay-to-win effects.
+
+This exclusion applies to both implementation and UI design.
+
+## 7. Achievement-Unlocked Cosmetics — Optional Stretch
+
+If the core MVP is implemented, tested, deployed, and stable, a small non-economic cosmetic system may be considered as a stretch feature.
+
+Allowed stretch examples:
+
+- Passport border unlocked by an Achievement;
+- Achievement stamp;
+- Rank Title plate;
+- Avatar frame.
+
+Hard constraints for any stretch cosmetic system:
+
+- no currency;
+- no purchasing;
+- no Shop;
+- no random reward;
+- no gameplay advantage;
+- no effect on XP or leaderboard position;
+- unlock source must be clear;
+- the system must be small enough to test completely.
+
+A full virtual economy requires a new ADR and a separate product/economy specification.
+
+## 8. Community Privacy Principles
+
+- Store only the selected coarse-grained Region identifier.
+- Do not request continuous geolocation.
+- Do not infer Home Community from GPS, IP address, or a precise home address.
+- Do not require a street address.
+- Allow the Member to change the selection later (with cooldown).
+- Allow the Member to hide the community label on personal surfaces.
+- Keep Home Community hidden from Share Cards by default (never shown, not configurable).
+- Passport toggle default is off.
+- Quest Detail may show the location needed to attend a public activity, but the product must not expose a user's residential location or build a public user movement history.
+
+See `specs/security/01-community-privacy-rules.md` for detailed privacy rules.
+
+## 9. Related Documents
+
+- ADR-0008: Community Identity, Local Leaderboards, and Virtual Economy Scope
+- `specs/architecture/01-domain-model-region.md`
+- `specs/data/01-community-identity-data-model.md`
+- `specs/security/01-community-privacy-rules.md`
+- `specs/testing/01-community-leaderboard-and-privacy-tests.md`
+- `specs/ux/04-community-identity-leaderboard-and-selector.md`
