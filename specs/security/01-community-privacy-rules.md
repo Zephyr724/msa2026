@@ -157,5 +157,5 @@ See `specs/testing/01-community-leaderboard-and-privacy-tests.md` for detailed t
 - `specs/architecture/01-domain-model-region.md`
 - `specs/data/01-community-identity-data-model.md`
 - `specs/testing/01-community-leaderboard-and-privacy-tests.md`
-- `04b-auth-security.md` (base authentication and authorization rules)
-- `04d-runtime-security.md` (rate limiting, CSRF, CORS)
+- `.clinerules/04b-auth-security.md` (base authentication and authorization rules)
+- `.clinerules/04d-runtime-security.md` (rate limiting, CSRF, CORS)

@@ -22,6 +22,7 @@ The rules are organized as:
 - `06-development-workflow.md` — Git strategy, commit conventions, PR requirements
 - `07-agent-workflow.md` — Quality gate matrix and error recovery
 - `08-typescript.md` — TypeScript coding rules for the frontend
+- `09-msa-assessment.md` — MSA assessment requirements
 
 ## Authority Hierarchy
 
@@ -80,4 +81,5 @@ The full agent rule set includes:
 - `05-testing.md` — Testing strategy
 - `06-development-workflow.md` — Development workflow
 - `07-agent-workflow.md` — Agent task workflow
+- `08-typescript.md` — TypeScript coding rules for the frontend
 - `09-msa-assessment.md` — MSA assessment requirements

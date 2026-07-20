@@ -1,6 +1,6 @@
 # 003 — Correct Harness Consistency
 
-- **Type**: Exact prompt (reconstructed from task specification)
+- **Type**: Reconstructed task summary
 - **Date**: 2026-07-19
 - **Target**: Cline (via DeepSeek)
 - **Context**: After initial migration of harness from Node.js/Express/SQLite to

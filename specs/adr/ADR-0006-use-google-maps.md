@@ -6,8 +6,7 @@
 - Decision source: `specs/Kiwimpact_Final_Planning_Baseline_v1.0.md`
 - Supersedes: None
 
-> The map-provider decision is already accepted in the planning baseline. This
-d.
+> The map-provider decision is already accepted in the planning baseline.
 
 ## Context
 

@@ -160,11 +160,7 @@ Self-reported completions do not award XP.
 
 Levels represent long-term engagement.
 
-Users progress through:
-
-- XP accumulation;
-- consistent participation;
-- completed activities.
+Levels advance only through accumulated verified XP.
 
 ---
 

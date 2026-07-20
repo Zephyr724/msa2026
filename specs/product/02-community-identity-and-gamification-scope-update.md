@@ -161,7 +161,7 @@ A full virtual economy requires a new ADR and a separate product/economy specifi
 - Do not require a street address.
 - Allow the Member to change the selection later (with cooldown).
 - Allow the Member to hide the community label on personal surfaces.
-- Keep Home Community hidden from Share Cards by default (never shown, not configurable).
+- Keep Home Community hidden from Share Cards (never included).
 - Passport toggle default is off.
 - Quest Detail may show the location needed to attend a public activity, but the product must not expose a user's residential location or build a public user movement history.
 

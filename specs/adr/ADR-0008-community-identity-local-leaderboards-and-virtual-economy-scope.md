@@ -49,9 +49,11 @@ Initial leaderboard scopes are:
 2. **Auckland**
 3. **New Zealand**
 
-The default Member leaderboard view is:
+Default leaderboard views by user type:
 
-`My Community + Weekly`
+- **Member with a Home Community:** My Community + Weekly
+- **Member without a Home Community:** Auckland + Weekly
+- **Guest:** Auckland + Weekly
 
 The model must be expandable beyond Auckland without assuming that every country uses identical administrative terminology.
 
@@ -68,7 +70,7 @@ Region
 - IsActive
 ```
 
-Initial `RegionType` values may include:
+The accepted `RegionType` values are:
 
 ```text
 Country
@@ -124,11 +126,10 @@ The MVP will:
 - not request continuous geolocation;
 - not infer Home Community from GPS, IP address, or a precise home address;
 - not require a street address;
-- allow the Member to change the selection later;
-- apply a configurable cooldown, initially targeted at 30 days, to reduce leaderboard gaming;
+- allow the Member to change the selection later (first selection is free; subsequent changes are subject to an initial configurable 30-day cooldown);
 - not retroactively move historical XP between communities;
 - allow the Member to hide the community label on personal surfaces where appropriate;
-- keep Home Community hidden from Share Cards by default.
+- keep Home Community hidden from Share Cards (never included).
 
 Quest Detail may show the location needed to attend a public activity, but the product must not expose a user's residential location or build a public user movement history.
 
@@ -162,7 +163,7 @@ This is a configurable product threshold, not a legal constant.
 Below the threshold, the UI shows a collective-progress state instead of a full ranking, for example:
 
 - verified Quest completions;
-- active contributors;
+- a privacy-safe indication of active contributors (exact counts are omitted when they may identify individuals);
 - Quest categories represented;
 - a link to the wider Auckland leaderboard.
 

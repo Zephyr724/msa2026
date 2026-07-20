@@ -69,7 +69,7 @@ When the selected community has fewer than 10 active ranked Members, replace the
 
 - `Your community is building momentum.`
 - verified Quest completions for the period;
-- active contributors count;
+- a privacy-safe indication of active contributors (exact counts are omitted when they may identify individuals);
 - Quest categories represented;
 - a link to the Auckland leaderboard.
 
@@ -152,7 +152,7 @@ When the toggle is off, the community label is omitted entirely from the Passpor
 
 ### 3.2 Share Card Exclusion
 
-Home Community is **never** included on Share Cards. This is a hard rule, not configurable.
+Home Community is never included on Share Cards.
 
 ### 3.3 No Other Passport Changes
 

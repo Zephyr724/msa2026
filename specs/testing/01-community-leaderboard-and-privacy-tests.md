@@ -366,13 +366,13 @@ Tests span three layers:
 
 ## 8. Authorization Tests
 
-### 8.1 Member Cannot Modify Another Member's Home Community
+### 8.1 PATCH /api/v1/users/me Is Self-Scoped
 
 **Backend integration test.**
 
-- Given: Member A and Member B.
-- When: Member A attempts to PATCH Member B's Home Community.
-- Then: 403 Forbidden is returned.
+- Given: Member A is authenticated.
+- When: Member A sends `PATCH /api/v1/users/me` with a different user's identifier or attempts to set `HomeCommunityRegionId` for another user.
+- Then: the endpoint only affects Member A's own profile. Any attempt to modify another user's data through the self-scoped endpoint is rejected or the foreign identifier is ignored.
 
 ### 8.2 Unauthenticated Cannot Set Home Community
 
@@ -432,4 +432,4 @@ Tests span three layers:
 - `specs/architecture/01-domain-model-region.md`
 - `specs/security/01-community-privacy-rules.md`
 - `specs/data/01-community-identity-data-model.md`
-- `05-testing.md` (base testing strategy)
+- `.clinerules/05-testing.md` (base testing strategy)

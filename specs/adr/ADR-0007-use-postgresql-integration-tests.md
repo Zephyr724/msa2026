@@ -6,7 +6,7 @@
 - Decision source: `specs/Kiwimpact_Final_Planning_Baseline_v1.0.md`
 - Supersedes: None
 
-> The testing direction is already accepted in the planning baseline. This ADR
+> The testing direction is already accepted in the planning baseline.
 
 ## Context
 

@@ -1,9 +1,9 @@
-# 06 — Figma AI Second-Iteration Prompt
+# 04 — Figma AI Second-Iteration Prompt
 
 - **Status:** Accepted prompt
 - **Date:** 2026-07-20
 - **Product:** Kiwimpact
-- **Recommended path:** `specs/ai/prompts/06-figma-ai-second-iteration-prompt.md`
+- **Recommended path:** `specs/ai/prompts/04-figma-ai-second-iteration-prompt.md`
 - **Prompt type:** Actual prepared prompt for the second Figma AI iteration
 - **Input design:** Existing Kiwimpact first-pass MVP Figma design
 

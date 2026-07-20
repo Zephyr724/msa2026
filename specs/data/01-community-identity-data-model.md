@@ -133,9 +133,11 @@ For "New Zealand" scope, all leaderboard-eligible XP is counted regardless of `C
 
 ## 5. Migration Notes
 
-### 5.1 New Migration Required
+### 5.1 Migration Strategy
 
-A new EF Core migration must:
+Whether the Region and community-identity columns are part of the initial
+schema or a later additive migration depends on when the Region table and
+related tables are first scaffolded. In either case the schema must include:
 
 1. Create the `Regions` table with columns and indexes as defined in §1.
 2. Add `HomeCommunityRegionId` (nullable FK → `Regions.Id`) to the user profile table.
@@ -182,10 +184,10 @@ builder.HasOne(r => r.ParentRegion)
     .HasForeignKey(r => r.ParentRegionId)
     .OnDelete(DeleteBehavior.Restrict);
 
-// Uniqueness: strategy depends on PostgreSQL version and NULL handling.
-// Option A: NULLS NOT DISTINCT (PostgreSQL 15+)
-// builder.HasIndex(r => new { r.Name, r.Type, r.ParentRegionId }).IsUnique();
-// Option B: separate root/non-root indexes.
+// Region-name uniqueness within a parent scope requires careful NULL
+// handling for root regions (ParentRegionId IS NULL). The exact EF Core
+// configuration is selected at scaffold time after verifying the target
+// PostgreSQL version and EF Core provider capabilities.
 
 builder.HasIndex(r => new { r.Type, r.IsActive });
 ```
@@ -235,5 +237,5 @@ Region (1) ──── (0..*) XpTransaction (CommunityRegionIdAtAward)
 - `specs/architecture/01-domain-model-region.md`
 - `specs/security/01-community-privacy-rules.md`
 - `specs/testing/01-community-leaderboard-and-privacy-tests.md`
-- `03-database.md` (database rules and migration governance)
-- `01-architecture.md` (Clean Architecture Lite layering)
+- `.clinerules/03-database.md` (database rules and migration governance)
+- `.clinerules/01-architecture.md` (Clean Architecture Lite layering)
