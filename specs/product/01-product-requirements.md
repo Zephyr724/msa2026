@@ -201,7 +201,7 @@ The passport summarizes:
 
 Kiwimpact supports community identity through coarse-grained regions.
 
-Users may select a Home Community representing where they participate.
+Home Community is the community the Member chooses to identify with.
 
 Community identity supports:
 

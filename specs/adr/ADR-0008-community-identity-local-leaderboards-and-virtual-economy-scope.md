@@ -289,7 +289,7 @@ This ADR is considered implemented only when evidence confirms:
 - only verified XP contributes to leaderboards;
 - small-community suppression works;
 - SignalR updates are scoped correctly;
-- Share Card excludes Home Community by default;
+- Share Card never includes Home Community;
 - community-change rules are tested;
 - the application contains no Wallet, virtual-currency balance, purchasing, or Shop implementation;
 - `PROJECT_STATUS.md` records observed implementation and test evidence.

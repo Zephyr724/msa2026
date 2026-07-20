@@ -56,7 +56,7 @@ Only verified XP contributes to competitive leaderboards. Self-reported completi
 A community with fewer than 10 active ranked Members (configurable threshold, default 10) must not display a full identifiable ranking. Below the threshold, the UI shows a collective-progress state:
 
 - verified Quest completions;
-- active contributors;
+- a privacy-safe indication of active contributors (exact counts are omitted when they may identify individuals);
 - Quest categories represented;
 - a link to the wider Auckland leaderboard.
 

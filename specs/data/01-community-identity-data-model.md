@@ -115,7 +115,7 @@ Controls whether the Home Community label appears on the Member's own Passport v
 
 ### 4.4 Leaderboard Query Pattern (Conceptual)
 
-Leaderboard-eligible XP transactions are those with a verification status that qualifies for leaderboard inclusion (verified completions, not self-reported).
+Leaderboard-eligible XP transactions are those created by verified completions (self-reported completions do not create XP transactions).
 
 For the "My Community" scope, the effective query filters `XpTransaction` by:
 

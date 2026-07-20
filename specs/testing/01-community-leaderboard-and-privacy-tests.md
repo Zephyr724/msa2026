@@ -371,8 +371,8 @@ Tests span three layers:
 **Backend integration test.**
 
 - Given: Member A is authenticated.
-- When: Member A sends `PATCH /api/v1/users/me` with a different user's identifier or attempts to set `HomeCommunityRegionId` for another user.
-- Then: the endpoint only affects Member A's own profile. Any attempt to modify another user's data through the self-scoped endpoint is rejected or the foreign identifier is ignored.
+- When: Member A sends `PATCH /api/v1/users/me` to set `HomeCommunityRegionId`.
+- Then: the endpoint only affects Member A's own profile. The endpoint does not accept a target-user identifier; the authenticated user's identity is determined from the authentication context.
 
 ### 8.2 Unauthenticated Cannot Set Home Community
 

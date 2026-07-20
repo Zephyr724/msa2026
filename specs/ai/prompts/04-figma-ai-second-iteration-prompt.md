@@ -129,8 +129,11 @@ My Community | Auckland | New Zealand
 Time period:
 Weekly | Monthly | All-time
 
-Default signed-in state:
-My Community + Weekly
+Default leaderboard scope by user state:
+
+- **Member with a Home Community:** My Community + Weekly
+- **Member without a Home Community:** Auckland + Weekly
+- **Guest:** Auckland + Weekly
 
 Include:
 
@@ -187,7 +190,7 @@ Apply the approved Round 2A visual system to the existing Kiwimpact first-pass p
 
 ### 1. Discover
 
-Add a `My Community` filter.
+Add a `My Community` filter based on Quest location regions (`Quest.LocationRegionId`). Do not infer a user's location or Home Community from the filter selection.
 
 Do not use the label `Near Me`, because the product does not use precise geolocation.
 
