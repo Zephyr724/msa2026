@@ -1,5 +1,11 @@
 # Project Status
 
+Last reviewed: 2026-07-21
+
+Accepted Member-Facing Visual Baseline
+Implementation gaps remain
+
+
 Last reviewed: 2026-07-20
 
 | Control or component | Status | Evidence / notes |
