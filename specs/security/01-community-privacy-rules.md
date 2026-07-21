@@ -65,6 +65,25 @@ In a small community, a full ranking combined with public XP values could effect
 
 The threshold is a configurable application setting, defaulting to 10. It is a product decision, not a legal privacy constant. It should be reviewable as community sizes change.
 
+### Privacy-Protected Response Shape
+
+For Community Challenge progress and Communities Leaderboard responses below
+the configured privacy threshold:
+
+```json
+{
+  "isPrivacyProtected": true,
+  "activeContributors": null,
+  "ratio": null
+}
+```
+
+- Do not return exact contributor count.
+- Do not return the exact `verified completions / active contributors` ratio.
+- Do not expose participant identities.
+- Exact verified-completion totals may remain only when aggregate totals are permitted.
+- Apply the same suppression to SignalR payloads (`ChallengeProgressUpdated`, `LeaderboardUpdated`).
+
 ## 4. Quest Location vs Home Community
 
 These are separate fields with different privacy properties:

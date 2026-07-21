@@ -27,8 +27,8 @@ erDiagram
     ApplicationUser ||--|| UserProfile : "1:1"
     UserProfile }o--o| Region : "HomeCommunityRegionId (nullable)"
     Region ||--o{ Region : "ParentRegionId (self-referencing)"
-    Region ||--o{ Quest : "LocationRegionId (nullable)"
-    Region ||--o{ XpTransaction : "CommunityRegionIdAtAward (nullable)"
+    Region o|--o{ Quest : "LocationRegionId (nullable)"
+    Region o|--o{ XpTransaction : "CommunityRegionIdAtAward (nullable)"
     Region ||--o{ CommunityChallenge : "LocalAreaRegionId"
     
     ApplicationUser ||--o{ Quest : "CreatedBy (Organizer/Admin)"
@@ -39,14 +39,15 @@ erDiagram
     
     ApplicationUser ||--o{ QuestParticipation : "1:N"
     ApplicationUser ||--o{ QuestCompletion : "UserId"
-    QuestParticipation ||--o| QuestCompletion : "ParticipationId (nullable)"
+    QuestParticipation o|--o{ QuestCompletion : "ParticipationId (nullable)"
     
-    QuestCompletion ||--|| EvidenceClaimDetail : "1:1 (when Method=EvidenceClaim)"
-    QuestCompletion ||--|| XpTransaction : "SourceCompletionId (1:1, when Status=Verified)"
+    QuestCompletion ||--o| EvidenceClaimDetail : "optional detail"
+    QuestCompletion ||--o| XpTransaction : "optional XP reward"
     
     ApplicationUser ||--o{ UserAchievement : "1:N"
     Achievement ||--o{ UserAchievement : "1:N"
-    Achievement ||--o| CommunityChallenge : "RewardAchievementId (nullable)"
+    Achievement o|--o{ CommunityChallenge : "RewardAchievementId (nullable)"
+    CommunityChallenge o|--o{ UserAchievement : "SourceCommunityChallengeId (nullable)"
 ```
 
 ## 3. Entity and Field Tables
@@ -119,6 +120,8 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 
 **QuestStatus enum:** `Draft`, `Published`, `Cancelled`, `Archived`
 
+**Archive preconditions:** A Quest may be archived only when `Status = Cancelled` or `Status = Published` with `EndAtUtc` in the past. Draft quests cannot be archived (they should be published first or deleted).
+
 **QuestSourceType enum:** `OrganizerOwned`, `AdminCuratedExternal`, `PlatformEcoChallenge`
 
 **RegistrationMode enum:** `Native`, `External`, `NoneRequired`
@@ -157,10 +160,16 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 | `CancelledAt` | `timestamp with time zone?` | Nullable |
 
 **Business rules:**
-- Required for Native registration Quests.
+- Required for Native registration Quests. Capacity enforcement applies only to Native registration.
 - Optional for External Quests (created when Member selects "Track in My Quests").
 - Not used for `NoneRequired` Quests.
 - Unique constraint on `(UserId, QuestId)` where `CancelledAt IS NULL` (one active participation per user per quest).
+- For Native Quests, Completion Code redemption and Evidence Claim submission require an existing Participation.
+- For External and NoneRequired Quests, completion may exist without Participation. External tracking does not consume platform Capacity.
+- Native Completion Code redemption requires an active Participation; otherwise return `409`.
+- Native Evidence Claim submission requires an active Participation; otherwise return `409`.
+- External and NoneRequired completion paths may omit Participation.
+- Self-reported completion creates no XP and does not reserve Capacity.
 
 ### 3.7 QuestCompletion (Canonical Completion Entity)
 
@@ -181,11 +190,16 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 **CompletionStatus enum:** `Pending`, `Verified`, `Rejected`, `SelfReported`
 
 **Business rules:**
-- `UserId` and `QuestId` are direct FKs — completion does not require a Participation row.
-- `ParticipationId` is nullable. Evidence Claims and Self Reports may exist without participation. Completion Code redemption typically has participation but it is not structurally required.
+- `UserId` and `QuestId` are direct FKs — completion does not require a Participation row for External and NoneRequired Quests.
+- `ParticipationId` is nullable. For External and NoneRequired Quests, Evidence Claims and Self Reports may exist without participation. For Native Quests, Completion Code redemption and Evidence Claim submission require an existing Participation.
 - Partial unique index: `(UserId, QuestId) WHERE Status = 'Verified'` — enforces at most one Verified completion per Member per Quest in the MVP.
 - Repeatable Quest completion is deferred. Future implementation must introduce `QuestOccurrence`.
+- At most one Pending Evidence Claim per `(UserId, QuestId)`. Enforced by partial unique index: `(UserId, QuestId) WHERE Method = 'EvidenceClaim' AND Status = 'Pending'`.
+- At most one SelfReported completion per `(UserId, QuestId)`. Enforced by partial unique index: `(UserId, QuestId) WHERE Method = 'SelfReported' AND Status = 'SelfReported'`.
+- SelfReported and verification records may coexist as separate rows. A SelfReported record is never promoted or deleted when a later verification occurs.
+- Passport deduplication is a read-model rule and does not delete or merge canonical completion records. Precedence: Verified > Pending EvidenceClaim > SelfReported > latest Rejected EvidenceClaim.
 - Self-reported completions have `Status = SelfReported`, award no XP, and do not count toward streaks, achievements, or leaderboards.
+- Use `QuestCompletion.CreatedAt` as submission time.
 
 ### 3.8 EvidenceClaimDetail
 
@@ -193,23 +207,36 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 |--------|------|-------------|
 | `Id` | `uuid` | PK, not null |
 | `QuestCompletionId` | `uuid` | Not null. FK → `QuestCompletion.Id`. Unique (1:1). Cascade delete. |
-| `Description` | `text` (max 500) | Not null. Member's description of participation. |
-| `EvidenceUrl` | `text` (max 2000) | Nullable. HTTPS only. Owner/Admin only. Never public. |
+| `Description` | `text` (max 500) | Not null on submission (API validation). Nullable after purge. Member's description of participation. |
+| `EvidenceUrl` | `text` (max 2000) | Nullable. HTTPS only. Owner/Admin only. Never public. Cleared on purge. |
 | `UserDeclaration` | `bool` | Not null. Member confirms accuracy of claim. |
-| `ReviewNote` | `text` (max 500) | Nullable. Admin review note. |
+| `ReviewNote` | `text` (max 500) | Nullable. Admin review note. Cleared on purge. |
 | `ReviewedByUserId` | `uuid?` | Nullable. FK → `AspNetUsers.Id`. |
 | `ReviewedAt` | `timestamp with time zone?` | Nullable |
-| `EvidencePurgeDueAt` | `timestamp with time zone?` | Nullable. Set = `ReviewedAt + 90 days` on approval. |
-| `EvidencePurgedAt` | `timestamp with time zone?` | Nullable. Set when evidence is purged. |
+| `EvidencePurgeDueAt` | `timestamp with time zone?` | Nullable. Set = `ReviewedAt + 90 days` after approval or rejection. |
+| `EvidencePurgedAt` | `timestamp with time zone?` | Nullable. Set when sensitive fields are cleared. |
 
 **Business rules:**
 - Only exists when `QuestCompletion.Method = EvidenceClaim`.
 - Evidence URL: HTTPS only, owner/Admin only, never public, backend never downloads/previews/fetches.
 - Full URL is not logged.
-- Pending claims can be edited or withdrawn by the claimant.
-- Reviewed claims cannot be edited by the claimant.
-- Evidence purge: `EvidencePurgeDueAt = ReviewedAt + 90 days`. Background job removes Description, EvidenceUrl, and detailed ReviewNote within 24 hours after due date.
-- Retained after purge: ClaimId, UserId, QuestId, Status, SubmittedAt, ReviewedAt, ReviewedBy, VerificationLevel, XpTransactionId, EvidencePurgedAt.
+- Pending claims can be edited or withdrawn by the claimant. Withdrawal permanently deletes the `QuestCompletion` and its `EvidenceClaimDetail` (cascade). Evidence is removed immediately. Do not add a `Withdrawn` CompletionStatus.
+- Reviewed claims cannot be edited or withdrawn by the claimant.
+- Evidence purge: `EvidencePurgeDueAt = ReviewedAt + 90 days` after either approval or rejection. Background job clears `Description`, `EvidenceUrl`, and `ReviewNote` (sets to null) within 24 hours after due date.
+- Retained after purge:
+  - `QuestCompletion.Id`
+  - `QuestCompletion.UserId`
+  - `QuestCompletion.QuestId`
+  - `QuestCompletion.Method`
+  - `QuestCompletion.Status`
+  - `QuestCompletion.CreatedAt` (submission time)
+  - `EvidenceClaimDetail.ReviewedAt`
+  - `EvidenceClaimDetail.ReviewedByUserId`
+  - `EvidenceClaimDetail.UserDeclaration`
+  - `EvidenceClaimDetail.EvidencePurgedAt`
+- The XP relation remains derivable through `XpTransaction.SourceCompletionId`.
+- Pending claim withdrawal remains permanent deletion of the pending `QuestCompletion` and owned `EvidenceClaimDetail`.
+- Do not introduce `SubmittedAt`, `VerificationLevel`, or `EvidenceClaimDetail.XpTransactionId`.
 
 ### 3.9 CompletionCode
 
@@ -275,11 +302,14 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 | `Id` | `uuid` | PK, not null |
 | `UserId` | `uuid` | Not null. FK → `AspNetUsers.Id`. |
 | `AchievementId` | `uuid` | Not null. FK → `Achievement.Id`. |
+| `SourceCommunityChallengeId` | `uuid?` | Nullable. FK → `CommunityChallenge.Id`. Set when the achievement is awarded as a Community Challenge reward. |
 | `AwardedAt` | `timestamp with time zone` | Not null |
 | `XpTransactionId` | `uuid?` | Nullable. FK → `XpTransaction.Id`. The XP transaction that triggered the achievement, if applicable. |
 
 **Business rules:**
-- Unique constraint on `(UserId, AchievementId)` — a Member earns each achievement at most once.
+- Partial unique index on `(UserId, AchievementId)` WHERE `SourceCommunityChallengeId IS NULL` — a Member earns each non-challenge achievement at most once.
+- Partial unique index on `(UserId, AchievementId, SourceCommunityChallengeId)` WHERE `SourceCommunityChallengeId IS NOT NULL` — a Member earns each challenge-reward achievement at most once per challenge.
+- `SourceCommunityChallengeId` is non-null when the achievement is awarded as a Community Challenge reward; null for all other achievement awards (milestones, streaks, category achievements).
 
 ### 3.13 CommunityChallenge
 
@@ -300,12 +330,15 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 
 **Business rules:**
 - At most one Active challenge per LocalArea at any time.
+- Challenge finalization is performed by a lightweight .NET hosted background service (`BackgroundService` implementation) that periodically evaluates Active challenges whose `PeriodEnd` has passed. Target met → `Completed`; target not met → `Failed`. Reward awards are performed idempotently.
+- Do not introduce Hangfire or another job framework.
 - Enforced via partial unique index: `(LocalAreaRegionId) WHERE Status = 'Active'`.
-- Progress is derived by querying `XpTransaction` — count of verified completions where `CommunityRegionIdAtAward = LocalAreaRegionId` and `XpTransaction.CreatedAt` within `[PeriodStart, PeriodEnd]`.
+- Progress is derived by querying `XpTransaction` — count of verified completions where `CommunityRegionIdAtAward = LocalAreaRegionId` and `XpTransaction.CreatedAt >= PeriodStart` AND `XpTransaction.CreatedAt < PeriodEnd` (half-open interval `[PeriodStart, PeriodEnd)`).
 - Do not create a `CommunityChallengeContribution` entity.
 - Rewards use `RewardAchievementId` only. Do not create `RewardBadgeCode` or another badge reward system.
 - Members do not manually join; contribution is automatic when eligible XP is awarded.
 - Historical contribution does not move when Home Community changes.
+- **Editing restrictions (MVP):** Admin may edit region, period, target, and reward only before `PeriodStart`. Once `PeriodStart` has arrived, or once any eligible contribution exists, those competitive fields are immutable. An already-started challenge may only be cancelled. Reducing the target below current progress is forbidden. Return `409 Conflict` for prohibited changes.
 
 ## 4. Enums Summary
 
@@ -333,13 +366,16 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 | Region | `ParentRegionId` | Index | Hierarchy traversal |
 | QuestParticipation | `(UserId, QuestId) WHERE CancelledAt IS NULL` | Partial unique index | One active participation per user per quest |
 | QuestCompletion | `(UserId, QuestId) WHERE Status = 'Verified'` | Partial unique index | At most one Verified completion per Member per Quest (MVP rule) |
+| QuestCompletion | `(UserId, QuestId) WHERE Method = 'EvidenceClaim' AND Status = 'Pending'` | Partial unique index | At most one Pending Evidence Claim per Member per Quest |
+| QuestCompletion | `(UserId, QuestId) WHERE Method = 'SelfReported' AND Status = 'SelfReported'` | Partial unique index | At most one SelfReported completion per Member per Quest |
 | QuestCompletion | `ParticipationId` | Index | Lookup completions by participation |
 | EvidenceClaimDetail | `QuestCompletionId` | Unique | 1:1 with QuestCompletion |
 | CompletionCode | `(QuestId, IsActive, IsRevoked)` | Index | Lookup active codes for a quest |
 | XpTransaction | `SourceCompletionId` | Unique | One XP transaction per QuestCompletion (reward idempotency) |
 | XpTransaction | `(CommunityRegionIdAtAward, CreatedAt)` | Index | Community Challenge progress queries |
 | XpTransaction | `(UserId, CreatedAt)` | Index | Personal XP history, leaderboard queries |
-| UserAchievement | `(UserId, AchievementId)` | Unique | One award per achievement per user |
+| UserAchievement | `(UserId, AchievementId) WHERE SourceCommunityChallengeId IS NULL` | Partial unique index | One award per non-challenge achievement per user |
+| UserAchievement | `(UserId, AchievementId, SourceCommunityChallengeId) WHERE SourceCommunityChallengeId IS NOT NULL` | Partial unique index | One award per challenge-reward achievement per user per challenge |
 | Achievement | `Code` | Unique | Machine-readable identifier |
 | CommunityChallenge | `(LocalAreaRegionId) WHERE Status = 'Active'` | Partial unique index | At most one Active challenge per LocalArea |
 | CommunityChallenge | `(LocalAreaRegionId, PeriodStart)` | Index | Challenge history lookup |
@@ -358,16 +394,16 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 
 | Resource | Owner | Authorization Rule |
 |----------|-------|--------------------|
-| UserProfile | The Member (self) | Self only; Admin read for authorised operational purposes |
+| UserProfile | The Member (self) | Self only. Admin may access specific UserProfile fields (e.g., display name) when needed for authorised operational purposes (e.g., claim review includes claimant display name), but there is no general Admin UserProfile-read endpoint. |
 | Quest | Organizer (creator) or Admin | Organizer manages owned quests; Admin manages all |
 | QuestImage | Organizer (quest owner) or Admin | Same as parent Quest |
 | QuestParticipation | The Member (self) | Self only (join/cancel own participation) |
-| QuestCompletion | The Member (self) | Self read; Admin review for EvidenceClaim; Organizer view aggregate only |
-| EvidenceClaimDetail | The Member (self) + Admin | Self read/write (pending only); Admin read/write (review) |
+| QuestCompletion | The Member (self) | Self read; Admin review for EvidenceClaim; Organizer: limited operational participant list and aggregate completion summary; no evidence or private profile data. Organizer cannot receive Verified Completion for own quests (self-dealing prevention). |
+| EvidenceClaimDetail | The Member (self) + Admin | Self read/write (pending only); Admin read/write (review). Admin cannot approve/reject own claim. |
 | CompletionCode | Organizer (quest owner) or Admin | Organizer manages codes for owned quests; Admin manages all |
 | XpTransaction | System (immutable) | Read by owning Member, Admin; never modified after creation |
 | UserAchievement | The Member (self) | Self read; System awards |
-| CommunityChallenge | Admin | Admin creates/manages; Members read |
+| CommunityChallenge | Admin | Guest and Member: public aggregate read. Admin: create and manage. Organizer: no special management privilege beyond public/member read. Private personal contribution data remains available only to the owning Member through Passport endpoints. |
 | Region | System (seed) | Public read (active only); Admin manages seed |
 
 ## 7. Transaction Boundaries
@@ -376,6 +412,10 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 - EvidenceClaim review: updating QuestCompletion.Status to `Verified` + `ReviewedAt`/`ReviewedBy` + creating XpTransaction must be atomic.
 - CommunityChallenge progress is derived (read-only query); no transactional write.
 - CompletionCode redemption: creating a Verified QuestCompletion + XpTransaction must check the `(UserId, QuestId) WHERE Status = 'Verified'` uniqueness constraint and the redemption eligibility in one atomic operation.
+- Self-dealing prevention rules:
+  - Organizer cannot redeem a CompletionCode or receive a Verified Completion for an Organizer-owned Quest they created. The application service must reject the operation (409 Conflict).
+  - Admin cannot approve or reject their own Evidence Claim. An Admin claim requires review by a different Admin. The review service must reject self-review (409 Conflict).
+- Organizer-owned Quest Evidence Claim submission is rejected before persistence with `409 Conflict`. The application service must not create a `QuestCompletion` or `EvidenceClaimDetail` row for the rejected request.
 
 ## 8. Concurrency Strategy
 
@@ -406,12 +446,73 @@ All entities and fields listed in §3 are MVP scope except as noted below.
 4. Region seed data is managed through `RegionSeed` class, not migrations.
 5. Seed data must be idempotent.
 6. Timestamps are stored as UTC using `timestamp with time zone`.
-7. `Pacific/Auckland` is used for display and business-week calculations.
+7. `Pacific/Auckland` is used for display and business-week calculations. Calendar boundaries are calculated in `Pacific/Auckland`, then converted to UTC for persistence and querying.
 8. XP amount is server-calculated; frontend never submits a trusted XP value.
 9. XP is never awarded for SelfReported completions.
 10. `CommunityRegionIdAtAward` is immutable after creation.
 
-## 11. Verification Checklist
+## 11. Resolved Completion-Lifecycle Decisions
+
+The following Completion lifecycle decisions are approved for the MVP.
+DeepSeek and other implementation agents must implement these rules exactly
+and must not select alternative behavior without new human approval.
+
+### 11.1 One Pending Evidence Claim per Member and Quest
+
+- A Member may have at most one `Pending` Evidence Claim for the same Quest.
+- Enforce this with a partial unique index on `(UserId, QuestId)` where
+  `Method = 'EvidenceClaim' AND Status = 'Pending'`.
+- A second claim submission while a Pending claim exists returns
+  `409 Conflict`.
+- The Member edits the existing Pending claim through the existing update
+  endpoint.
+- Withdrawing the Pending claim permanently deletes it and releases the unique
+  slot.
+- After a claim is Rejected, the Member may submit a new Evidence Claim.
+- Multiple historical Rejected claims are permitted.
+
+### 11.2 One SelfReported Completion per Member and Quest
+
+- A Member may have at most one SelfReported completion for the same Quest.
+- Enforce this with a partial unique index on `(UserId, QuestId)` where
+  `Method = 'SelfReported' AND Status = 'SelfReported'`.
+- A second SelfReported submission for the same Quest returns `409 Conflict`.
+- Repeatable Quest completion remains deferred until `QuestOccurrence` is
+  introduced.
+
+### 11.3 SelfReported and Later Verification
+
+- A SelfReported completion may coexist with a Pending, Rejected, or Verified
+  verification record for the same Member and Quest.
+- A SelfReported record is not promoted, mutated, or deleted when a Member
+  later submits an Evidence Claim or redeems a Completion Code.
+- A later Verified completion remains a separate `QuestCompletion` and is the
+  only record that may create an `XpTransaction`.
+- Passport completion history displays one primary record per Quest using this
+  precedence:
+  1. Verified;
+  2. Pending EvidenceClaim;
+  3. SelfReported;
+  4. latest Rejected EvidenceClaim.
+- Where more than one Rejected Evidence Claim exists, use the record with the
+  latest `CreatedAt`.
+- Full Evidence Claim history remains available through the claim-history
+  endpoints and is not removed by Passport deduplication.
+
+### 11.4 Organizer-Owned Quest Evidence Claim
+
+- An Organizer who created an Organizer-owned Quest may not submit an Evidence
+  Claim for that Quest.
+- Reject the submission at
+  `POST /api/v1/quests/{questId}/claims` with `409 Conflict`.
+- Do not persist a Pending `QuestCompletion` or `EvidenceClaimDetail` for the
+  rejected request.
+- This is the earliest enforcement point for the existing rule that an
+  Organizer cannot receive a Verified Completion or XP from their own Quest.
+- This restriction does not prevent the Organizer from completing Quests
+  created by another Organizer or Admin.
+
+## 12. Verification Checklist
 
 - [ ] All entities have EF Core configurations matching these field definitions
 - [ ] All unique constraints and indexes are created in migrations
@@ -425,8 +526,14 @@ All entities and fields listed in §3 are MVP scope except as noted below.
 - [ ] SelfReported completions create no XpTransaction
 - [ ] `CommunityRegionIdAtAward` snapshot is immutable
 - [ ] CommunityChallenge progress is derived, not stored in a contribution table
+- [ ] `LastCommunityChangeAt` column exists in UserProfile table
+- [ ] Partial unique index prevents duplicate Pending Evidence Claims
+- [ ] Partial unique index prevents duplicate SelfReported completions
+- [ ] SelfReported and Verified records may coexist without duplicate XP
+- [ ] Passport displays one primary completion per Quest using the accepted precedence
+- [ ] Organizer-owned Quest Evidence Claim submission is rejected before persistence
 
-## 12. Related Documents
+## 13. Related Documents
 
 - `specs/architecture/01-domain-model-region.md` — Region entity full specification
 - `specs/data/01-community-identity-data-model.md` — Community identity data model

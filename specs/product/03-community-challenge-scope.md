@@ -40,8 +40,15 @@ For the product, it provides:
 - At most one Active challenge exists per LocalArea at any time.
 - Each challenge runs for one calendar month (Pacific/Auckland).
 - Admin creates challenges manually. There is no automatic monthly challenge generation in the MVP.
+- **Editing restrictions (MVP):** Admin may edit region, period, target, and reward only before `PeriodStart`. Once `PeriodStart` has arrived, or once any eligible contribution exists, those competitive fields are immutable. An already-started challenge may only be cancelled. Reducing the target below current progress is forbidden. Return `409 Conflict` for prohibited changes.
+- Guest and Member may read public aggregate data (challenge detail, progress).
+- Organizer has no special challenge management privileges beyond Member read access.
 - A challenge may be Cancelled by Admin before completion.
-- At the end of the period, the challenge is Completed (target met) or Failed (target not met).
+- Challenge finalization is performed by a lightweight .NET hosted background service (`BackgroundService` implementation) that periodically evaluates Active challenges whose `PeriodEnd` has passed:
+  - Target met → `Completed`. Eligible contributors receive the `RewardAchievementId` Achievement.
+  - Target not met → `Failed`.
+  - Reward awards are performed idempotently (using `UserAchievement` unique constraints as the guard).
+- Do not introduce Hangfire or another job framework.
 
 ### 3.2 Participation
 
@@ -66,8 +73,11 @@ Challenge progress is derived by querying `XpTransaction`:
 ```
 COUNT of verified QuestCompletions
 WHERE XpTransaction.CommunityRegionIdAtAward = LocalAreaRegionId
-  AND XpTransaction.CreatedAt BETWEEN PeriodStart AND PeriodEnd
+  AND XpTransaction.CreatedAt >= PeriodStart
+  AND XpTransaction.CreatedAt < PeriodEnd
 ```
+
+The interval is defined as `[PeriodStart, PeriodEnd)` (half-open). Calendar boundaries are calculated in `Pacific/Auckland`, then converted to UTC for persistence and querying.
 
 Progress is calculated on read; there is no `CommunityChallengeContribution` table.
 
@@ -118,7 +128,19 @@ The Communities Leaderboard ranks LocalAreas by their current challenge progress
 
 - Challenge progress shows aggregate counts only — no individual contributor names or rankings.
 - Individual contribution is private by default. A Member can see their own contribution count on their Passport.
-- Small-community considerations: if a community has very few active Members, the contributor count may be suppressed (same threshold and rules as the People Leaderboard small-community protection — see `specs/security/01-community-privacy-rules.md` §3).
+- Small-community considerations: if a community has very few active Members, the contributor count must be suppressed (same threshold and rules as the People Leaderboard small-community protection — see `specs/security/01-community-privacy-rules.md` §3).
+- This applies to both:
+  - Community Challenge progress API (`GET /api/v1/community-challenges/{id}/progress`) — suppress exact contributor counts below threshold.
+  - Communities Leaderboard API (`GET /api/v1/leaderboards/communities`) — suppress exact contributor counts for communities below threshold.
+- Below the configured threshold (default 10 active ranked Members), return a privacy-protected response shape:
+  ```json
+  {
+    "isPrivacyProtected": true,
+    "activeContributors": null,
+    "ratio": null
+  }
+  ```
+- Do not return exact contributor count, exact ratio, or participant identities. Exact verified-completion totals may remain where aggregate totals are permitted. Apply the same suppression to SignalR payloads.
 
 ## 7. Empty and Small-Community States
 

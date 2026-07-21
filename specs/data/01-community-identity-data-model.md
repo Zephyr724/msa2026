@@ -66,7 +66,13 @@ These are initial schema additions or a later additive migration, depending on w
 - No history table for past selections. The previous value is overwritten on change.
 - Removed when the `UserProfile` is deleted.
 
-### 2.3 ShowCommunityOnPassport
+### 2.3 LastCommunityChangeAt
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `LastCommunityChangeAt` | `timestamp with time zone?` | Nullable. Set when Home Community is changed (not first selection). Used for cooldown enforcement. |
+
+### 2.4 ShowCommunityOnPassport
 
 | Column | Type | Constraints |
 |--------|------|-------------|
@@ -142,8 +148,9 @@ related tables are first scaffolded. In either case the schema must include:
 1. Create the `Regions` table with columns and indexes as defined in §1.
 2. Add `HomeCommunityRegionId` (nullable FK → `Regions.Id`) to the user profile table.
 3. Add `ShowCommunityOnPassport` (bool, default false) to the user profile table.
-4. Add `LocationRegionId` (nullable FK → `Regions.Id`) to the `Quests` table.
-5. Add `CommunityRegionIdAtAward` (nullable FK → `Regions.Id`) to the `XpTransactions` table.
+4. Add `LastCommunityChangeAt` (timestamp with time zone, nullable) to the user profile table.
+5. Add `LocationRegionId` (nullable FK → `Regions.Id`) to the `Quests` table.
+6. Add `CommunityRegionIdAtAward` (nullable FK → `Regions.Id`) to the `XpTransactions` table.
 
 The exact migration implementation is verified after scaffold.
 

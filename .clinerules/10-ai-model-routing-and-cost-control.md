@@ -5,7 +5,12 @@ in this repository to preserve architectural quality while controlling cost.
 
 ## Model responsibilities
 
-- Cline is the only agent interface used for this repository.
+- Cline was the initial primary agent interface for this repository.
+- The repository now supports multiple AI agent interfaces, including Cline and
+Codex IDE Extension.
+- All agents must follow the shared repository instructions defined in
+AGENTS.md.
+- Agent-specific rules remain inside their corresponding configuration files.
 - Claude Sonnet is the planning, architecture, security, and independent review model.
 - DeepSeek is the routine implementation, testing, debugging, and command-execution model.
 - Claude Opus is an exceptional escalation model and is never a default model.
