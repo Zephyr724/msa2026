@@ -62,7 +62,9 @@ A community with fewer than 10 active ranked Members (configurable threshold, de
 
 The threshold is a configurable product value, not a legal constant.
 
-## 3. Community Progress Metrics
+## 3. Community Progress Metrics and Communities Leaderboard
+
+### 3.1 Community Metrics
 
 MVP community metrics include:
 
@@ -80,12 +82,47 @@ The MVP must not claim:
 
 unless a separately accepted and validated methodology exists.
 
+### 3.2 Communities Leaderboard (MVP-lite)
+
+A read-only Communities Leaderboard mode is an accepted MVP-lite feature. It is separate from the People Leaderboard.
+
+**Primary ranking metric:**
+
+`verified completions / active contributors`
+
+**Supporting values:**
+
+- total verified completions;
+- active contributors.
+
+**Scope and period:**
+
+- Scopes: Auckland, New Zealand (My Community is a People Leaderboard scope, not a Communities Leaderboard scope)
+- Periods: Monthly, All-time
+
+**An active ranked Member** is an active, non-deleted account with at least one eligible verified Quest XP transaction in the selected period.
+
+**Privacy considerations:**
+
+- The Communities Leaderboard ranks aggregate community metrics. It does not expose individual Member data.
+- Small-community threshold considerations apply to the contributor count when it may identify individuals.
+
+**Explicitly excluded:**
+
+- Seasons — sequenced periods with cumulative scoring and resets.
+- Leagues — tiers of communities with promotion and relegation.
+- Editable scoring formulas — the metric is fixed.
+- Complex trend analytics — charts, historical comparisons, projections.
+- The Communities Leaderboard must not present raw totals as proof that a larger community is inherently more environmentally successful.
+
+### 3.3 Future Regional Comparison
+
 Future regional comparison should distinguish:
 
 1. actions completed **by Members belonging to a region**;
 2. actions completed **at Quest locations within a region**.
 
-Future comparisons should include both totals and normalised measures, such as completions per active Member.
+Future comparisons should include both totals and normalised measures, such as completions per active Member. The MVP-lite Communities Leaderboard is a first step toward this capability.
 
 ## 4. Separation of Identity and Quest Location
 
