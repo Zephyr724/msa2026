@@ -77,9 +77,11 @@ Before Slice 1 implementation:
 
 Evidence:
 
-- Docker Desktop is running.
-- docker-compose.yml starts PostgreSQL 17 and Mailpit successfully.
-- PostgreSQL container is available through the local Docker workflow.
+- Docker Desktop is available.
+- `docker-compose.yml` successfully starts PostgreSQL 17 and Mailpit.
+- `.github/workflows/ci.yml` is active.
+- GitHub Actions `Backend Build and Test` passed.
+- GitHub Actions `Frontend Build and Test` passed.
 
 ## Accepted Architecture Baseline
 
