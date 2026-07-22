@@ -71,7 +71,7 @@ Review evidence:
 Before Slice 1 implementation:
 
 - [x] PROJECT_STATUS updated
-- [ ] GitHub Actions CI workflow added and verified
+- [x] GitHub Actions CI workflow added and verified
 - [x] Docker availability verified
 - [x] PostgreSQL local workflow verified
 
