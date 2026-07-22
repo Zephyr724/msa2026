@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Kiwimpact.Api/Kiwimpact.Api.csproj" />
+    <Project Path="src/Kiwimpact.Core/Kiwimpact.Core.csproj" />
+    <Project Path="src/Kiwimpact.Infrastructure/Kiwimpact.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Kiwimpact.UnitTests/Kiwimpact.UnitTests.csproj" />
+  </Folder>
+</Solution>
