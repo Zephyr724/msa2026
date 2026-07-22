@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: kiwimpact-postgres
+    environment:
+      POSTGRES_USER: kiwimpact
+      POSTGRES_PASSWORD: kiwimpact_dev
+      POSTGRES_DB: kiwimpact
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kiwimpact -d kiwimpact"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: kiwimpact-mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  postgres_data:
