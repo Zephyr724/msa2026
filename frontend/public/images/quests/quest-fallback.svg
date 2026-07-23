@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" role="img" aria-labelledby="title description">
+  <title id="title">Kiwimpact quest illustration</title>
+  <desc id="description">Native leaves surrounding a simple environmental quest marker.</desc>
+  <rect width="800" height="480" fill="#e8f5e9"/>
+  <circle cx="400" cy="240" r="112" fill="#2e7d32"/>
+  <path d="M400 146c-45 41-70 79-70 114 0 40 31 72 70 72s70-32 70-72c0-35-25-73-70-114Z" fill="#fff"/>
+  <path d="M400 190v94m0 0-34-34m34 34 34-34" fill="none" stroke="#2e7d32" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>
+  <path d="M185 315c76-16 125-66 146-148-82 21-132 70-148 146l2 2Zm430 0c-76-16-125-66-146-148 82 21 132 70 148 146l-2 2Z" fill="#66bb6a"/>
+</svg>

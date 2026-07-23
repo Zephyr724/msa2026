@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kiwimpact.Infrastructure" />
+    <InternalsVisibleTo Include="Kiwimpact.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

@@ -5,6 +5,7 @@
     <Project Path="src/Kiwimpact.Infrastructure/Kiwimpact.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Kiwimpact.IntegrationTests/Kiwimpact.IntegrationTests.csproj" />
     <Project Path="tests/Kiwimpact.UnitTests/Kiwimpact.UnitTests.csproj" />
   </Folder>
 </Solution>
