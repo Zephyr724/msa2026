@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#2d5a27"/>
+  <text x="200" y="150" text-anchor="middle" fill="white" font-size="16" font-family="sans-serif">beach-survey</text>
+  <text x="200" y="180" text-anchor="middle" fill="#a0d8a0" font-size="12" font-family="sans-serif">Kiwimpact Demo</text>
+</svg>

@@ -1,6 +1,6 @@
 # Kiwimpact — Community eco quests across New Zealand
 
-**Status: Slice 0 Foundation implemented**
+**Status: Slice 1 Region and Public Quest Read implemented and verified**
 
 Kiwimpact is an Auckland-first gamified community environmental participation
 platform for Aotearoa New Zealand. The technical foundation is now in place.
@@ -51,13 +51,20 @@ dotnet run --project src/Kiwimpact.Api --launch-profile http
 
 The API starts on `http://localhost:5000` with the `http` launch profile.
 
-**Foundation endpoints:**
+**Available endpoints:**
 
 | Endpoint | URL |
 |----------|-----|
 | Health | `GET /health` |
 | OpenAPI JSON | `GET /openapi/v1.json` |
 | Scalar Docs | `/scalar/v1` |
+| Active local Regions | `GET /api/v1/regions` |
+| Region detail | `GET /api/v1/regions/{id}` |
+| Region children | `GET /api/v1/regions/{id}/children` |
+| Region ancestors | `GET /api/v1/regions/{id}/ancestors` |
+| Published Quest discovery | `GET /api/v1/quests` |
+| Published Quest detail | `GET /api/v1/quests/{id}` |
+| Published Quest images | `GET /api/v1/quests/{id}/images` |
 
 ### 3. Frontend
 
@@ -94,22 +101,38 @@ or environment variables for secrets.
 **Local connection string:**
 
 ```
-Host=localhost;Database=kiwimpact;Username=kiwimpact;Password=kiwimpact_dev
+Host=localhost;Port=5433;Database=kiwimpact;Username=kiwimpact;Password=kiwimpact_dev
 ```
+
+> **Port mapping:** Docker Compose maps host port `5433` to container port `5432`
+> so the PostgreSQL container does not conflict with another local PostgreSQL
+> service that may already use the default host port `5432`.
+>
+> Verify the services are running with:
+>
+> ```bash
+> docker compose ps
+> ```
 
 ## Current State
 
 - Slice 0 Foundation is implemented.
-- React frontend builds, runs, and renders the application shell.
-- ASP.NET Core backend builds, runs, and exposes health and Scalar endpoints.
+- Slice 1 Region and Public Quest Read is implemented on
+  `feat/slice-1-region-quest-read` and remains uncommitted.
+- React Router provides public Quest discovery and detail pages.
+- TanStack Query owns Region and Quest server state; discovery filters,
+  sorting, search, page, and page size are URL-owned.
+- ASP.NET Core exposes anonymous Region and published-Quest read APIs plus
+  health, OpenAPI, and Scalar endpoints.
 - Three-project Clean Architecture Lite structure is established.
-- EF Core and PostgreSQL boundaries are configured (no entities or migrations yet).
-- Frontend and backend unit tests pass.
-- **No business features are implemented.**
-
-Integration tests (`Kiwimpact.IntegrationTests`) are deferred to the first
-data-backed feature slice (no entities, migrations, or persistence behaviour
-exist yet).
+- EF Core Region, Quest, QuestImage, and Identity-backed curator persistence
+  is configured with a PostgreSQL migration and Development-only demo seeds.
+- PostgreSQL integration tests run through Testcontainers and apply the real
+  migration.
+- Final Slice 1 verification on 2026-07-24 passed: backend build with
+  0 warnings/0 errors, 34 unit tests, 73 PostgreSQL integration tests,
+  and 65 frontend tests across 6 files, plus frontend lint, type-check,
+  and production build.
 
 ## Key References
 
