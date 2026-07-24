@@ -1,0 +1,65 @@
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import QuestForm from '../components/organizer/QuestForm';
+import { emptyQuestFormValues } from '../components/organizer/questFormModel';
+import { ManagementForbidden } from '../components/organizer/RequireManagementAccess';
+import { useCreateQuestMutation } from '../hooks/useOrganizerQuests';
+import { ApiError } from '../lib/api/apiFetch';
+import type { CreateQuestInput } from '../types/questManagement';
+
+export default function OrganizerQuestCreatePage() {
+  const navigate = useNavigate();
+  const create = useCreateQuestMutation();
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  useEffect(() => {
+    if (sessionExpired) navigate('/login', { replace: true });
+  }, [navigate, sessionExpired]);
+
+  async function handleSubmit(input: CreateQuestInput) {
+    setServerError(null);
+    try {
+      return await create.mutateAsync(input);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setSessionExpired(true);
+      } else if (error instanceof ApiError && error.status === 403) {
+        setForbidden(true);
+      } else {
+        setServerError(
+          error instanceof ApiError
+            ? error.problem?.detail ?? 'The quest could not be created.'
+            : 'The quest could not be created. Please try again.',
+        );
+      }
+      throw error;
+    }
+  }
+
+  if (forbidden) return <ManagementForbidden questSpecific />;
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-8">
+      <Link className="btn btn-ghost btn-sm mb-4" to="/organizer/quests">
+        &larr; Back to managed quests
+      </Link>
+      <h1 className="text-3xl font-bold">Create quest</h1>
+      <p className="mb-8 mt-2 text-base-content/65">
+        New quests are saved as drafts. You can review and publish after creation.
+      </p>
+      <QuestForm
+        disableNavigationProtection={sessionExpired}
+        initialValues={emptyQuestFormValues}
+        onClearServerError={() => setServerError(null)}
+        onSubmit={handleSubmit}
+        onSubmitted={(quest) => navigate(`/organizer/quests/${quest.id}/edit`)}
+        pendingLabel="Creating…"
+        serverError={serverError}
+        submitLabel="Create draft"
+        submitting={create.isPending}
+      />
+    </main>
+  );
+}

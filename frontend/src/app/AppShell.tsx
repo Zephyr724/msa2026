@@ -6,6 +6,9 @@ export default function AppShell() {
   const auth = useAuthQuery();
   const logout = useLogoutMutation();
   const navigate = useNavigate();
+  const canManageQuests = auth.data?.roles.some(
+    (role) => role === 'Organizer' || role === 'Admin',
+  );
 
   async function handleLogout() {
     try {
@@ -35,6 +38,11 @@ export default function AppShell() {
             <Link className="btn btn-ghost btn-sm" to="/quests">
               Quests
             </Link>
+            {canManageQuests && (
+              <Link className="btn btn-ghost btn-sm" to="/organizer/quests">
+                Manage quests
+              </Link>
+            )}
             {auth.isPending ? (
               <span aria-live="polite" className="text-sm text-base-content/60">
                 Checking session…

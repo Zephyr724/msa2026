@@ -5,6 +5,10 @@ import QuestDetailPage from '../pages/QuestDetailPage.tsx';
 import NotFoundPage from '../pages/NotFoundPage.tsx';
 import LoginPage from '../pages/LoginPage.tsx';
 import RegisterPage from '../pages/RegisterPage.tsx';
+import OrganizerQuestListPage from '../pages/OrganizerQuestListPage.tsx';
+import OrganizerQuestCreatePage from '../pages/OrganizerQuestCreatePage.tsx';
+import OrganizerQuestEditPage from '../pages/OrganizerQuestEditPage.tsx';
+import RequireManagementAccess from '../components/organizer/RequireManagementAccess.tsx';
 import AppShell from './AppShell.tsx';
 
 export const router = createBrowserRouter([
@@ -16,6 +20,14 @@ export const router = createBrowserRouter([
       { path: '/quests/:questId', element: <QuestDetailPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      {
+        element: <RequireManagementAccess />,
+        children: [
+          { path: '/organizer/quests', element: <OrganizerQuestListPage /> },
+          { path: '/organizer/quests/new', element: <OrganizerQuestCreatePage /> },
+          { path: '/organizer/quests/:questId/edit', element: <OrganizerQuestEditPage /> },
+        ],
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
