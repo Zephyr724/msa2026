@@ -4,6 +4,8 @@ Last reviewed: 2026-07-24
 
 ## Current Implementation Status
 
+### Slice 2A — COMPLETE, MERGED, AND FROZEN
+
 ### Slice 1 — COMPLETE AND FROZEN
 
 Status: COMPLETE, MERGED, AND FROZEN

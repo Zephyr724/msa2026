@@ -25,4 +25,26 @@ internal static class ProblemDetailsHelper
             Detail = detail
         };
     }
+
+    public static ProblemDetails Forbidden(string detail)
+    {
+        return new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
+            Title = "Forbidden",
+            Status = StatusCodes.Status403Forbidden,
+            Detail = detail
+        };
+    }
+
+    public static ProblemDetails Conflict(string detail)
+    {
+        return new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+            Title = "Conflict",
+            Status = StatusCodes.Status409Conflict,
+            Detail = detail
+        };
+    }
 }
