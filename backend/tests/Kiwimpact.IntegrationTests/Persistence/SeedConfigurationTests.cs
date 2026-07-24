@@ -41,6 +41,11 @@ public sealed class SeedConfigurationTests
 
         try
         {
+            using (var preDb = CreateInspectionContext(container.GetConnectionString()))
+            {
+                await preDb.Database.MigrateAsync(TestContext.Current.CancellationToken);
+            }
+
             var factory = new NonDevelopmentWebApplicationFactory(container.GetConnectionString());
 
             // Create a client — this triggers startup but seed is gated
@@ -50,13 +55,13 @@ public sealed class SeedConfigurationTests
             // Inspect database via an independent context (not factory.Services
             // which would re-trigger startup).
             using var db = CreateInspectionContext(container.GetConnectionString());
-            db.Database.Migrate();
-
             var regionCount = await db.Regions.CountAsync(TestContext.Current.CancellationToken);
             var questCount = await db.Quests.CountAsync(TestContext.Current.CancellationToken);
+            var roleCount = await db.Roles.CountAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal(0, regionCount);
             Assert.Equal(0, questCount);
+            Assert.Equal(3, roleCount);
         }
         finally
         {
