@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Kiwimpact.Api\Kiwimpact.Api.csproj" />
     <ProjectReference Include="..\..\src\Kiwimpact.Core\Kiwimpact.Core.csproj" />
   </ItemGroup>
 

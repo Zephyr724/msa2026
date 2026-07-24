@@ -12,6 +12,7 @@ public sealed class KiwimpactDbContext
     public DbSet<Region> Regions => Set<Region>();
     public DbSet<Quest> Quests => Set<Quest>();
     public DbSet<QuestImage> QuestImages => Set<QuestImage>();
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
 
     public KiwimpactDbContext(DbContextOptions<KiwimpactDbContext> options)
         : base(options)
