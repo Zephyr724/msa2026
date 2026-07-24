@@ -1,168 +1,121 @@
 # Kiwimpact Agent Instructions
 
-## Project Overview
+## Purpose and authority
 
-Kiwimpact is an individual full-stack web application for the Microsoft
-Student Accelerator 2026 Phase 2 Software Development Stream.
+This file is the primary cross-agent instruction entry point for Kiwimpact.
+`.clinerules/` provides Cline-compatible fallback guidance.
 
-It is a New Zealand environmental action and community platform using Quests,
-XP, Achievements, streaks, Community Challenges, and Leaderboards to encourage
-participation.
-
-AI tools assist development. The project author remains responsible for every
-accepted decision and all submitted work.
-
-## Source of Truth
-
-Use this priority order:
+Use this source-of-truth order:
 
 1. Current explicit human instruction.
 2. Accepted ADRs.
-3. Accepted documents under `/specs`.
-4. Source code, migrations, configuration, tests, and running behaviour.
-5. AI-generated proposals and review comments.
+3. Accepted specifications under `/specs`.
+4. Source code, migrations, configuration, tests, and observed behaviour.
+5. AI proposals, prompts, reviews, and reports.
 
-Accepted ADRs and specifications define intended behaviour.
+Accepted decisions define intended behaviour. Implementation evidence defines
+what currently exists. Do not claim that planned behaviour is implemented
+unless source, tests, and observed verification support that claim.
 
-Source code, migrations, configuration, tests, and running behaviour define
-what is currently implemented.
+The human remains responsible for every accepted decision and submitted
+change.
 
-Never treat a specification, AI response, checklist, or review record as proof
-that a feature has been implemented.
+## Technology and boundaries
 
-## Repository Structure
+Kiwimpact uses React, TypeScript, Vite, React Router, Tailwind CSS, daisyUI,
+TanStack Query, and Zustand in `frontend/`; C#, .NET 10+, ASP.NET Core, Entity
+Framework Core, PostgreSQL, ASP.NET Core Identity with HttpOnly cookie
+authentication, and Scalar in `backend/`.
 
-```text
-frontend/
-backend/
-specs/
-.clinerules/
-AGENTS.md
-```
+Keep frontend and backend responsibilities separated. Backend enforcement is
+mandatory for authentication, authorization, ownership, validation,
+antiforgery, CORS, rate limiting, sensitive evidence, and privacy thresholds.
 
-Keep frontend and backend responsibilities separated. Do not move business
-rules to the frontend when they must be enforced by the backend.
-
-## Technology Baseline
-
-### Frontend
-
-- React
-- TypeScript
-- Vite
-- React Router
-- Tailwind CSS
-- daisyUI
-- TanStack Query
-- Zustand
-
-### Backend
-
-- C#
-- .NET 10+
-- ASP.NET Core
-- Entity Framework Core
-- PostgreSQL
-- ASP.NET Core Identity
-- HttpOnly cookie authentication
-- Scalar API documentation
-
-Do not replace a major technology or install a new dependency without explicit
+Do not replace a major technology or add a dependency without explicit human
 approval.
 
-## Development Workflow
+## Agent routing
 
-Before implementing a significant task:
+- Codex is the default planning, implementation, testing, debugging, and
+  documentation agent.
+- Cline with DeepSeek is an optional low-risk or quota-constrained fallback,
+  not a mandatory implementation route.
+- Important and high-risk tasks require one independent read-only review.
+- The human selects Kimi K3 or a fresh Codex session as reviewer according to
+  availability, cost, and task risk.
+- The reviewer cannot be the session that implemented the task.
+- Claude is escalation-only when the normal implementation/review pair cannot
+  resolve a concrete high-risk problem.
 
-1. Read relevant accepted specifications and ADRs.
-2. Inspect the current repository implementation.
-3. Separate intended behaviour from implemented behaviour.
-4. Identify conflicts or missing decisions.
-5. Obtain human approval for architecture, security, schema, or scope changes.
-6. Implement the smallest useful vertical slice.
-7. Run relevant verification commands.
-8. Review Git diff and report remaining risks.
+One task has one implementation owner. A normal important task permits one
+independent full review, one concentrated correction pass, and one targeted
+closure check limited to original unresolved Blocker/Major findings. A second
+full review or second reviewer requires explicit human approval.
 
-Prefer simple, explicit, maintainable solutions.
+## Approval boundaries
 
-Avoid speculative features, premature abstractions, unrelated refactoring, and
-duplicate implementations.
+Obtain explicit human approval before:
 
-## Agent Roles
+- changing product scope, architecture, or an ADR;
+- changing authentication or the security model;
+- changing the database schema;
+- adding, removing, or materially upgrading dependencies;
+- performing destructive operations;
+- staging, committing, pushing, merging, resetting, reverting, or deploying.
 
-- ChatGPT supports product decisions, MSA interpretation, architecture
-  discussion, UX analysis, and documentation review.
-- Claude supports high-risk planning, architecture, security, data-model/API
-  review, and independent review.
-- DeepSeek through Cline performs routine approved implementation, testing,
-  debugging, and command execution.
-- Codex performs repository-aware analysis, focused approved implementation,
-  review, and verification through the Codex interface.
+Do not create or update a pull request without explicit approval. Never discard
+unrelated user changes.
 
-Agent roles do not override the source-of-truth order or human approval.
+## Task workflow
 
-## Security
+Before a significant task:
 
-Backend enforcement is mandatory for:
+1. Read the short task contract and directly relevant accepted decisions.
+2. Inspect the current implementation and separate intended from implemented
+   behaviour.
+3. Identify missing decisions and obtain required approvals.
+4. Implement the smallest useful vertical slice as the sole implementation
+   owner.
+5. Run targeted tests during implementation.
+6. Run applicable full gates once after implementation is complete.
+7. Review the Git diff and report results, risks, and unfinished work.
+8. For important or high-risk work, obtain the single independent review and
+   follow the bounded correction workflow above.
 
-- authentication;
-- authorization;
-- resource ownership;
-- validation;
-- antiforgery protection;
-- CORS;
-- rate limiting;
-- sensitive evidence handling;
-- privacy thresholds.
+Do not recursively traverse historical prompts, reviews, or completion
+reports. Reference stable decisions instead of copying them. Do not repeatedly
+read unchanged files or rerun successful full suites when sufficient evidence
+already exists.
 
-Do not rely on hidden buttons or frontend state for security.
+## Verified commands
 
-## Testing and Verification
+Run frontend commands from `frontend/`:
 
-Run the checks relevant to changed code or configuration.
+```bash
+npm run lint
+npm run type-check
+npm run test -- --run
+npm run build
+```
 
-Frontend checks may include:
+Run backend commands from `backend/`:
 
-- build;
-- lint;
-- TypeScript type-check;
-- unit tests;
-- end-to-end tests where required.
+```bash
+dotnet build Kiwimpact.slnx
+dotnet test tests/Kiwimpact.UnitTests/Kiwimpact.UnitTests.csproj --no-build
+dotnet test tests/Kiwimpact.IntegrationTests/Kiwimpact.IntegrationTests.csproj --no-build
+```
 
-Backend checks may include:
+Run only the gates applicable to the changed code or configuration. Never
+claim a command passed unless it was executed and its result observed.
 
-- build;
-- unit tests;
-- PostgreSQL integration tests;
-- migration verification.
+## Repository safety
 
-Never claim that a command or test passed unless it was actually executed and
-its result was observed.
+`main` is the deployable source of truth. Use short-lived `feat/`, `fix/`, or
+`docs/` branches. Before editing, inspect the current branch and working tree.
+Do not make substantial changes directly on `main`.
 
-## Git Safety
-
-- `main` is the deployable source of truth.
-- Do not make substantial changes directly on `main`.
-- Use one short-lived branch per independent task.
-- Before editing, inspect the current branch and working tree.
-- Never discard unrelated user changes.
-- Do not commit, push, merge, rebase, amend, reset, clean, force-push, delete a
-  branch, or create/update a pull request without explicit approval in the
-  current task.
-- Before requesting approval, report changed files, `git diff --stat`, checks
-  run, results, risks, and unfinished work.
-
-## MSA Requirements
-
-Maintain compliance with the accepted MSA requirements, including:
-
-- React frontend;
-- C# .NET backend;
-- Entity Framework Core;
-- persistent database;
-- CRUD;
-- frontend and backend tests;
-- deployed frontend and backend;
-- Scalar API documentation;
-- responsive UI;
-- AI usage evidence under `/specs`.
+Maintain the accepted MSA requirements, including the React frontend, C# .NET
+backend, Entity Framework Core, persistent database, CRUD, frontend and backend
+tests, deployed frontend and backend, Scalar documentation, responsive UI, and
+AI-use evidence under `/specs`.

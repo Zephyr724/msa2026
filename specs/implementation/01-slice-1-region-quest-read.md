@@ -1,19 +1,12 @@
-库
-/
-MSA2026
-/
-01-slice-1-region-quest-read-r2-corrected.md
-
-
 # Slice 1 — Regions and Public Quest Read
 
-- **Status:** Draft — pending independent Codex review and human approval
+- **Status:** Implemented / Merged / Frozen
 - **Date:** 2026-07-22
-- **Branch:** `feat/slice-1-region-quest-read`
+- **Historical branch:** `feat/slice-1-region-quest-read`
 - **Predecessor:** Slice 0 Foundation
-- **Implementation agent:** DeepSeek through Cline, only after this plan is approved
-- **Review agent:** Codex, read-only
-- **Commit policy:** No implementation commit until independent implementation review approves the completed slice
+- **Historical implementation agent:** DeepSeek through Cline
+- **Historical review agent:** Codex, read-only
+- **Closure:** Merged through PR #3 and frozen
 
 ## 1. Objective
 

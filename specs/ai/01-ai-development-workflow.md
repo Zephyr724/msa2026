@@ -2,160 +2,96 @@
 
 ## Purpose
 
-This document records how AI tools are used during the development of
-Kiwimpact for the MSA 2026 Phase 2 assessment.
+This document records the active AI-assisted development workflow for
+Kiwimpact and preserves the context of the earlier multi-agent approach.
 
-AI tools assist with planning, design, implementation, testing, and review.
-The project author remains responsible for evaluating AI-generated outputs
-and understanding all submitted code.
+AI tools assist development. The project author remains responsible for every
+accepted decision, all submitted changes, understanding the code, interpreting
+test results, protecting credentials, and deciding what is committed or
+submitted.
 
-AI conversations are not treated as the source of truth. Human-approved
-documents under `/specs`, accepted ADRs, source code, migrations,
-configuration, and tests determine project status.
+## Instruction and evidence authority
 
----
+`AGENTS.md` is the primary cross-agent instruction entry point.
+`.clinerules/` is Cline-compatible fallback guidance.
 
-# Workflow
+Use this source-of-truth order:
 
-Kiwimpact follows a multi-stage AI-assisted development workflow:
-
-1. Human defines requirements, evaluates trade-offs, and makes final decisions.
-
-2. Figma / Figma AI supports visual exploration and UI iteration.
-
-3. ChatGPT supports:
-   - product decisions;
-   - MSA requirement interpretation;
-   - UX and gamification analysis;
-   - architecture discussion;
-   - documentation review.
-
-4. Claude supports:
-   - design analysis;
-   - design token proposals;
-   - component specifications;
-   - ADR drafting;
-   - ERD and API contract drafting.
-
-5. Human reviews and accepts or rejects AI-generated specifications.
-
-6. Codex / DeepSeek + Cline implement accepted specifications in small
-   vertical slices.
-
-7. AI agents run verified commands, report failures, and assist with review.
-
-8. Human reviews implementation, tests, and Git diff before accepting changes.
-
----
-
-# AI Roles
-
-## Human
-
-Responsible for:
-
-- product decisions;
-- architecture approval;
-- accepting or rejecting AI output;
-- reviewing generated code;
-- final submission decisions.
-
-## ChatGPT
-
-Used for:
-
-- product and scope decisions;
-- MSA requirement interpretation;
-- UX and gamification analysis;
-- architecture discussion;
-- documentation review;
-- independent second-opinion review.
-
-## Claude
-
-Claude proposes and independently reviews architecture, ERDs, API contracts,
-security boundaries, and major implementation plans. Claude output remains a
-proposal until human approval.
-
-## Codex
-
-Codex operates through the Codex interface for repository-aware analysis,
-focused approved implementation, review, and verification.
-
-## DeepSeek + Cline
-
-DeepSeek through Cline performs routine implementation and command execution
-from approved specifications. Cline is the execution interface for the DeepSeek
-workflow.
-
----
-
-# Source of Truth
-
-The source of truth order is:
-
-1. Human decisions in the current task.
+1. Current human decisions and approvals.
 2. Accepted ADRs.
-3. Approved `/specs` documents.
-4. Source code, migrations, lockfiles, configuration, and tests.
-5. AI conversations and generated suggestions.
+3. Accepted specifications under `/specs`.
+4. Source code, migrations, configuration, lockfiles, tests, and observed
+   behaviour.
+5. AI prompts, suggestions, reviews, and reports.
 
-AI-generated suggestions do not become project decisions until reviewed and accepted.
+Specifications describe intended behaviour. Implementation evidence proves
+what currently exists.
 
----
+## Active workflow
 
-# Prompt Recording
+1. The human defines the task contract and makes product, architecture,
+   security, schema, dependency, Git, deployment, and submission decisions.
+2. Codex is the default planning, implementation, testing, debugging, and
+   documentation agent.
+3. One task has one implementation owner.
+4. Targeted tests run during implementation. Applicable full gates run once
+   after implementation is complete.
+5. Low-risk work may complete with Codex self-check, automated gates, and
+   human inspection.
+6. Important and high-risk work receives one independent read-only review.
+   The human selects Kimi K3 or a fresh Codex session. The implementation and
+   review sessions must differ.
+7. The implementer performs at most one concentrated correction pass.
+8. Only original unresolved Blocker/Major findings receive a targeted closure
+   check.
+9. Claude is escalation-only when the normal implementation/review pair cannot
+   resolve a concrete high-risk problem.
+10. The human reviews the final diff and evidence before accepting changes.
 
-Actual prompts or reconstructed prompt summaries are recorded under:
+Never run Kimi, Codex, and Claude sequentially on the same normal task. A
+second full review or second reviewer requires explicit human approval.
 
-`specs/ai/prompts/`
+## Historical context
 
-Independent review records and their resolutions are recorded under:
+Earlier Kiwimpact work used a multi-stage route in which ChatGPT supported
+product and UX discussion, Claude supported planning and architecture, and
+DeepSeek through Cline performed routine implementation. Codex also performed
+repository-aware implementation and review. Those records remain valid
+historical evidence, but they do not define the active routing policy.
 
-`specs/ai/reviews/`
+Figma/Figma AI may still support visual exploration. ChatGPT may support
+product, MSA, UX, and documentation discussion. Cline with DeepSeek remains an
+optional low-risk or quota-constrained implementation fallback.
 
-Persistent agent instructions and workflow evidence are recorded under:
+## Evidence recording
 
-`specs/ai/agent-instructions/`
+Meaningful implementation prompts are stored under `specs/ai/prompts/`.
+Independent review records are stored under `specs/ai/reviews/` only when a
+review is actually performed.
 
-Each prompt record includes:
+For each Slice:
 
-- AI tool used;
-- date;
-- purpose;
-- whether the prompt is exact or reconstructed;
-- important outputs or decisions.
+- record one main implementation prompt;
+- record one independent review only when required and performed;
+- append corrections and closure results to the existing task/review evidence
+  instead of creating repeated final-rereview files;
+- create one completion report only after final gates pass.
 
-Only meaningful AI-assisted development activities are recorded.
+Prompt records identify the date, tool/model, purpose, prompt provenance,
+observed outcome, changed files, verification, and human decision. Historical
+prompts, reviews, and reports must not be recursively traversed.
 
----
+## Standard task sequence
 
-# Standard Development Workflow
-
-For significant tasks:
-
-1. Read relevant specifications and ADRs.
-2. Inspect current implementation.
-3. Separate planned behaviour from implemented behaviour.
-4. Create an implementation plan.
-5. Obtain human approval for architecture,
-   security, schema, or scope changes.
-6. Implement the smallest useful vertical slice.
-7. Run relevant verification commands.
-8. Review Git diff.
-9. Record important AI prompts or summaries.
-10. Human accepts or rejects the result.
-
----
-
-# Human Responsibilities
-
-The project author remains responsible for:
-
-- understanding submitted code;
-- approving architecture and product decisions;
-- reviewing AI-generated output;
-- running and interpreting tests;
-- protecting credentials;
-- deciding commits and submission contents;
-- explaining AI usage during assessment.
+1. Define Goal, Scope, Out of scope, Definition of Done, Verification, Risk,
+   and Stop condition.
+2. Read directly relevant accepted decisions and inspect current
+   implementation.
+3. Obtain human approval for any product-scope, architecture, security,
+   schema, dependency, destructive, Git-write, or deployment change.
+4. Implement the smallest demonstrable behaviour.
+5. Run targeted checks while working.
+6. Run applicable full gates once at the end.
+7. Review the Git diff and record meaningful prompt evidence.
+8. Apply the risk-based review workflow.
+9. Obtain human acceptance.

@@ -119,3 +119,9 @@ performed.
 
 All applicable final verification gates passed after the bounded corrections.
 No original Blocker or Major finding is known to remain.
+
+## Closure Addendum
+
+After the evidence above was recorded, Slice 1 was merged through PR #3 and
+frozen. The earlier test and working-tree evidence remains the historical
+observation made at completion and is not a statement of the current Git state.

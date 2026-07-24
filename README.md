@@ -1,6 +1,6 @@
 # Kiwimpact — Community eco quests across New Zealand
 
-**Status: Slice 1 Region and Public Quest Read implemented and verified**
+**Status: Slice 1 Region and Public Quest Read merged and frozen**
 
 Kiwimpact is an Auckland-first gamified community environmental participation
 platform for Aotearoa New Zealand. The technical foundation is now in place.
@@ -117,8 +117,9 @@ Host=localhost;Port=5433;Database=kiwimpact;Username=kiwimpact;Password=kiwimpac
 ## Current State
 
 - Slice 0 Foundation is implemented.
-- Slice 1 Region and Public Quest Read is implemented on
-  `feat/slice-1-region-quest-read` and remains uncommitted.
+- Slice 1 Region and Public Quest Read is complete, merged through PR #3, and
+  frozen.
+- Current work is workflow and scope convergence before Slice 2.
 - React Router provides public Quest discovery and detail pages.
 - TanStack Query owns Region and Quest server state; discovery filters,
   sorting, search, page, and page size are URL-owned.

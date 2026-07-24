@@ -1,99 +1,94 @@
 # Specifications Index
 
-## Specification Precedence Policy
+## Specification precedence
 
 1. Accepted later ADRs and scope-specific specifications override earlier
    specifications only within their explicitly defined scope.
-2. ADR-0008 and its related Community specifications amend the planning baseline
-   for Community identity, regional leaderboards, and virtual-economy scope.
-3. The v1.0 planning baseline (`specs/Kiwimpact_Final_Planning_Baseline_v1.0.md`)
-   remains authoritative for areas not amended by later accepted specifications.
-4. Review records and AI prompt files are evidence of the development process,
-   not normative product specifications.
-5. Implementation is proven by source code, migrations, configuration, lockfiles,
-   and tests — not by specification documents alone.
+2. ADR-0008 and its related Community specifications amend the planning
+   baseline for Community identity, regional leaderboards, and virtual
+   economy scope.
+3. The v1.0 planning baseline remains authoritative where no later accepted
+   document applies.
+4. Prompt, review, and completion records are process evidence, not normative
+   product specifications.
+5. Implementation is proven by source, migrations, configuration, lockfiles,
+   tests, and observed behaviour.
 
-## Current Accepted Specification Set
+## Planning and project profile
 
-### Planning Baseline
+- [`Kiwimpact_Final_Planning_Baseline_v1.0.md`](Kiwimpact_Final_Planning_Baseline_v1.0.md)
+- [`00-project-profile.md`](00-project-profile.md)
 
-- `specs/Kiwimpact_Final_Planning_Baseline_v1.0.md` — v1.0 accepted planning baseline
+## Product
 
-### Project Profile
+- [`product/01-product-requirements.md`](product/01-product-requirements.md)
+- [`product/02-community-identity-and-gamification-scope-update.md`](product/02-community-identity-and-gamification-scope-update.md)
+- [`product/03-community-challenge-scope.md`](product/03-community-challenge-scope.md)
+- [`product/04-phase-2-delivery-scope.md`](product/04-phase-2-delivery-scope.md)
 
-- `specs/00-project-profile.md` — concise project profile
+## Architecture
 
-### Architecture Decision Records
+- [`architecture/01-domain-model-region.md`](architecture/01-domain-model-region.md)
+- [`architecture/02-core-domain-data-model.md`](architecture/02-core-domain-data-model.md)
+- [`architecture/03-api-contract.md`](architecture/03-api-contract.md)
 
-- `specs/adr/ADR-0001-use-postgresql.md` — PostgreSQL
-- `specs/adr/ADR-0002-use-identity-cookie-authentication.md` — Identity + Cookie Auth
-- `specs/adr/ADR-0003-use-clean-architecture-lite.md` — Clean Architecture Lite
-- `specs/adr/ADR-0004-use-react-vite-tailwind-daisyui.md` — React/Vite/Tailwind/daisyUI
-- `specs/adr/ADR-0005-use-tanstack-query-and-zustand.md` — TanStack Query + Zustand
-- `specs/adr/ADR-0006-use-google-maps.md` — Google Maps
-- `specs/adr/ADR-0007-use-postgresql-integration-tests.md` — PostgreSQL Integration Tests
-- `specs/adr/ADR-0008-community-identity-local-leaderboards-and-virtual-economy-scope.md` — Community Identity, Local Leaderboards, Virtual Economy Scope
+## Architecture decision records
 
-### Product
+- [`adr/ADR-0001-use-postgresql.md`](adr/ADR-0001-use-postgresql.md)
+- [`adr/ADR-0002-use-identity-cookie-authentication.md`](adr/ADR-0002-use-identity-cookie-authentication.md)
+- [`adr/ADR-0003-use-clean-architecture-lite.md`](adr/ADR-0003-use-clean-architecture-lite.md)
+- [`adr/ADR-0004-use-react-vite-tailwind-daisyui.md`](adr/ADR-0004-use-react-vite-tailwind-daisyui.md)
+- [`adr/ADR-0005-use-tanstack-query-and-zustand.md`](adr/ADR-0005-use-tanstack-query-and-zustand.md)
+- [`adr/ADR-0006-use-google-maps.md`](adr/ADR-0006-use-google-maps.md)
+- [`adr/ADR-0007-use-postgresql-integration-tests.md`](adr/ADR-0007-use-postgresql-integration-tests.md)
+- [`adr/ADR-0008-community-identity-local-leaderboards-and-virtual-economy-scope.md`](adr/ADR-0008-community-identity-local-leaderboards-and-virtual-economy-scope.md)
+- [`adr/ADR-0009-use-single-origin-deployment.md`](adr/ADR-0009-use-single-origin-deployment.md)
 
-- `specs/product/01-product-requirements.md` — Accepted product overview
-- `specs/product/02-community-identity-and-gamification-scope-update.md` — Community identity scope update
+## UX, data, security, and testing
 
-### UX
+- [`ux/01-ui-design-brief.md`](ux/01-ui-design-brief.md)
+- [`ux/02-figma-ai-mvp-ui-generation-spec.md`](ux/02-figma-ai-mvp-ui-generation-spec.md)
+- [`ux/03-figma-ai-first-pass-ui-review.md`](ux/03-figma-ai-first-pass-ui-review.md)
+- [`ux/04-community-identity-leaderboard-and-selector.md`](ux/04-community-identity-leaderboard-and-selector.md)
+- [`data/01-community-identity-data-model.md`](data/01-community-identity-data-model.md)
+- [`security/01-community-privacy-rules.md`](security/01-community-privacy-rules.md)
+- [`testing/01-community-leaderboard-and-privacy-tests.md`](testing/01-community-leaderboard-and-privacy-tests.md)
 
-- `specs/ux/01-ui-design-brief.md` — Accepted base UI brief
-- `specs/ux/02-figma-ai-mvp-ui-generation-spec.md` — First-pass Figma AI generation spec (historical)
-- `specs/ux/03-figma-ai-first-pass-ui-review.md` — First-pass UI review archive
-- `specs/ux/04-community-identity-leaderboard-and-selector.md` — Community identity UX extension
+## AI workflow and active rules
 
-### Architecture
+- [`ai/01-ai-development-workflow.md`](ai/01-ai-development-workflow.md)
+- [`ai/02-agent-context-and-governance.md`](ai/02-agent-context-and-governance.md)
+- [`ai/03-deadline-execution-mode.md`](ai/03-deadline-execution-mode.md)
+- [`ai/agent-instructions/01-model-routing-policy.md`](ai/agent-instructions/01-model-routing-policy.md)
+- [`../AGENTS.md`](../AGENTS.md) — primary cross-agent instructions
+- [`../.clinerules/06-development-workflow.md`](../.clinerules/06-development-workflow.md)
+- [`../.clinerules/07-agent-workflow.md`](../.clinerules/07-agent-workflow.md)
+- [`../.clinerules/10-ai-model-routing-and-cost-control.md`](../.clinerules/10-ai-model-routing-and-cost-control.md)
 
-- `specs/architecture/01-domain-model-region.md` — Region domain model
+## Slice index
 
-### Data
+- [`implementation/00-slice-0-foundation.md`](implementation/00-slice-0-foundation.md)
+- [`implementation/reports/00-slice-0-foundation-completion-report-2026-07-22.md`](implementation/reports/00-slice-0-foundation-completion-report-2026-07-22.md)
+- [`implementation/01-slice-1-region-quest-read.md`](implementation/01-slice-1-region-quest-read.md)
+- [`implementation/reports/01-slice-1-region-quest-read-completion-report-2026-07-22.md`](implementation/reports/01-slice-1-region-quest-read-completion-report-2026-07-22.md)
+- [`implementation/02a-email-password-auth-core.md`](implementation/02a-email-password-auth-core.md)
+- [`implementation/02b-account-lifecycle-and-auth-hardening.md`](implementation/02b-account-lifecycle-and-auth-hardening.md)
 
-- `specs/data/01-community-identity-data-model.md` — Community identity data model
+## Prompt evidence index
 
-### Security
+- [`ai/prompts/04-figma-ai-second-iteration-prompt.md`](ai/prompts/04-figma-ai-second-iteration-prompt.md)
+- [`ai/prompts/15-slice-1-region-quest-read-plan-review-task.md`](ai/prompts/15-slice-1-region-quest-read-plan-review-task.md)
+- [`ai/prompts/16-slice-1-region-quest-read-plan-rereview-task.md`](ai/prompts/16-slice-1-region-quest-read-plan-rereview-task.md)
+- [`ai/prompts/35-d1-streamline-codex-workflow.md`](ai/prompts/35-d1-streamline-codex-workflow.md)
+- [`ai/prompts/36-d2-phase-2-scope-and-auth-planning.md`](ai/prompts/36-d2-phase-2-scope-and-auth-planning.md)
 
-- `specs/security/01-community-privacy-rules.md` — Community privacy rules
+## Review evidence index
 
-### Testing
+- [`review/01-pre-development-review.md`](review/01-pre-development-review.md)
+- [`review/02-community-scope-review.md`](review/02-community-scope-review.md)
+- [`ai/reviews/15-slice-1-region-quest-read-plan-review-2026-07-22.md`](ai/reviews/15-slice-1-region-quest-read-plan-review-2026-07-22.md)
+- [`ai/reviews/16-slice-1-region-quest-read-plan-rereview-2026-07-22.md`](ai/reviews/16-slice-1-region-quest-read-plan-rereview-2026-07-22.md)
 
-- `specs/testing/01-community-leaderboard-and-privacy-tests.md` — Community leaderboard and privacy tests
+## Project status
 
-### Review
-
-- `specs/review/01-pre-development-review.md` — Pre-development ADR and UI brief review (completed)
-- `specs/review/02-community-scope-review.md` — Community scope and ADR-0008 review
-
-### AI Workflow
-
-- `specs/ai/01-ai-development-workflow.md` — AI development workflow
-- `specs/ai/02-agent-context-and-governance.md` — Agent context and governance
-
-### AI Prompts (evidence only)
-
-- `specs/ai/prompts/003-correct-harness-consistency.md` — Reconstructed task summary
-- `specs/ai/prompts/04-figma-ai-second-iteration-prompt.md` — Second Figma iteration prompt
-
-### Agent Rules
-
-- `.clinerules/00-harness-core.md` — Universal harness core
-- `.clinerules/00-meta.md` — Project context and language policy
-- `.clinerules/01-architecture.md` — Architecture constraints
-- `.clinerules/02-technology-stack.md` — Technology stack and toolchain
-- `.clinerules/03-database.md` — Database rules
-- `.clinerules/04a-security-baseline.md` — Security baseline
-- `.clinerules/04b-auth-security.md` — Authentication and authorization
-- `.clinerules/04c-dependency-security.md` — Dependency and supply-chain security
-- `.clinerules/04d-runtime-security.md` — Runtime security
-- `.clinerules/05-testing.md` — Testing strategy
-- `.clinerules/06-development-workflow.md` — Development workflow
-- `.clinerules/07-agent-workflow.md` — Agent task workflow
-- `.clinerules/08-typescript.md` — TypeScript coding rules
-- `.clinerules/09-msa-assessment.md` — MSA assessment requirements
-
-### Project Status
-
-- `PROJECT_STATUS.md` — Current implementation and control status
+- [`../PROJECT_STATUS.md`](../PROJECT_STATUS.md)

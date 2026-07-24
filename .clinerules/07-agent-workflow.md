@@ -1,73 +1,98 @@
 # 07 — Agent Task Workflow
 
-> The base task execution protocol, ambiguity handling, approval boundaries,
-> tool failure circuit breaker, context management, quality gate matrix,
-> final diff review, completion report, and task handoff are defined in
-> `00-harness-core.md`. This file extends it with project-specific workflow
-> and recovery rules.
+## 7.1 Bounded task workflow
 
-## 7.1 Quality Gate Matrix
+Every task uses:
 
-Per `00-harness-core.md` §10, apply checks proportionally. A command is active
-only after it exists in repository configuration, has been executed
-successfully at least once, and is marked active in `PROJECT_STATUS.md`.
+1. one short task contract;
+2. one implementation owner;
+3. targeted tests during implementation;
+4. applicable full gates once at the end;
+5. for important or high-risk work, one independent read-only review in a
+   separate session;
+6. one concentrated correction pass;
+7. a closure check limited to original unresolved Blocker/Major findings.
 
-| Change Type | Required Gates |
+The reviewer may be Kimi K3 or a fresh Codex session. Do not run both Kimi and
+Codex reviews for the same normal task. Minor findings are recorded and
+deferred. Optional findings are not implemented by default. A second full
+review requires explicit human reopening.
+
+Low-risk documentation, styling, and isolated UI work may finish with
+automated gates, implementation-session self-check, and human inspection unless
+the human requests independent review.
+
+## 7.2 Short task contract
+
+Define:
+
+- Goal;
+- Scope;
+- Out of scope;
+- Definition of Done;
+- Verification;
+- Risk;
+- Stop condition.
+
+Stop and request a decision when the work requires a scope, architecture,
+security, schema, dependency, destructive-operation, or Git-write approval not
+already granted.
+
+## 7.3 Quality gate matrix
+
+| Change type | Applicable gates |
 | --- | --- |
-| Markdown/doc only | Document review, broken-reference search, Git diff |
-| Frontend source | Targeted frontend tests + verified frontend scripts |
-| Backend source | Targeted backend tests + verified dotnet commands |
-| API specification/documentation only | Document review, contract consistency review, broken-reference search, Git diff |
-| Backend API implementation | Targeted API integration tests + verified backend gates |
-| Full-stack API implementation | Backend API gates + affected frontend gates |
-| Database/migration | Migration application test + PostgreSQL integration tests |
-| Dependency/lockfile | Verified restore/install + vulnerability/license review + affected build/tests |
-| CI/config | Syntax validation + affected command dry run |
-| Release candidate | All configured gates, including Cypress |
+| Markdown/documentation | Document review and Git diff checks |
+| Frontend source | Targeted frontend tests, then applicable verified frontend scripts |
+| Backend source | Targeted backend tests, then build and applicable verified test projects |
+| Full-stack contract | Affected backend and frontend gates |
+| Database/migration | Build and applicable PostgreSQL integration tests |
+| Dependency/lockfile | Approved restore/install plus affected build and tests |
+| CI/configuration | Syntax review and affected verified commands |
 
-Cypress must be configured and passing before the project is described as
-submission-ready.
+When multiple categories apply, use their union. Do not invent a missing
+command. Do not repeatedly rerun an unchanged failing command.
 
-- When a change matches more than one category, apply the union of all
-  applicable gates. Do not select only the least expensive category.
-- Run targeted checks after a coherent change set.
-- Run full applicable gates once before completion.
-- Do not repeatedly run an unchanged failing command.
-- If a required command is not defined, report it rather than inventing one.
+## 7.4 Independent review scope
 
-## 7.2 Error Recovery
+A review task must:
 
-- If a test fails after a change, identify the root cause:
-  1. Implementation bug introduced by the current change → fix the source code
-  2. Incorrect test assumption → verify contract before modifying test
-  3. Stale fixture → update fixture, not the production code
-  4. Unrelated pre-existing failure → report it without silently expanding scope
-  5. Environment issue (port conflict, stale DB) → perform only
-     non-destructive cleanup within the approved task scope. Database
-     reset, container-volume deletion, process termination outside the
-     task, or destructive cleanup requires approval.
-- If type-check or lint fails:
-  - If the failure was introduced by the current change, fix it before
-    proceeding to the next change.
-  - If it clearly predates the task or is unrelated, do not expand scope
-    silently; record the failure, preserve evidence, and request direction
-    when it blocks verification.
-- If a migration fails:
-  - Never modify a migration that has been successfully applied in any shared
-    environment or relied upon by another branch or developer.
-  - A local migration that failed before being recorded as applied may be
-    corrected in place during development only if it has not been shared or
-    relied upon by another branch or developer.
-  - If the failed migration was already applied or shared, create a corrective
-    migration instead.
+- read the task contract, current diff, and directly affected source/test
+  files;
+- read at most one previous review file;
+- not recursively traverse historical prompts, reviews, or reports;
+- not inspect more than 25 files without human approval;
+- not repeatedly reopen the same unchanged file;
+- not repeatedly rerun successful full suites;
+- stop tool use and return a verdict when sufficient evidence exists.
 
-## 7.3 Agent Self-Review Checklist
+Findings are classified as Blocker, Major, Minor, or Optional. Approval
+requires zero Blockers and zero Majors.
 
-Before marking any task as complete, verify only the items relevant to the
-actual change. Mark non-applicable items as N/A.
+## 7.5 Error recovery
 
-- [ ] Has the project code review checklist in `06-development-workflow.md`
-  been applied to the actual change?
-- [ ] Have all applicable gates selected from Section 7.1 passed?
-- [ ] Do not leave newly introduced TODO/FIXME markers unless they include an
-  issue reference, owner, or explicit follow-up explanation.
+When a check fails, classify the cause before editing:
+
+1. implementation bug introduced by the task;
+2. incorrect test assumption after a verified contract change;
+3. stale fixture;
+4. unrelated pre-existing failure;
+5. environment issue.
+
+Perform only non-destructive recovery within scope. Database resets,
+container-volume deletion, unrelated process termination, dependency changes,
+or other destructive cleanup require approval. Never weaken a test merely to
+make it pass.
+
+## 7.6 Completion
+
+Before reporting completion:
+
+- confirm the Definition of Done;
+- observe all applicable final gate results;
+- review the final diff for scope and security;
+- record unresolved risks and deferred Minor findings;
+- create a completion report only when the task requires one and final gates
+  have passed;
+- do not stage, commit, push, merge, reset, revert, or deploy without explicit
+  human approval.
