@@ -1,7 +1,7 @@
 # Kiwimpact Project Profile
 
 - **Status:** Accepted Project Profile
-- **Last updated:** 2026-07-20
+- **Last updated:** 2026-07-24
 - **Repository:** `msa2026`
 - **Product owner:** Zephyr Chen
 
@@ -119,6 +119,11 @@ of incomplete features.
 
 ## 5. MVP Scope
 
+The current Phase 2 submission schedule is controlled by
+`specs/product/04-phase-2-delivery-scope.md`. The list below preserves
+long-term product direction; it does not override that document's P0, P1, and
+Deferred priorities.
+
 Included
 email/password authentication;
 Google external login;
@@ -202,6 +207,10 @@ Local Infrastructure Target
 React and ASP.NET Core run directly on the development machine.
 Docker Compose provides PostgreSQL and Mailpit.
 Important integration tests use temporary PostgreSQL through Testcontainers.
+
+For the current assessment, full frontend/backend/PostgreSQL Dockerization is a
+committed advanced requirement. The existing PostgreSQL/Mailpit Compose
+workflow alone does not satisfy full application Dockerization.
 
 These remain targets until their files, commands, and observed behavior are
 recorded in PROJECT_STATUS.md.
@@ -418,11 +427,16 @@ assessment files;
 meaningful Git history;
 planning and AI-assisted-development evidence under /specs.
 
-The selected Top 3 advanced requirements are:
+Four advanced requirements are committed:
 
-Security Measures
-WebSockets using SignalR
-Cypress End-to-End Testing
+1. Security Measures
+2. Zustand State Management
+3. Theme Switching
+4. Dockerization
+
+The final README will identify only the three strongest completed advanced
+requirements for marking, based on actual implementation and evidence quality.
+Cypress and SignalR are P1 stretch requirements and must not delay P0.
 
 Do not claim an assessment requirement as complete before implementation and
 evidence have been verified.
@@ -494,6 +508,7 @@ be reported rather than silently resolved.
 specs/Kiwimpact_Final_Planning_Baseline_v1.0.md
 specs/product/01-product-requirements.md
 specs/product/02-community-identity-and-gamification-scope-update.md
+specs/product/04-phase-2-delivery-scope.md
 specs/adr/
 specs/ux/
 specs/architecture/

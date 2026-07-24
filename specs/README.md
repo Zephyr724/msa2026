@@ -23,6 +23,8 @@
 
 - [`product/01-product-requirements.md`](product/01-product-requirements.md)
 - [`product/02-community-identity-and-gamification-scope-update.md`](product/02-community-identity-and-gamification-scope-update.md)
+- [`product/03-community-challenge-scope.md`](product/03-community-challenge-scope.md)
+- [`product/04-phase-2-delivery-scope.md`](product/04-phase-2-delivery-scope.md)
 
 ## Architecture
 
@@ -40,6 +42,7 @@
 - [`adr/ADR-0006-use-google-maps.md`](adr/ADR-0006-use-google-maps.md)
 - [`adr/ADR-0007-use-postgresql-integration-tests.md`](adr/ADR-0007-use-postgresql-integration-tests.md)
 - [`adr/ADR-0008-community-identity-local-leaderboards-and-virtual-economy-scope.md`](adr/ADR-0008-community-identity-local-leaderboards-and-virtual-economy-scope.md)
+- [`adr/ADR-0009-use-single-origin-deployment.md`](adr/ADR-0009-use-single-origin-deployment.md)
 
 ## UX, data, security, and testing
 
@@ -68,6 +71,8 @@
 - [`implementation/reports/00-slice-0-foundation-completion-report-2026-07-22.md`](implementation/reports/00-slice-0-foundation-completion-report-2026-07-22.md)
 - [`implementation/01-slice-1-region-quest-read.md`](implementation/01-slice-1-region-quest-read.md)
 - [`implementation/reports/01-slice-1-region-quest-read-completion-report-2026-07-22.md`](implementation/reports/01-slice-1-region-quest-read-completion-report-2026-07-22.md)
+- [`implementation/02a-email-password-auth-core.md`](implementation/02a-email-password-auth-core.md)
+- [`implementation/02b-account-lifecycle-and-auth-hardening.md`](implementation/02b-account-lifecycle-and-auth-hardening.md)
 
 ## Prompt evidence index
 
@@ -75,6 +80,7 @@
 - [`ai/prompts/15-slice-1-region-quest-read-plan-review-task.md`](ai/prompts/15-slice-1-region-quest-read-plan-review-task.md)
 - [`ai/prompts/16-slice-1-region-quest-read-plan-rereview-task.md`](ai/prompts/16-slice-1-region-quest-read-plan-rereview-task.md)
 - [`ai/prompts/35-d1-streamline-codex-workflow.md`](ai/prompts/35-d1-streamline-codex-workflow.md)
+- [`ai/prompts/36-d2-phase-2-scope-and-auth-planning.md`](ai/prompts/36-d2-phase-2-scope-and-auth-planning.md)
 
 ## Review evidence index
 

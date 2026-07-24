@@ -21,6 +21,26 @@ paths:
 ---
 # 04b — Authentication & Authorization
 
+## Current delivery sequencing
+
+The complete long-term authentication and security goals below remain valid.
+For the current assessment, the latest approved delivery-scope document
+controls scheduling:
+
+1. Slice 2A implements email/password authentication core, Identity cookies,
+   CSRF, roles, UserProfile, session restoration, and baseline
+   lockout/rate-limiting.
+2. Slice 2B is optional/P1 and adds email confirmation, account recovery,
+   password change, Mailpit delivery, and focused hardening.
+3. Google login and account linking are deferred from the current submission
+   schedule.
+
+This sequencing does not weaken password hashing, Cookie, CSRF, authorization,
+validation, rate-limit, lockout, or secret-handling requirements. See
+`specs/product/04-phase-2-delivery-scope.md`,
+`specs/implementation/02a-email-password-auth-core.md`, and
+`specs/implementation/02b-account-lifecycle-and-auth-hardening.md`.
+
 ## Authentication
 
 Kiwimpact uses ASP.NET Core Identity with HttpOnly cookie authentication
