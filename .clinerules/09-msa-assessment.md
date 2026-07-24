@@ -65,32 +65,30 @@ official assessment brief.
 - The implemented product must demonstrate the theme through actual behavior
   and user experience, not only through README claims.
 
-## 3. Project-Selected Top 3 Advanced Requirements
+## 3. Committed Advanced Requirements and Final Top 3
 
 MSA asks participants to implement at least three advanced requirements from
 the official list and states that only three explicitly listed requirements
 will be marked.
 
-Project decision: Kiwimpact submits the following three advanced requirements
-for assessment:
+Project decision: Kiwimpact commits to the following four advanced
+requirements for the current assessment:
 
 1. Security Measures
-2. WebSockets using ASP.NET Core SignalR
-3. End-to-End Testing using Cypress
+2. Zustand State Management
+3. Theme Switching
+4. Dockerization
 
-These selections are approved assessment targets, not current implementation
-claims.
+The final README must nominate only the three strongest completed requirements
+from this set, based on verified implementation and evidence quality. The final
+Top 3 selection is not fixed before that evidence is known.
 
 An item may be marked as implemented in the README only after its source code,
 tests, runtime behavior, deployment behavior, and supporting evidence have
 been verified.
 
-Other implemented capabilities, such as Zustand state management, Light/Dark
-theme switching, and Docker local infrastructure, may be described under a
-separate heading such as `Additional Features`.
-
-They must not be presented as additional numbered entries in the Top 3
-advanced-requirements scoring list.
+Cypress and SignalR are P1 stretch requirements. They must not delay P0
+delivery and are not required for the final Top 3 selection.
 
 ## 4. Security Measures Evidence
 
@@ -200,14 +198,21 @@ The final README must contain:
 - a self-reflection explaining what would be done differently if the project
   were repeated.
 
-The Top 3 section must clearly list:
+The Top 3 section must clearly list exactly three of the four committed
+advanced requirements:
 
-1. Security Measures
-2. WebSockets using SignalR
-3. Cypress End-to-End Testing
+- Security Measures
+- Zustand State Management
+- Theme Switching
+- Dockerization
 
-The Security Measures section must identify at least two implemented controls
-and explain both their importance and implementation.
+The final three must be selected only after their implementation and evidence
+quality have been verified. Cypress and SignalR may be described if completed,
+but they are P1 stretch work and must not be presented as required P0 or fixed
+Top 3 requirements.
+
+If Security Measures is selected, its section must identify at least two
+implemented controls and explain both their importance and implementation.
 
 Additional advanced or supporting features may be discussed elsewhere in the
 README, but they must be clearly separated from the numbered Top 3 scoring
