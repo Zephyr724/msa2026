@@ -1,5 +1,6 @@
 using Kiwimpact.Api.Contracts;
 using Kiwimpact.Core.Entities;
+using Kiwimpact.Core.Services;
 
 namespace Kiwimpact.Api.Mapping;
 
@@ -92,4 +93,96 @@ internal static class DtoMapping
             quest.ExternalSourceUrl,
             quest.SourceCheckedAt?.ToString("O"));
     }
+
+    public static QuestManagementListItemDto ToManagementListItem(this Quest quest)
+    {
+        return new QuestManagementListItemDto(
+            quest.Id,
+            quest.Title,
+            quest.Status.ToString(),
+            quest.Category.ToString(),
+            quest.Difficulty.ToString(),
+            quest.Capacity,
+            quest.StartAtUtc?.ToString("O"),
+            quest.EndAtUtc?.ToString("O"),
+            quest.LocationRegion?.ToQuestLocation(),
+            quest.UpdatedAt.ToString("O"),
+            quest.Version);
+    }
+
+    public static QuestManagementDetailDto ToManagementDetail(this Quest quest)
+    {
+        var cover = quest.Images
+            .Where(image => image.IsCover)
+            .OrderBy(image => image.SortOrder)
+            .ThenBy(image => image.Id)
+            .FirstOrDefault()
+            ?? throw new InvalidOperationException("Managed Quest is missing its cover image.");
+
+        return new QuestManagementDetailDto(
+            quest.Id,
+            quest.Title,
+            quest.Description,
+            quest.Category.ToString(),
+            quest.Status.ToString(),
+            quest.SourceType.ToString(),
+            quest.RegistrationMode?.ToString(),
+            quest.Difficulty.ToString(),
+            quest.XpAward,
+            quest.Capacity,
+            quest.StartAtUtc?.ToString("O"),
+            quest.EndAtUtc?.ToString("O"),
+            quest.LocationRegion?.ToQuestLocation(),
+            quest.LocationDescription,
+            quest.ExternalSourceUrl,
+            quest.ExternalSourceStatus?.ToString(),
+            quest.SourceCheckedAt?.ToString("O"),
+            quest.NextCheckDueAt?.ToString("O"),
+            new QuestManagementCoverImageDto(
+                cover.Id,
+                cover.ImageUrl,
+                cover.AltText,
+                cover.CreatorName,
+                cover.SourceUrl,
+                cover.LicenceNote),
+            quest.CreatedAt.ToString("O"),
+            quest.UpdatedAt.ToString("O"),
+            quest.Version);
+    }
+
+    public static CreateQuestCommand ToCommand(this CreateQuestRequest request) => new(
+        request.Title,
+        request.Description,
+        request.Category,
+        request.RegistrationMode,
+        request.Difficulty,
+        request.Capacity,
+        request.StartAtUtc,
+        request.EndAtUtc,
+        request.LocationRegionId,
+        request.LocationDescription,
+        request.ExternalSourceUrl,
+        request.CoverImage?.ToCommand());
+
+    public static UpdateQuestCommand ToCommand(this UpdateQuestRequest request) => new(
+        request.Title,
+        request.Description,
+        request.Category,
+        request.RegistrationMode,
+        request.Difficulty,
+        request.Capacity,
+        request.StartAtUtc,
+        request.EndAtUtc,
+        request.LocationRegionId,
+        request.LocationDescription,
+        request.ExternalSourceUrl,
+        request.CoverImage?.ToCommand(),
+        request.Version);
+
+    private static QuestCoverImageCommand ToCommand(this CoverImageRequest request) => new(
+        request.ImageUrl,
+        request.AltText,
+        request.CreatorName,
+        request.SourceUrl,
+        request.LicenceNote);
 }

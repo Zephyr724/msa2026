@@ -4,6 +4,11 @@ namespace Kiwimpact.Core.Entities;
 
 public sealed class Quest
 {
+    public const int MaxTitleLength = 200;
+    public const int MaxDescriptionLength = 2000;
+    public const int MaxLocationDescriptionLength = 500;
+    public const int MaxExternalSourceUrlLength = 2000;
+
     internal Quest()
     {
         Title = string.Empty;
@@ -36,4 +41,179 @@ public sealed class Quest
     // Navigation properties
     public Region? LocationRegion { get; internal set; }
     public ICollection<QuestImage> Images { get; internal set; } = new List<QuestImage>();
+
+    public static Quest CreateOrganizerOwned(
+        Guid createdByUserId,
+        QuestDetails details,
+        QuestCoverImageDetails coverImage,
+        DateTimeOffset now)
+    {
+        if (createdByUserId == Guid.Empty)
+            throw new ArgumentException("Authenticated owner is required.", nameof(createdByUserId));
+
+        var normalized = ValidateAndNormalize(details);
+        var questId = Guid.NewGuid();
+        var timestamp = now.ToUniversalTime();
+        var quest = new Quest
+        {
+            Id = questId,
+            Title = normalized.Title,
+            Description = normalized.Description,
+            Category = normalized.Category,
+            Status = QuestStatus.Draft,
+            SourceType = QuestSourceType.OrganizerOwned,
+            RegistrationMode = normalized.RegistrationMode,
+            Difficulty = normalized.Difficulty,
+            XpAward = 0,
+            Capacity = normalized.Capacity,
+            StartAtUtc = normalized.StartAtUtc,
+            EndAtUtc = normalized.EndAtUtc,
+            LocationRegionId = normalized.LocationRegionId,
+            LocationDescription = normalized.LocationDescription,
+            ExternalSourceUrl = normalized.ExternalSourceUrl,
+            CreatedByUserId = createdByUserId,
+            CreatedAt = timestamp,
+            UpdatedAt = timestamp,
+        };
+
+        var cover = QuestImage.CreateCover(questId, coverImage);
+        cover.Quest = quest;
+        quest.Images.Add(cover);
+        return quest;
+    }
+
+    public void UpdateDetails(
+        QuestDetails details,
+        QuestCoverImageDetails? coverImage,
+        DateTimeOffset now)
+    {
+        var normalized = ValidateAndNormalize(details);
+        Title = normalized.Title;
+        Description = normalized.Description;
+        Category = normalized.Category;
+        RegistrationMode = normalized.RegistrationMode;
+        Difficulty = normalized.Difficulty;
+        Capacity = normalized.Capacity;
+        StartAtUtc = normalized.StartAtUtc;
+        EndAtUtc = normalized.EndAtUtc;
+        LocationRegionId = normalized.LocationRegionId;
+        LocationDescription = normalized.LocationDescription;
+        ExternalSourceUrl = normalized.ExternalSourceUrl;
+
+        if (coverImage is not null)
+        {
+            var cover = Images
+                .Where(image => image.IsCover)
+                .OrderBy(image => image.SortOrder)
+                .ThenBy(image => image.Id)
+                .FirstOrDefault()
+                ?? throw new InvalidOperationException("Quest must retain a cover image.");
+            cover.UpdateCover(coverImage);
+        }
+
+        EnsureServerInvariants();
+        UpdatedAt = now.ToUniversalTime();
+    }
+
+    public void Publish(DateTimeOffset now)
+    {
+        if (Status != QuestStatus.Draft)
+            throw new InvalidOperationException("Only a Draft Quest can be published.");
+        if (!Images.Any(image => image.IsCover))
+            throw new InvalidOperationException("Quest requires a cover image before publishing.");
+
+        Status = QuestStatus.Published;
+        UpdatedAt = now.ToUniversalTime();
+    }
+
+    public void Cancel(DateTimeOffset now)
+    {
+        if (Status != QuestStatus.Published)
+            throw new InvalidOperationException("Only a Published Quest can be cancelled.");
+
+        Status = QuestStatus.Cancelled;
+        UpdatedAt = now.ToUniversalTime();
+    }
+
+    public void Archive(DateTimeOffset now)
+    {
+        var timestamp = now.ToUniversalTime();
+        var canArchive = Status == QuestStatus.Cancelled ||
+            (Status == QuestStatus.Published && EndAtUtc.HasValue && EndAtUtc.Value < timestamp);
+        if (!canArchive)
+            throw new InvalidOperationException(
+                "Only a Cancelled or ended Published Quest can be archived.");
+
+        Status = QuestStatus.Archived;
+        UpdatedAt = timestamp;
+    }
+
+    public void EnsureCanDelete()
+    {
+        if (Status != QuestStatus.Draft)
+            throw new InvalidOperationException("Only a Draft Quest can be deleted.");
+    }
+
+    private static QuestDetails ValidateAndNormalize(QuestDetails details)
+    {
+        ArgumentNullException.ThrowIfNull(details);
+        if (!Enum.IsDefined(details.Category))
+            throw new ArgumentException("Quest category is invalid.");
+        if (!Enum.IsDefined(details.RegistrationMode))
+            throw new ArgumentException("Registration mode is invalid.");
+        if (!Enum.IsDefined(details.Difficulty))
+            throw new ArgumentException("Quest difficulty is invalid.");
+        if (details.Capacity is < 0)
+            throw new ArgumentException("Capacity must be null or at least zero.");
+
+        var start = details.StartAtUtc?.ToUniversalTime();
+        var end = details.EndAtUtc?.ToUniversalTime();
+        if (start.HasValue && end.HasValue && end.Value <= start.Value)
+            throw new ArgumentException("End date must be later than start date.");
+
+        var externalUrl = Optional(
+            details.ExternalSourceUrl, MaxExternalSourceUrlLength, "External source URL");
+        if (externalUrl is not null && !IsHttpsUrl(externalUrl))
+            throw new ArgumentException("External source URL must be an absolute HTTPS URL.");
+
+        return details with
+        {
+            Title = Required(details.Title, "Title", MaxTitleLength),
+            Description = Required(details.Description, "Description", MaxDescriptionLength),
+            StartAtUtc = start,
+            EndAtUtc = end,
+            LocationDescription = Optional(
+                details.LocationDescription, MaxLocationDescriptionLength, "Location description"),
+            ExternalSourceUrl = externalUrl,
+        };
+    }
+
+    private void EnsureServerInvariants()
+    {
+        if (CreatedByUserId == Guid.Empty || !Enum.IsDefined(SourceType) || XpAward < 0)
+            throw new InvalidOperationException("Quest server-controlled fields are invalid.");
+    }
+
+    private static string Required(string? value, string field, int maximumLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException($"{field} is required.");
+        var trimmed = value.Trim();
+        if (trimmed.Length > maximumLength)
+            throw new ArgumentException($"{field} must be at most {maximumLength} characters.");
+        return trimmed;
+    }
+
+    private static string? Optional(string? value, int maximumLength, string field)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        var trimmed = value.Trim();
+        if (trimmed.Length > maximumLength)
+            throw new ArgumentException($"{field} must be at most {maximumLength} characters.");
+        return trimmed;
+    }
+
+    private static bool IsHttpsUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
 }
