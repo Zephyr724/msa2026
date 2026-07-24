@@ -79,13 +79,41 @@ Before a significant task:
 5. Run targeted tests during implementation.
 6. Run applicable full gates once after implementation is complete.
 7. Review the Git diff and report results, risks, and unfinished work.
-8. For important or high-risk work, obtain the single independent review and
+8. Create implementation evidence before requesting independent review.
+9. For important or high-risk work, obtain the single independent review and
    follow the bounded correction workflow above.
 
-Do not recursively traverse historical prompts, reviews, or completion
-reports. Reference stable decisions instead of copying them. Do not repeatedly
-read unchanged files or rerun successful full suites when sufficient evidence
-already exists.
+A Slice is not considered ready for commit until:
+
+1. Production implementation is complete.
+
+2. Applicable verification gates have been executed and their results have been
+   observed.
+
+3. An implementation prompt record exists under `specs/ai/prompts/`.
+   The record must contain either:
+   - the actual implementation prompt used; or
+   - a truthful reconstructed implementation instruction when the original
+     prompt is unavailable.
+
+4. A completion report exists under `specs/implementation/reports/`.
+
+5. The completion report clearly states:
+   - implemented scope;
+   - files changed;
+   - verification commands and observed results;
+   - known limitations;
+   - review status.
+
+6. For important or high-risk tasks, the independent read-only review record
+   exists under `specs/ai/reviews/`, and all original Blocker/Major findings
+   have been closed before commit.
+
+Do not request independent review before the required evidence documents
+exist.
+
+Evidence documents must record observed facts only. Do not invent test counts,
+browser results, file changes, or security guarantees that were not verified.
 
 ## Verified commands
 
