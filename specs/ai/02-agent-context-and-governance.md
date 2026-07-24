@@ -1,85 +1,96 @@
 # 02 — Agent Context and Governance
 
-## Agent Rule Source
+## Primary instruction source
 
-Cline's operational rules are stored in the repository root at `.clinerules/`.
-These files define the default engineering behavior for the AI agent.
+`AGENTS.md` is the concise primary cross-agent instruction entry point.
+`.clinerules/` contains Cline-compatible fallback guidance and project-specific
+engineering detail. When wording conflicts, follow the authority hierarchy
+below and the active routing policy in `AGENTS.md`.
 
-The rules are organized as:
+## Authority hierarchy
 
-- `00-harness-core.md` — Universal harness core (task execution, ambiguity
-  handling, scope control, approval boundaries, security baseline, quality
-  gates)
-- `00-meta.md` — Project context, language policy, and quick reference
-- `01-architecture.md` — Architecture constraints (Clean Architecture Lite)
-- `02-technology-stack.md` — Accepted technology choices
-- `03-database.md` — Database rules (PostgreSQL, EF Core migrations)
-- `04a-security-baseline.md` — Security baseline with high-risk operation gates
-- `04b-auth-security.md` — Authentication and authorization (ASP.NET Core Identity)
-- `04c-dependency-security.md` — Dependency and supply-chain security
-- `04d-runtime-security.md` — Runtime security (proxy trust, CORS, CSRF, SSRF)
-- `05-testing.md` — Testing strategy (Vitest, xUnit v3, Testcontainers, Cypress)
-- `06-development-workflow.md` — Git strategy, commit conventions, PR requirements
-- `07-agent-workflow.md` — Quality gate matrix and error recovery
-- `08-typescript.md` — TypeScript coding rules for the frontend
-- `09-msa-assessment.md` — MSA assessment requirements
+1. Platform, tool, and security constraints.
+2. Explicit human goals and action-specific approvals for the current task.
+3. Accepted ADRs, specifications, and project governance.
+4. Source code, migrations, configuration, lockfiles, contracts, tests, and
+   observed behaviour.
+5. Agent instructions and explicit assumptions.
+6. AI proposals, prompts, reviews, and reports.
 
-## Authority Hierarchy
+Accepted specifications define intended behaviour. Repository and runtime
+evidence prove implemented behaviour. Report mismatches explicitly.
 
-The harness establishes this authority order:
+## Active agent governance
 
-1. Platform, tool, and security constraints that cannot be overridden
-2. Explicit user goals and action-specific approvals for the current task
-3. Accepted ADRs, accepted specifications, and project-specific governance
-   rules
-4. Domain-specific sources of truth (migrations, lockfiles, contracts, tests,
-   source code)
-5. This universal harness
-6. Explicitly stated agent assumptions
+- Codex is the default planner, implementer, tester, debugger, and
+  documentation agent.
+- Cline with DeepSeek is an optional low-risk or quota-constrained fallback.
+- One task has one implementation owner.
+- Low-risk work may finish with implementation-session self-check, automated
+  gates, and human inspection.
+- Important and high-risk work receives one independent read-only review in a
+  separate session.
+- The human selects Kimi K3 or a fresh Codex session as reviewer.
+- Claude is escalation-only for a concrete high-risk problem unresolved by the
+  normal implementation/review pair.
+- Kimi, Codex, and Claude must not be run sequentially on the same normal task.
 
-Accepted specifications describe intended behavior. Source code, migrations,
-configuration, lockfiles, and tests prove the currently implemented behavior.
-A mismatch must be reported and resolved explicitly.
+## Approval boundaries
 
-## Approval Boundaries
+Explicit human approval is required for:
 
-The agent must not perform the following without explicit human approval:
-- install, remove, or materially upgrade dependencies;
-- commit, push, merge, tag, publish, deploy, or create a release;
-- rewrite Git history or force-push;
-- delete files or directories outside the clearly stated task scope;
-- perform destructive database or production-data operations;
-- modify authentication, authorization, secrets, security controls, or
-  production environment configuration;
-- alter accepted migrations or persistence history;
-- send private repository content to an external service.
+- product-scope changes;
+- architecture or ADR changes;
+- authentication or security-model changes;
+- database-schema changes;
+- dependency changes;
+- destructive operations;
+- staging, committing, pushing, merging, resetting, reverting, or deploying.
 
-## Specification Location
+The same approval principle applies to releases, history rewriting, force
+pushes, production-data operations, and sending private repository content to
+external services.
 
-Current Kiwimpact specifications and ADRs are located in `/specs`. This
-directory is the single source of truth for intended product behavior.
-The `/docs` directory contains only archived legacy materials from the
-superseded Node.js/Express/SQLite project.
+## Context limits
 
-Specification precedence is defined in `specs/README.md`. Later accepted
-scope-specific ADRs and specifications override earlier documents only within
-their explicit scope.
+Start with the task contract, accepted decisions directly relevant to it, the
+current diff, and affected source/tests.
 
-## Agent Rule Files
+For review tasks:
 
-The full agent rule set includes:
+- read at most one previous review;
+- do not recursively traverse historical prompts, reviews, or reports;
+- do not inspect more than 25 files without human approval;
+- do not repeatedly reopen unchanged files;
+- do not repeatedly rerun successful full suites;
+- stop tool use and return a verdict when sufficient evidence exists.
 
-- `00-harness-core.md` — Universal harness core
-- `00-meta.md` — Project context and language policy
-- `01-architecture.md` — Architecture constraints
-- `02-technology-stack.md` — Technology stack and toolchain
-- `03-database.md` — Database rules
-- `04a-security-baseline.md` — Security baseline
-- `04b-auth-security.md` — Authentication and authorization
-- `04c-dependency-security.md` — Dependency and supply-chain security
-- `04d-runtime-security.md` — Runtime security
-- `05-testing.md` — Testing strategy
-- `06-development-workflow.md` — Development workflow
-- `07-agent-workflow.md` — Agent task workflow
-- `08-typescript.md` — TypeScript coding rules for the frontend
-- `09-msa-assessment.md` — MSA assessment requirements
+Reference stable decisions instead of copying them into prompts.
+
+## Evidence lifecycle
+
+One Slice records one main implementation prompt. Save an independent review
+record only when the review is actually performed. Append correction and
+closure evidence to the existing task/review record. Create the completion
+report once, after final gates pass.
+
+Prompt and review evidence is process evidence, not proof that a feature is
+implemented.
+
+## Cline-compatible rule map
+
+- `00-harness-core.md` — base task and approval protocol
+- `00-meta.md` — project context and language
+- `01-architecture.md` — architecture boundaries
+- `02-technology-stack.md` — accepted toolchain
+- `03-database.md` — PostgreSQL and EF Core
+- `04a-security-baseline.md` through `04d-runtime-security.md` — security
+- `05-testing.md` — testing strategy
+- `06-development-workflow.md` — verified development commands
+- `07-agent-workflow.md` — bounded task and review workflow
+- `08-typescript.md` — frontend TypeScript rules
+- `09-msa-assessment.md` — assessment requirements
+- `10-ai-model-routing-and-cost-control.md` — risk-based model routing
+
+Do not recursively load this entire map for every task. Read only the directly
+relevant guidance.

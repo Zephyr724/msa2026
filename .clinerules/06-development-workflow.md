@@ -1,117 +1,80 @@
 # 06 — Development Workflow
 
-## 6.1 Git Branch Strategy
+## 6.1 Git branch strategy
 
-### Target Policy (once controls are active)
-- `main` — protected, requires PR + review + CI pass
-- Feature branches: `feature/<description>` or `fix/<description>`
-- Branch naming: lowercase, hyphens for separators
-- No direct commits to `main`; all changes via pull request
+- `main` is the deployable source of truth.
+- Use short-lived branches with the actual prefixes `feat/`, `fix/`, or
+  `docs/`.
+- Use lowercase descriptions with hyphens.
+- Follow the pull-request and CI workflow manually where controls are not
+  technically enforced; do not claim an inactive control is enforced.
+- Git write actions require explicit human approval.
 
-### Current State
-- Follow the same workflow manually.
-- Until branch protection and CI are active, do not claim they are technically
-  enforced. See `PROJECT_STATUS.md` for control status.
+## 6.2 Commit convention
 
-## 6.2 Commit Convention
-- Follow [Conventional Commits](https://www.conventionalcommits.org/) 1.0
-- Format: `type(scope): description`
-- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`
-- Keep descriptions concise; use body for rationale when needed
-- Example: `feat(quests): add organizer quest creation`
-- Example: `fix(claims): prevent duplicate XP awards`
+- Follow Conventional Commits 1.0.
+- Use `type(scope): description`.
+- Keep commits small and meaningful.
+- Agents propose commit messages unless the human explicitly approves the
+  commit action.
 
-## 6.3 Pull Request Requirements
+## 6.3 Task execution
 
-### Solo Mode — target policy
-- PR required
-- CI required (all currently configured gates)
-- Agent self-review checklist required
-- Human final diff review required
-- No approval count requirement
+- Start from a short task contract and directly relevant context.
+- Keep changes focused and avoid unrelated refactoring.
+- Run targeted tests while implementing.
+- After implementation is complete, run the applicable full gates once.
+- Diagnose failures before changing source or tests.
+- Fix failures introduced by the task. Report unrelated failures without
+  silently expanding scope.
 
-### Solo Mode — current state before CI is operational
-- Use a feature branch or PR for review.
-- Run equivalent gates locally.
-- Record observed results in the task or PR summary.
-- Do not claim that CI passed.
+## 6.4 Verified quality gates
 
-### Team Mode (when collaborators join)
-- PR required
-- CI required
-- At least one independent approval required
+Run frontend commands from `frontend/`:
 
-## 6.4 Code Quality Gates
+```bash
+npm run lint
+npm run type-check
+npm run test -- --run
+npm run build
+```
 
-The following gates are planned project quality controls. A gate is active
-only after the corresponding command or tool exists in repository
-configuration, has been executed successfully, and is marked active in
-`PROJECT_STATUS.md`. The required subset for a task is selected by the
-Quality Gate Matrix in `07-agent-workflow.md` §7.1.
+Run backend commands from `backend/`:
 
-### Frontend gates (active after scaffold and verification)
-- `npm run format:check` passes (Prettier)
-- `npm run lint` passes (ESLint, no errors, no warnings)
-- `npm run typecheck` passes (`tsc --noEmit`)
-- `npm test` passes (unit + integration)
-- `npm run build` passes for production source changes and release candidates
+```bash
+dotnet build Kiwimpact.slnx
+dotnet test tests/Kiwimpact.UnitTests/Kiwimpact.UnitTests.csproj --no-build
+dotnet test tests/Kiwimpact.IntegrationTests/Kiwimpact.IntegrationTests.csproj --no-build
+```
 
-### Backend gates (active after scaffold and verification)
-- `dotnet format --verify-no-changes` passes
-- `dotnet build` passes
-- `dotnet test` passes
-- EF Core migrations are up-to-date and verified
+Select gates proportionally:
 
-### Cross-cutting gates (active after configuration)
-- No untriaged critical/high vulnerability may remain
-- Reachable critical/high CVEs in production dependencies block merge
-- Approved temporary exceptions must comply with `04c-dependency-security.md`
+- documentation-only changes: document review and Git diff checks;
+- frontend changes: affected targeted tests, then applicable frontend gates;
+- backend changes: affected targeted tests, then backend build and applicable
+  unit or PostgreSQL integration tests;
+- database or migration changes: backend build plus applicable PostgreSQL
+  integration tests;
+- full-stack changes: the applicable frontend and backend gates.
 
-## 6.5 Agent Workflow Guidelines
-- Start each task by reading relevant context files before modifying
-- Make focused, minimal changes; avoid unrelated refactoring in feature PRs
-- Agent execution follows `00-harness-core.md` and `07-agent-workflow.md`.
-- Run the applicable targeted checks after each coherent source-code change
-  set, according to the Quality Gate Matrix in `07-agent-workflow.md` §7.1.
-  Run full applicable gates once before completion.
-- Fix implementation and test failures introduced by the current task.
-- Report unrelated or pre-existing failures without silently expanding scope.
-- When tests fail, first identify the root cause: implementation bug, incorrect test assumption, stale fixture, or environment issue. Only modify test assertions when the contract has demonstrably changed, and explain why in the task summary.
-- When the user has explicitly approved committing, group changes into logical
-  commits. Otherwise, prepare the working tree and propose commit messages
-  without executing `git commit`.
+Do not require Prettier, `npm run typecheck`, `dotnet format`, speculative
+security scans, or end-to-end commands when no verified repository command is
+available. If a needed command is absent, report the gap instead of inventing
+one.
 
-## 6.6 Code Review Checklist
-- [ ] Does the change follow the dependency direction:
-  controllers → application services → repository interfaces,
-  with services also using domain rules?
-- [ ] Are EF Core queries restricted to approved Infrastructure persistence
-  components in `Kiwimpact.Infrastructure`?
-- [ ] Are resource-level authorization decisions enforced in application
-  services, not assumed from HTTP middleware?
-- [ ] Is user input validated before reaching services?
-  (Frontend: Zod forms improve UX; backend: DataAnnotations and
-  application/domain validation are independently authoritative.)
-- [ ] Are public APIs documented?
-- [ ] Are symbols exported only when another module actually needs them?
-- [ ] Do tests cover critical behavior and meaningful failure cases?
-- [ ] Are any dangerous patterns introduced into runtime code?
-- [ ] Did all applicable local or CI gates pass, and were their results
-  observed?
+## 6.5 Review checklist
 
-## 6.7 Deployment and Submission
+- Does the change follow accepted architecture and dependency direction?
+- Are backend security, authorization, ownership, and validation boundaries
+  enforced on the backend?
+- Are public contracts allowlisted and documented where applicable?
+- Do tests cover meaningful success and failure behaviour?
+- Were applicable commands actually run and their results observed?
+- Does the final diff contain only in-scope changes?
 
-- Deployment procedure remains governed by an accepted deployment
-  specification or ADR.
-- Do not create tags, releases, or changelog requirements unless explicitly
-  adopted.
-- Frontend and backend deployment must remain publicly accessible for marking
-  until Phase 2 results are released.
-- Before submission, verify public access in a private/incognito browser.
-- Do not commit after the confirmed MSA submission deadline.
+## 6.6 Deployment and submission
 
-## 6.8 Commit History Requirements
-
-- Maintain small, meaningful commits throughout development.
-- Do not combine the entire assessment into one final commit.
-- Agents still require explicit approval before committing.
+Deployment follows an accepted deployment specification or ADR and requires
+explicit human approval. Do not create tags, releases, or changelog
+requirements unless adopted. Before submission, verify public access and all
+applicable gates.

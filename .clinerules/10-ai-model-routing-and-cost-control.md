@@ -1,86 +1,56 @@
-# AI Model Routing and Cost Control
+# 10 — AI Model Routing and Cost Control
 
-This rule is always active. It controls how Claude and DeepSeek are used
-in this repository to preserve architectural quality while controlling cost.
+This rule applies risk-based routing while controlling duplicate review and
+context cost. All agents follow `AGENTS.md`.
 
-## Model responsibilities
+## Implementation
 
-- Cline was the initial primary agent interface for this repository.
-- The repository now supports multiple AI agent interfaces, including Cline and
-Codex IDE Extension.
-- All agents must follow the shared repository instructions defined in
-AGENTS.md.
-- Agent-specific rules remain inside their corresponding configuration files.
-- Claude Sonnet is the planning, architecture, security, and independent review model.
-- DeepSeek is the routine implementation, testing, debugging, and command-execution model.
-- Claude Opus is an exceptional escalation model and is never a default model.
+- Codex is the default implementation agent.
+- Use normal or medium effort for low-risk work.
+- Use high effort for authentication, authorization, migrations,
+  data-integrity, deployment, and cross-stack contracts.
+- Ultra or maximum effort is exceptional and requires human approval.
+- Cline with DeepSeek is a low-risk or quota-constrained fallback, not a
+  mandatory implementation route.
+- One task has one implementation owner.
 
-## Claude usage boundary
+## Independent review
 
-Claude may be used for:
+- Important and high-risk tasks require one independent read-only review.
+- Kimi K3 is the preferred cross-model reviewer during the initial trial.
+- A fresh Codex session is the fallback reviewer.
+- The reviewer must not be the implementation session.
+- Claude is escalation-only when the normal implementation/review pair cannot
+  resolve a concrete high-risk problem.
+- Do not use multiple independent reviewers for one normal task.
+- Do not run Kimi, Codex, and Claude sequentially on the same normal task.
 
-- architecture and major structural decisions;
-- ADR creation or review;
-- authentication, authorisation, security, and privacy decisions;
-- API contracts and data-model decisions;
-- complex cross-frontend/backend/database planning;
-- difficult root-cause analysis after routine attempts have failed;
-- independent implementation reviews;
-- final architecture, security, and MSA compliance reviews.
+Reviews classify findings as Blocker, Major, Minor, or Optional. Approval
+requires:
 
-Claude must not be used for:
+- Blocker = 0;
+- Major = 0.
 
-- routine component implementation;
-- ordinary CRUD implementation;
-- styling adjustments;
-- repetitive test writing;
-- straightforward bug fixes;
-- routine terminal commands;
-- ordinary documentation updates already defined by accepted specifications.
+One independent full review may be followed by one concentrated correction
+pass and one targeted closure check of original unresolved Blocker/Major
+findings. A second full review or reviewer requires explicit human approval.
 
-## Claude task rules
+## Cost and context control
 
-- Every Claude task must begin in Plan mode.
-- Claude planning and review tasks must remain in Plan mode.
-- Claude must not request a switch to Act mode unless the user explicitly
-  authorises Claude to implement a clearly bounded task.
-- Claude must not modify files or execute terminal commands during planning
-  or independent review.
-- Claude should initially read only files explicitly mentioned by the user.
-- Claude may read directly referenced dependencies when necessary.
-- Claude must ask before substantially expanding the file scope.
-- Claude output should normally remain under 1,200 words unless the user
-  explicitly requests a more detailed response.
-- Claude must distinguish accepted repository decisions from suggestions.
-- Unresolved architectural decisions require explicit human approval.
+- Review prompts must define exact scope.
+- Read the task contract, current diff, and directly affected source/test
+  files.
+- Do not recursively read historical prompts, reviews, or reports.
+- Stop before inspecting more than 25 files and ask before expanding scope.
+- Read at most one prior review.
+- Do not repeatedly read unchanged files.
+- Do not repeatedly rerun successful full suites.
+- Return a verdict when sufficient evidence exists.
 
-## DeepSeek implementation rules
+## Claude escalation
 
-- Routine implementation must be performed by DeepSeek in Act mode.
-- DeepSeek must implement only the human-approved plan and accepted specs.
-- DeepSeek must not introduce new architecture decisions without approval.
-- DeepSeek must run relevant build, type-check, lint, and test commands.
-- DeepSeek must not claim success unless the relevant commands actually pass.
-
-## Independent review isolation
-
-- Each independent Claude review must use a new blank Cline task.
-- Do not perform an independent review inside the implementation task.
-- Provide only the accepted specification, relevant diff, changed files,
-  test results, and directly related dependencies.
-- Review tasks must not modify files.
-- Reviews must classify findings as Blocker, Major, Minor, or Optional.
-- Reviews must end with either APPROVE or CHANGES REQUIRED.
-
-## Opus escalation
-
-- Claude Opus must not be configured as the default Plan or Act model.
-- Opus may be selected only after the user explicitly states that Opus is
-  approved for the named task.
-- Acceptable escalation reasons include:
-  - high-risk authentication or authorisation decisions;
-  - major database or architecture migration;
-  - unresolved security disagreement;
-  - repeated failure by the normal planning model;
-  - final high-risk architecture or security audit.
-- After the escalated task ends, restore Claude Sonnet as the Plan model.
+Claude is not a routine planner, implementer, or reviewer. Escalation requires
+a concrete high-risk problem that the normal pair cannot resolve, such as an
+unresolved reproducible Blocker involving authentication, authorization,
+data integrity, migration safety, or architecture. A third reviewer or
+Claude escalation requires explicit human approval.

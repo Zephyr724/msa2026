@@ -8,6 +8,8 @@ Last reviewed: 2026-07-24
 
 Status: COMPLETE, MERGED, AND FROZEN
 
+Slice 1 was merged through PR #3 and is now frozen.
+
 Closure:
 
 - 7/7 original findings closed
@@ -46,15 +48,14 @@ Review evidence:
 - specs/ai/reviews/10-slice-0-foundation-codex-rereview-2026-07-22.md
 - specs/ai/reviews/14-slice-0-final-codex-commit-readiness-review-2026-07-22.md
 
-## Current Slice
+## Current Work
 
-### Slice 1 — Region and Public Quest Read
+### Workflow and scope convergence before Slice 2
 
-Status: Implementation and final bounded corrections complete; all applicable
-verification gates pass. The working tree remains uncommitted pending human
-review and approval.
+Status: Documentation workflow alignment is in progress. Slice 2 implementation
+has not started.
 
-Implemented:
+The completed Slice 1 baseline includes:
 
 - Region, Quest, and QuestImage persistence plus the initial PostgreSQL
   migration.
@@ -65,7 +66,7 @@ Implemented:
 - Backend unit tests, real PostgreSQL integration tests, and frontend
   component/contract tests.
 
-Final verification observed 2026-07-24:
+Final Slice 1 verification observed 2026-07-24:
 
 - Backend build: 0 warnings, 0 errors.
 - Backend unit tests: 34 passed, 0 failed, 0 skipped.
