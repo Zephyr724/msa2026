@@ -6,6 +6,10 @@ import {
 } from '../../src/lib/api/apiFetch.ts';
 import { fetchPublishedQuests } from '../../src/lib/api/quests.ts';
 import { fetchActiveLocalAreas } from '../../src/lib/api/regions.ts';
+import {
+  cancelQuestParticipation,
+  joinQuest,
+} from '../../src/lib/api/participation.ts';
 
 describe('apiFetch', () => {
   afterEach(() => {
@@ -130,6 +134,40 @@ describe('apiFetch', () => {
       body: '{}',
     })).rejects.toMatchObject({ status: 401 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends body-free Join and Cancel through apiFetch with Cookie and CSRF behavior', async () => {
+    const questId = 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+    const participationId = 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e';
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-participation' }))
+      .mockResolvedValueOnce(jsonResponse({
+        participationId,
+        questId,
+        status: 'Active',
+        joinedAtUtc: '2026-07-25T00:00:00Z',
+        cancelledAtUtc: null,
+      }, 201))
+      .mockResolvedValueOnce(jsonResponse({
+        participationId,
+        questId,
+        status: 'Cancelled',
+        joinedAtUtc: '2026-07-25T00:00:00Z',
+        cancelledAtUtc: '2026-07-25T01:00:00Z',
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await joinQuest(questId);
+    await cancelQuestParticipation(questId);
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(`/api/v1/quests/${questId}/join`);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(`/api/v1/quests/${questId}/cancel`);
+    for (const call of fetchMock.mock.calls.slice(1)) {
+      expect(call[1]).toMatchObject({ method: 'POST', credentials: 'include' });
+      expect(call[1]?.body).toBeUndefined();
+      expect(headerValue(call[1], 'X-CSRF-TOKEN')).toBe('csrf-participation');
+    }
   });
 });
 

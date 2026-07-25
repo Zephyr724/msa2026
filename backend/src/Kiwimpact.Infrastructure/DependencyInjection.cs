@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IRegionReadRepository, RegionReadRepository>();
         services.AddScoped<IQuestReadRepository, QuestReadRepository>();
         services.AddScoped<IQuestWriteRepository, QuestWriteRepository>();
+        services.AddScoped<IQuestParticipationRepository, QuestParticipationRepository>();
 
         return services;
     }
