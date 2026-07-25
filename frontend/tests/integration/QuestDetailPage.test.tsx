@@ -14,6 +14,10 @@ vi.mock('../../src/components/quest/QuestParticipationPanel', () => ({
   default: () => null,
 }));
 
+vi.mock('../../src/components/quest/QuestCompletionPanel', () => ({
+  default: () => null,
+}));
+
 const mockUseQuestDetail = vi.mocked(useQuestDetail);
 const mockUseQuestImages = vi.mocked(useQuestImages);
 

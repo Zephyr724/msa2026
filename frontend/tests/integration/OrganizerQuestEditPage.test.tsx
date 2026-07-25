@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { completionCodeKeys } from '../../src/hooks/useCompletion';
 import { organizerQuestKeys } from '../../src/hooks/useOrganizerQuests';
 import { resetCsrfToken } from '../../src/lib/api/apiFetch';
 import OrganizerQuestEditPage from '../../src/pages/OrganizerQuestEditPage';
@@ -124,6 +125,14 @@ function renderEdit(quest: ReturnType<typeof managedQuestDetail>) {
   const queryClient = createTestQueryClient();
   queryClient.setQueryData(organizerQuestKeys.detail(quest.id), quest);
   queryClient.setQueryData(['regions', ''], []);
+  // The edit page now embeds the Completion Code section; seed its status so
+  // these tests exercise the same fetch sequences as before Slice 4B-2.
+  queryClient.setQueryData(completionCodeKeys.status(quest.id), {
+    isConfigured: false,
+    validFromUtc: null,
+    validToUtc: null,
+    createdAtUtc: null,
+  });
   return renderWithRouter([
     { path: '/organizer/quests/:questId/edit', element: <OrganizerQuestEditPage /> },
     { path: '/organizer/quests', element: <p>List destination</p> },
