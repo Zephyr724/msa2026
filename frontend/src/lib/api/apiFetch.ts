@@ -16,13 +16,15 @@ let csrfTokenRequest: Promise<string> | null = null;
 export class ApiError extends Error {
   status: number;
   problem?: ProblemDetails;
+  retryAfterSeconds?: number;
 
-  constructor(status: number, problem?: ProblemDetails) {
+  constructor(status: number, problem?: ProblemDetails, retryAfterSeconds?: number) {
     const title = problem?.title ?? 'Request failed';
     super(title);
     this.name = 'ApiError';
     this.status = status;
     this.problem = problem;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -59,7 +61,7 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status, problem);
+    throw new ApiError(response.status, problem, parseRetryAfter(response));
   }
 
   if (response.status === 204 || response.headers.get('content-length') === '0') {
@@ -130,4 +132,12 @@ async function readProblem(
   } catch {
     return undefined;
   }
+}
+
+/** Reads a delta-seconds Retry-After header; HTTP-date forms are ignored. */
+function parseRetryAfter(response: Response): number | undefined {
+  const value = response.headers.get('Retry-After');
+  if (value === null) return undefined;
+  const seconds = Number.parseInt(value, 10);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
 }

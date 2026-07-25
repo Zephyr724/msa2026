@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuestDetail, useQuestImages } from '../hooks/useQuests';
 import { ApiError } from '../lib/api/apiFetch';
+import QuestCompletionPanel from '../components/quest/QuestCompletionPanel';
 import QuestParticipationPanel from '../components/quest/QuestParticipationPanel';
 
 export default function QuestDetailPage() {
@@ -115,6 +116,12 @@ export default function QuestDetailPage() {
       </section>
 
       <QuestParticipationPanel
+        questId={quest.id}
+        registrationMode={quest.registrationMode}
+      />
+      {/* Keyed so local reveal/input state can never leak across quests. */}
+      <QuestCompletionPanel
+        key={quest.id}
         questId={quest.id}
         registrationMode={quest.registrationMode}
       />

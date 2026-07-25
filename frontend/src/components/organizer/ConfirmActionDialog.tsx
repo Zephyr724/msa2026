@@ -6,6 +6,7 @@ interface ConfirmActionDialogProps {
   description: string;
   confirmLabel: string;
   pendingLabel: string;
+  cancelLabel?: string;
   pending: boolean;
   error?: string | null;
   children?: ReactNode;
@@ -19,6 +20,7 @@ export default function ConfirmActionDialog({
   description,
   confirmLabel,
   pendingLabel,
+  cancelLabel = 'Keep quest',
   pending,
   error,
   children,
@@ -88,7 +90,7 @@ export default function ConfirmActionDialog({
             ref={safeButtonRef}
             type="button"
           >
-            Keep quest
+            {cancelLabel}
           </button>
           <button
             className="btn btn-primary"

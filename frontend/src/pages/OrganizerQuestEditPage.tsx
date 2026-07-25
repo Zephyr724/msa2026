@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import QuestForm from '../components/organizer/QuestForm';
 import { questDetailToFormValues } from '../components/organizer/questFormModel';
+import CompletionCodeSection from '../components/organizer/CompletionCodeSection';
 import QuestLifecycleActions from '../components/organizer/QuestLifecycleActions';
 import { ManagementForbidden } from '../components/organizer/RequireManagementAccess';
 import { QuestStatusBadge } from './OrganizerQuestListPage';
@@ -185,6 +186,9 @@ export default function OrganizerQuestEditPage() {
           submitting={update.isPending}
         />
       </div>
+
+      {/* Keyed so a quest switch resets all local reveal/dialog state. */}
+      {!archived && <CompletionCodeSection key={quest.id} quest={quest} />}
     </main>
   );
 }
