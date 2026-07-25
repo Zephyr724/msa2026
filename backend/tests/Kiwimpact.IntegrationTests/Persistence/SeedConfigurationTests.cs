@@ -366,6 +366,13 @@ internal sealed class NonDevelopmentWebApplicationFactory
     {
         builder.UseEnvironment("Production"); // NOT Development
 
+        builder.ConfigureAppConfiguration((_, configuration) =>
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["CompletionCodes:HmacKey"] = Convert.ToBase64String(
+                    Enumerable.Range(1, 32).Select(value => (byte)value).ToArray()),
+            }));
+
         builder.ConfigureServices(services =>
         {
             var descriptor = services.SingleOrDefault(
@@ -407,6 +414,11 @@ internal sealed class SeedConfigWebApplicationFactory
         builder.ConfigureAppConfiguration((_, configBuilder) =>
         {
             configBuilder.AddInMemoryCollection(_config);
+            configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["CompletionCodes:HmacKey"] = Convert.ToBase64String(
+                    Enumerable.Range(1, 32).Select(value => (byte)value).ToArray()),
+            });
         });
 
         builder.ConfigureServices(services =>

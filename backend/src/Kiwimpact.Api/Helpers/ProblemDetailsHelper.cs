@@ -47,4 +47,15 @@ internal static class ProblemDetailsHelper
             Detail = detail
         };
     }
+
+    public static ProblemDetails InvalidCompletionCode()
+    {
+        return new ProblemDetails
+        {
+            Type = "https://kiwimpact.app/problems/invalid-completion-code",
+            Title = "Invalid Completion Code",
+            Status = StatusCodes.Status400BadRequest,
+            Detail = "The completion code is invalid."
+        };
+    }
 }
