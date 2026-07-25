@@ -63,29 +63,47 @@ public sealed class QuestManagementService : IQuestManagementService
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var quest = await GetAsync(actorId, isAdmin, id, ct);
-        EnsureVersion(quest, command.Version);
-        await EnsureRegionAsync(command.LocationRegionId, ct);
-
+        EnsureActor(actorId);
+        await using var transaction = await _repository.BeginTransactionAsync(ct);
         try
         {
+            if (!await _repository.LockQuestAsync(id, ct))
+                throw Error(QuestManagementError.NotFound, "Quest not found.");
+
+            var quest = await GetAsync(actorId, isAdmin, id, ct);
+            EnsureVersion(quest, command.Version);
+            await EnsureRegionAsync(command.LocationRegionId, ct);
+            var originalStartAtUtc = quest.StartAtUtc;
+            var originalEndAtUtc = quest.EndAtUtc;
+
             quest.UpdateDetails(
                 ToDetails(command),
                 command.CoverImage is null ? null : ToCoverDetails(command.CoverImage),
                 DateTimeOffset.UtcNow);
+
+            if (quest.StartAtUtc != originalStartAtUtc || quest.EndAtUtc != originalEndAtUtc)
+                await _repository.RevokeActiveCompletionCodesAsync(quest.Id, ct);
+
+            await SaveAsync(ct);
+            await _repository.ReloadAsync(quest, ct);
+            await transaction.CommitAsync(ct);
+            return quest;
         }
         catch (ArgumentException ex)
         {
+            await transaction.RollbackAsync(ct);
             throw Error(QuestManagementError.Validation, ex.Message);
         }
         catch (InvalidOperationException ex)
         {
+            await transaction.RollbackAsync(ct);
             throw Error(QuestManagementError.Conflict, ex.Message);
         }
-
-        await SaveAsync(ct);
-        await _repository.ReloadAsync(quest, ct);
-        return quest;
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task DeleteAsync(

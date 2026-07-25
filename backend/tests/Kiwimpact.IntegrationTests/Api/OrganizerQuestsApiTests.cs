@@ -337,7 +337,7 @@ public sealed class OrganizerQuestsApiTests : IClassFixture<CustomWebApplication
     }
 
     [Fact]
-    public async Task ManagementOpenApi_HasEightEndpointsAndNoGalleryRoutes()
+    public async Task ManagementOpenApi_HasTenEndpointsIncludingCompletionCodesAndNoGalleryRoutes()
     {
         var client = _factory.CreateClient();
         var response = await client.GetStringAsync(
@@ -348,7 +348,10 @@ public sealed class OrganizerQuestsApiTests : IClassFixture<CustomWebApplication
             .Where(path => path.Name.StartsWith("/api/v1/organizer/quests", StringComparison.Ordinal))
             .ToList();
 
-        Assert.Equal(8, managementPaths.Sum(path => path.Value.EnumerateObject().Count()));
+        Assert.Equal(10, managementPaths.Sum(path => path.Value.EnumerateObject().Count()));
+        Assert.Contains(
+            managementPaths,
+            path => path.Name.EndsWith("/completion-codes", StringComparison.Ordinal));
         Assert.DoesNotContain(managementPaths, path => path.Name.Contains("/images", StringComparison.Ordinal));
     }
 

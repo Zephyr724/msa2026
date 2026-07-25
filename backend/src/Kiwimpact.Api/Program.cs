@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using Kiwimpact.Api.Security;
 using Kiwimpact.Core.Services;
+using Kiwimpact.Core.Security;
 using Kiwimpact.Infrastructure;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Data.Seeds;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -43,6 +45,19 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
         "Connection string 'DefaultConnection' is not configured.");
 
 builder.Services.AddInfrastructure(connectionString);
+
+builder.Services.AddOptions<CompletionCodeOptions>()
+    .Bind(builder.Configuration.GetSection("CompletionCodes"))
+    .Validate(
+        CompletionCodeOptions.HasValidHmacKey,
+        "CompletionCodes:HmacKey must be valid Base64 containing at least 32 bytes.")
+    .ValidateOnStart();
+builder.Services.AddSingleton(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<CompletionCodeOptions>>().Value;
+    return new CompletionCodeProtector(
+        CompletionCodeProtector.DecodeConfiguredKey(options.HmacKey));
+});
 
 // Identity authentication, cookies, lockout, and API-safe challenge responses.
 builder.Services
@@ -126,6 +141,38 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0,
                 AutoReplenishment = true,
             }));
+    options.AddPolicy(CompletionCodeRateLimitPolicies.Redeem, context =>
+    {
+        var actorIdText = context.User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var questIdText = context.Request.RouteValues["questId"]?.ToString();
+        if (context.User.Identity?.IsAuthenticated != true ||
+            !Guid.TryParse(actorIdText, out var actorId) ||
+            !Guid.TryParse(questIdText, out var questId))
+        {
+            return RateLimitPartition.GetNoLimiter("unauthenticated");
+        }
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            $"{actorId:D}:{questId:D}",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            });
+    });
+    options.OnRejected = (context, _) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter =
+                Math.Ceiling(retryAfter.TotalSeconds).ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
+        }
+        return ValueTask.CompletedTask;
+    };
 });
 
 // Core application services
@@ -133,6 +180,7 @@ builder.Services.AddScoped<IRegionReadService, RegionReadService>();
 builder.Services.AddScoped<IQuestDiscoveryService, QuestDiscoveryService>();
 builder.Services.AddScoped<IQuestManagementService, QuestManagementService>();
 builder.Services.AddScoped<IQuestParticipationService, QuestParticipationService>();
+builder.Services.AddScoped<IQuestCompletionService, QuestCompletionService>();
 
 var app = builder.Build();
 
@@ -148,8 +196,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 // ── Seed Orchestration ──────────────────────────────────────────────
