@@ -20,6 +20,8 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         .WithImage("postgres:17-alpine")
         .Build();
 
+    public string ConnectionString => _dbContainer.GetConnectionString();
+
     public async ValueTask InitializeAsync()
     {
         await _dbContainer.StartAsync(TestContext.Current.CancellationToken);

@@ -41,6 +41,8 @@ public sealed class Quest
     // Navigation properties
     public Region? LocationRegion { get; internal set; }
     public ICollection<QuestImage> Images { get; internal set; } = new List<QuestImage>();
+    public ICollection<QuestParticipation> Participations { get; internal set; } =
+        new List<QuestParticipation>();
 
     public static Quest CreateOrganizerOwned(
         Guid createdByUserId,

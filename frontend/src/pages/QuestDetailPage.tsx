@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuestDetail, useQuestImages } from '../hooks/useQuests';
 import { ApiError } from '../lib/api/apiFetch';
+import QuestParticipationPanel from '../components/quest/QuestParticipationPanel';
 
 export default function QuestDetailPage() {
   const { questId } = useParams<{ questId: string }>();
@@ -112,6 +113,11 @@ export default function QuestDetailPage() {
           </div>
         )}
       </section>
+
+      <QuestParticipationPanel
+        questId={quest.id}
+        registrationMode={quest.registrationMode}
+      />
 
       {/* External Source */}
       {quest.externalSourceUrl && (

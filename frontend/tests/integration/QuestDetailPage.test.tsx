@@ -10,6 +10,10 @@ vi.mock('../../src/hooks/useQuests', () => ({
   useQuestImages: vi.fn(),
 }));
 
+vi.mock('../../src/components/quest/QuestParticipationPanel', () => ({
+  default: () => null,
+}));
+
 const mockUseQuestDetail = vi.mocked(useQuestDetail);
 const mockUseQuestImages = vi.mocked(useQuestImages);
 

@@ -132,6 +132,7 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddScoped<IRegionReadService, RegionReadService>();
 builder.Services.AddScoped<IQuestDiscoveryService, QuestDiscoveryService>();
 builder.Services.AddScoped<IQuestManagementService, QuestManagementService>();
+builder.Services.AddScoped<IQuestParticipationService, QuestParticipationService>();
 
 var app = builder.Build();
 

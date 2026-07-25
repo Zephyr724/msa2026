@@ -150,6 +150,25 @@ internal static class DtoMapping
             quest.Version);
     }
 
+    public static QuestParticipationDto ToDto(this QuestParticipation participation)
+    {
+        return new QuestParticipationDto(
+            participation.Id,
+            participation.QuestId,
+            participation.CancelledAt.HasValue ? "Cancelled" : "Active",
+            participation.JoinedAt.ToString("O"),
+            participation.CancelledAt?.ToString("O"));
+    }
+
+    public static MyQuestParticipationDto ToDto(this MyQuestParticipationState state)
+    {
+        return new MyQuestParticipationDto(
+            state.Status.ToString(),
+            state.CanJoin,
+            state.IneligibilityReason?.ToString(),
+            state.CapacityFull);
+    }
+
     public static CreateQuestCommand ToCommand(this CreateQuestRequest request) => new(
         request.Title,
         request.Description,
