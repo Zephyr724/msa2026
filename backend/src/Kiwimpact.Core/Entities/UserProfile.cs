@@ -1,3 +1,5 @@
+using Kiwimpact.Core.Progression;
+
 namespace Kiwimpact.Core.Entities;
 
 public sealed class UserProfile
@@ -14,6 +16,8 @@ public sealed class UserProfile
     public Guid? HomeCommunityRegionId { get; internal set; }
     public bool ShowCommunityOnPassport { get; internal set; }
     public DateTimeOffset? LastCommunityChangeAt { get; internal set; }
+    public long TotalXp { get; internal set; }
+    public int Level { get; internal set; } = ProgressionRules.MinLevel;
     public DateTimeOffset CreatedAt { get; internal set; }
     public DateTimeOffset UpdatedAt { get; internal set; }
 
@@ -38,8 +42,34 @@ public sealed class UserProfile
             HomeCommunityRegionId = null,
             ShowCommunityOnPassport = false,
             LastCommunityChangeAt = null,
+            TotalXp = 0,
+            Level = ProgressionRules.MinLevel,
             CreatedAt = now,
             UpdatedAt = now,
         };
+    }
+
+    /// <summary>
+    /// Applies one XP award inside the award transaction. The addition is
+    /// checked: overflow raises <see cref="OverflowException"/> as an
+    /// invariant failure instead of wrapping, and the award rolls back. The
+    /// Level is always recomputed from the checked new total via
+    /// <see cref="ProgressionRules.ComputeLevel"/> — never incremented and
+    /// never supplied by a caller.
+    /// </summary>
+    public void ApplyXpAward(int xpAmount, DateTimeOffset now)
+    {
+        if (xpAmount <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(xpAmount),
+                "XP amount must be positive.");
+
+        var newTotal = checked(TotalXp + xpAmount);
+        if (newTotal < 0)
+            throw new InvalidOperationException("Total XP cannot become negative.");
+
+        TotalXp = newTotal;
+        Level = ProgressionRules.ComputeLevel(newTotal);
+        UpdatedAt = now.ToUniversalTime();
     }
 }

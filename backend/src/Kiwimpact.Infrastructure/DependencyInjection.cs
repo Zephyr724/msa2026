@@ -1,5 +1,6 @@
 using Kiwimpact.Core.Repositories;
 using Kiwimpact.Infrastructure.Data;
+using Kiwimpact.Infrastructure.Reconciliation;
 using Kiwimpact.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,8 @@ public static class DependencyInjection
         services.AddScoped<IQuestWriteRepository, QuestWriteRepository>();
         services.AddScoped<IQuestParticipationRepository, QuestParticipationRepository>();
         services.AddScoped<IQuestCompletionRepository, QuestCompletionRepository>();
+        services.AddScoped<IXpLedgerRepository, XpLedgerRepository>();
+        services.AddSingleton<XpReconciliationRunner>();
 
         return services;
     }

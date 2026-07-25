@@ -192,16 +192,14 @@ public sealed class QuestCompletionPersistenceTests
     }
 
     [Fact]
-    public async Task SchemaContainsNoXpTransactionAndCompletionHasOnlyApprovedIndexes()
+    public async Task CompletionHasOnlyApprovedIndexes()
     {
         using var scope = await _fixture.CreateSeededScopeAsync();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
 
-        var xpTable = await db.Database.SqlQueryRaw<bool>(
-                "SELECT to_regclass('public.\"XpTransactions\"') IS NOT NULL AS \"Value\"")
-            .SingleAsync(TestContext.Current.CancellationToken);
-        Assert.False(xpTable);
-
+        // The Slice 5A XP ledger schema (XpTransactions table, progression
+        // columns) is asserted positively by the XP ledger persistence and
+        // migration test classes.
         var completionIndexes = await db.Database.SqlQuery<string>($"""
                 SELECT indexname AS "Value"
                 FROM pg_indexes

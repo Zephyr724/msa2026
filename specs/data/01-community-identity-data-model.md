@@ -106,8 +106,8 @@ Controls whether the Home Community label appears on the Member's own Passport v
 ### 4.2 Business Rules
 
 - Set at the time XP is awarded for verified completions.
-- Snapshots the user's `HomeCommunityRegionId` at the moment of the award.
-- Null when the user had no Home Community at the time of award.
+- Copied from the source completion's immutable `CommunityRegionIdAtCompletion`; for awards created together with the completion this equals the user's `HomeCommunityRegionId` at the moment of the award. Reconciliation of pre-ledger completions never reads the user's current Home Community.
+- Null when the source completion has no community snapshot.
 - Self-reported completions do not create XP transactions.
 - **Must not be recalculated or updated** when the user later changes their Home Community.
 - Leaderboard queries for community-attribution scopes (My Community, Auckland) use this snapshot field, **not** the user's current `UserProfile.HomeCommunityRegionId`.

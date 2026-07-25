@@ -100,12 +100,14 @@
 | `GET`    | `/api/v1/users/me` | Member+ | Return authenticated user's full profile. Ownership: self.             |
 | `PATCH`  | `/api/v1/users/me` | Member+ | Update display name, Home Community, privacy toggles. Ownership: self. |
 | `DELETE` | `/api/v1/users/me` | Member+ | Request account deletion.                                              |
+| `GET`    | `/api/v1/users/me/progression` | Member+ | Return the authenticated user's own server-authoritative progression: exactly `{ totalXp, level, rankTitle }`. `rankTitle` is derived from the persisted `Level` at read time. Ownership: self; identity comes only from the authenticated session — no route/query user selector exists. |
 
 **Important error conditions:**
 
 - `PATCH`: 409 if Home Community change within cooldown period. 400 if Region invalid/inactive/not LocalArea.
 - `PATCH`: first Home Community selection has no cooldown.
 - `PATCH` response includes `nextAllowedCommunityChangeAt` when cooldown is active.
+- Progression: `401` anonymous; `503 progression-not-ready` while any Verified completion still lacks its XP row (reward state incomplete; bounded ProblemDetails with no counts or internals; evaluated live on every request, never cached); `404` when the authenticated user has no profile row.
 
 ### 2.3 Regions
 

@@ -195,6 +195,14 @@ internal static class DtoMapping
             state.VerifiedAtUtc?.ToString("O"));
     }
 
+    public static MyProgressionDto ToDto(this MyProgressionState state)
+    {
+        return new MyProgressionDto(
+            state.TotalXp,
+            state.Level,
+            state.RankTitle);
+    }
+
     public static CreateQuestCommand ToCommand(this CreateQuestRequest request) => new(
         request.Title,
         request.Description,

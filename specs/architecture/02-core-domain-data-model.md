@@ -71,6 +71,8 @@ Managed by ASP.NET Core Identity. Not defined here in detail. Key relationships:
 | `HomeCommunityRegionId` | `uuid?` | Nullable. FK → `Region.Id`. Restrict delete. |
 | `ShowCommunityOnPassport` | `bool` | Not null, default `false` |
 | `LastCommunityChangeAt` | `timestamp with time zone?` | Nullable. Set when Home Community is changed (not first selection). Used for cooldown enforcement. |
+| `TotalXp` | `bigint` | Not null, default `0`, CHECK `>= 0`. Transactional projection of the XP ledger; written only inside award transactions as a checked addition (overflow is an invariant failure that rolls back the award); never wrapped or clamped. |
+| `Level` | `int` | Not null, default `1`, CHECK `BETWEEN 1 AND 99`. Always recomputed from `TotalXp` via the accepted progression formula, never incremented. Rank Title is derived from `Level` at read time and never persisted. |
 | `CreatedAt` | `timestamp with time zone` | Not null |
 | `UpdatedAt` | `timestamp with time zone` | Not null |
 
@@ -102,7 +104,7 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 | `SourceType` | `text` (max 50) | Not null. Stores `QuestSourceType` enum as string. |
 | `RegistrationMode` | `text` (max 50) | Nullable for External source. Stores `RegistrationMode` enum as string. |
 | `Difficulty` | `text` (max 50) | Not null. Stores `QuestDifficulty` enum as string. |
-| `XpAward` | `int` | Not null, ≥ 0. Server-calculated; frontend never submits XP value. |
+| `XpAward` | `int` | Not null, ≥ 0. Retained but **not a reward input**: reward amounts derive only from the immutable `QuestCompletion.RewardDifficultySnapshot`. Column retained pending a separate cleanup decision. |
 | `Capacity` | `int?` | Nullable. Null = unlimited. |
 | `StartAtUtc` | `timestamp with time zone?` | Nullable |
 | `EndAtUtc` | `timestamp with time zone?` | Nullable |
@@ -268,14 +270,14 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 | `QuestId` | `uuid` | Not null. FK → `Quest.Id`. |
 | `SourceCompletionId` | `uuid` | Not null. FK → `QuestCompletion.Id`. **Unique** — one XP transaction per completion (reward-idempotency boundary). |
 | `XpAmount` | `int` | Not null, > 0 |
-| `CommunityRegionIdAtAward` | `uuid?` | Nullable. FK → `Region.Id`. Restrict delete. Snapshot of user's Home Community at XP award time. |
-| `CreatedAt` | `timestamp with time zone` | Not null |
+| `CommunityRegionIdAtAward` | `uuid?` | Nullable. FK → `Region.Id`. Restrict delete. Copied from the source completion's immutable `CommunityRegionIdAtCompletion`; for awards created together with the completion this equals the Home Community at award time. |
+| `CreatedAt` | `timestamp with time zone` | Not null. Award-effective time: `= SourceCompletion.VerifiedAtUtc`. Reconciliation processing time is never used, and a timestamp is never invented for a completion whose `VerifiedAtUtc` is null. |
 
 **Business rules:**
 - Created only for verified QuestCompletions (`Status = Verified`, not SelfReported).
 - `SourceCompletionId` is unique — one QuestCompletion yields at most one XpTransaction.
 - Together with `QuestCompletion(UserId, QuestId) WHERE Status = 'Verified'` unique partial index, this forms the full reward-idempotency boundary.
-- `CommunityRegionIdAtAward` snapshots the user's Home Community at award time. Must not be recalculated or updated when the user later changes community.
+- `CommunityRegionIdAtAward` is copied from the source completion's immutable `CommunityRegionIdAtCompletion` (for awards created together with the completion this equals the Home Community at award time). Must not be recalculated or updated when the user later changes community. Reconciliation never reads the current Home Community.
 - Self-reported completions create no XpTransaction.
 - XP amount is server-calculated from Quest difficulty; frontend never submits a trusted XP value.
 
@@ -408,7 +410,7 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 
 ## 7. Transaction Boundaries
 
-- XP award: creating a `Verified` QuestCompletion (via CompletionCode redemption or Admin claim approval) and its XpTransaction must be atomic — a single `SaveChangesAsync()` call.
+- XP award: creating a `Verified` QuestCompletion (via CompletionCode redemption or Admin claim approval) and its XpTransaction must be atomic — a single `SaveChangesAsync()` call. Slice 5A restored this atomicity for Completion Code redemption: completion, `XpTransaction`, and the profile progression projection commit or roll back in one transaction. The single bounded exception is the historical reconciliation of pre-ledger Slice 4B completions: a hosted background service awards each legacy completion in its own per-row transaction, with unique `SourceCompletionId` as the authoritative idempotency boundary and the completion's immutable `VerifiedAtUtc` as the award-effective timestamp.
 - EvidenceClaim review: updating QuestCompletion.Status to `Verified` + `ReviewedAt`/`ReviewedBy` + creating XpTransaction must be atomic.
 - CommunityChallenge progress is derived (read-only query); no transactional write.
 - CompletionCode redemption: creating a Verified QuestCompletion + XpTransaction must check the `(UserId, QuestId) WHERE Status = 'Verified'` uniqueness constraint and the redemption eligibility in one atomic operation.
@@ -422,6 +424,7 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 - Default: optimistic concurrency via EF Core concurrency tokens on mutable entities.
 - Entities with concurrency tokens: `Quest`, `QuestParticipation`, `QuestCompletion`, `CommunityChallenge`.
 - XP award idempotency is enforced through unique constraints (database-level guard), not application-level retry logic.
+- `UserProfiles.TotalXp`/`Level` progression updates are serialized by a `SELECT ... FOR UPDATE` row lock on the profile row inside award transactions; no new concurrency token is added for progression.
 
 ## 9. MVP and Deferred Scope
 

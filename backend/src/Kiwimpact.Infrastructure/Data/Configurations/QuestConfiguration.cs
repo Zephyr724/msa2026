@@ -93,5 +93,14 @@ public sealed class QuestConfiguration : IEntityTypeConfiguration<Quest>
             .HasDatabaseName("IX_Quests_Status_Difficulty");
         builder.HasIndex(q => new { q.Status, q.LocationRegionId })
             .HasDatabaseName("IX_Quests_Status_LocationRegionId");
+
+        // FK lookup indexes with their existing names. These were created by
+        // EF's ForeignKeyIndexConvention; they are declared explicitly because
+        // the convention is removed (KiwimpactDbContext.ConfigureConventions)
+        // to keep the XpTransactions index set exactly as approved.
+        builder.HasIndex(q => q.CreatedByUserId)
+            .HasDatabaseName("IX_Quests_CreatedByUserId");
+        builder.HasIndex(q => q.LocationRegionId)
+            .HasDatabaseName("IX_Quests_LocationRegionId");
     }
 }
