@@ -1,10 +1,10 @@
 # Slice 5A — XP Ledger and Progression Core Completion Report
 
-- **Date:** 2026-07-25 (implementation), 2026-07-25 (Review 36 correction pass)
-- **Status:** Backend implementation complete; Review 36 correction pass complete
-- **Review status:** TARGETED CLOSURE CHECK PENDING — Review 36 (`TARGETED FIX
-  REQUIRED`) Majors M1–M3 and Minors m1–m3 corrected in one concentrated
-  correction pass; awaiting the Codex targeted closure check
+- **Date:** 2026-07-25 (implementation, Review 36 correction pass, and CI
+  portability correction)
+- **Status:** Backend implementation complete
+- **Review status:** APPROVE — Review 36 targeted closure confirmed M1–M3
+  closed
 - **Implementation prompt:** `specs/ai/prompts/45-slice-5a-xp-ledger-progression-core-implementation.md`
 - **Approved plan:** `specs/implementation/05a-xp-ledger-and-progression-core.md` (D1–D7 approved by the human on 2026-07-25 after Review 35 `APPROVE`)
 - **Implementation review:** `specs/ai/reviews/36-slice-5a-codex-independent-implementation-review.md`
@@ -12,10 +12,12 @@
 ## Implementation status
 
 Complete per the approved plan and Prompt 45, followed by one concentrated
-correction pass closing all six Review 36 findings. No staging, commit, push,
-merge, pull request, deployment, or destructive operation was performed. No
-frontend, authentication-architecture, Docker/deployment, dependency, or
-out-of-scope product change was made.
+correction pass closing all six Review 36 findings. The implementation owner
+performed no staging, commit, push, merge, pull request, deployment, or
+destructive operation; the reviewed Slice was subsequently committed and
+pushed through the human-approved workflow. No frontend,
+authentication-architecture, Docker/deployment, dependency, or out-of-scope
+product change was made.
 
 ## Review 36 correction pass
 
@@ -72,6 +74,30 @@ All six findings were addressed; nothing outside the six findings was changed.
   level cannot be supplied by any caller. A new unit test proves one award
   can skip levels (computed, never incremented); the existing guards
   (positive amount, negative result, checked overflow) are unchanged.
+
+## Post-review CI portability correction
+
+The first GitHub Actions run exposed two test-only timestamp comparisons that
+were stable locally but invalid across PostgreSQL round trips. .NET
+`DateTimeOffset` retains 100-nanosecond ticks while PostgreSQL
+`timestamp with time zone` stores microseconds; CI observed differences of
+two and four ticks.
+
+The two assertions comparing an in-memory pre-save timestamp with a
+database-round-tripped timestamp now use a one-microsecond precision:
+
+- rollback preservation of `UserProfile.UpdatedAt`;
+- reconciliation preservation of
+  `XpTransaction.CreatedAt = QuestCompletion.VerifiedAtUtc`.
+
+No production code, schema, API, reward rule, or accepted specification
+changed. The two formerly failing tests passed directly, then the complete
+backend gates and the exact CI command passed:
+
+- `dotnet build Kiwimpact.slnx` — 0 warnings, 0 errors;
+- unit tests — 176/176;
+- integration tests — 195/195;
+- `dotnet test Kiwimpact.slnx --no-build` — both projects passed, 371 total.
 
 ## Approved scope delivered (D1–D7)
 

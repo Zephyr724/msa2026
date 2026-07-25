@@ -94,7 +94,10 @@ public sealed class XpLedgerPersistenceTests : IClassFixture<TestDatabaseFixture
                 TestContext.Current.CancellationToken);
             Assert.Equal(0, profile.TotalXp);
             Assert.Equal(1, profile.Level);
-            Assert.Equal(graph.Profile.UpdatedAt, profile.UpdatedAt);
+            Assert.Equal(
+                graph.Profile.UpdatedAt,
+                profile.UpdatedAt,
+                TimeSpan.FromMicroseconds(1));
         }
         finally
         {

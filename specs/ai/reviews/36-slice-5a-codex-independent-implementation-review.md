@@ -304,3 +304,27 @@ supporting changes for M1–M3, not scope expansion.
 Slice 5A now satisfies the independent-review requirement for commit
 readiness. This verdict does not itself authorize stage, commit, push, merge,
 PR, or deployment; those actions still require explicit human approval.
+
+## Post-approval CI portability check — 2026-07-25
+
+The first GitHub Actions run failed two integration assertions by two and four
+.NET ticks respectively. Both compared an in-memory `DateTimeOffset` retaining
+100-nanosecond precision with a value round-tripped through PostgreSQL
+`timestamp with time zone`, whose precision is one microsecond.
+
+Codex changed only those two test assertions to compare at one-microsecond
+precision. This preserves the timestamp-semantic checks while matching the
+database contract; no production code, migration, API, or product behavior
+changed.
+
+Independent verification:
+
+- both formerly failing tests: 2/2 passed;
+- `dotnet build Kiwimpact.slnx`: 0 warnings, 0 errors;
+- unit tests: 176/176 passed;
+- integration tests: 195/195 passed;
+- exact CI command `dotnet test Kiwimpact.slnx --no-build`: both projects
+  passed, 371 tests total.
+
+This test-only portability correction does not reopen M1–M3 or change the
+final `APPROVE` verdict.

@@ -491,7 +491,10 @@ public sealed class XpReconciliationTests : IClassFixture<TestDatabaseFixture>
             transaction => transaction.SourceCompletionId == completion.Id,
             TestContext.Current.CancellationToken);
         Assert.Equal(expectedAmount, xp.XpAmount);
-        Assert.Equal(completion.VerifiedAtUtc, xp.CreatedAt);
+        Assert.Equal(
+            completion.VerifiedAtUtc!.Value,
+            xp.CreatedAt,
+            TimeSpan.FromMicroseconds(1));
         Assert.Equal(expectedCommunityId, xp.CommunityRegionIdAtAward);
         Assert.Equal(completion.UserId, xp.UserId);
         Assert.Equal(completion.QuestId, xp.QuestId);
