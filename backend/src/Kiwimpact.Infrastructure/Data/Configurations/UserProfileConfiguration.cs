@@ -9,7 +9,15 @@ public sealed class UserProfileConfiguration : IEntityTypeConfiguration<UserProf
 {
     public void Configure(EntityTypeBuilder<UserProfile> builder)
     {
-        builder.ToTable("UserProfiles");
+        builder.ToTable("UserProfiles", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_UserProfiles_TotalXp_NonNegative",
+                "\"TotalXp\" >= 0");
+            table.HasCheckConstraint(
+                "CK_UserProfiles_Level_Range",
+                "\"Level\" BETWEEN 1 AND 99");
+        });
 
         builder.HasKey(profile => profile.Id);
 
@@ -20,6 +28,14 @@ public sealed class UserProfileConfiguration : IEntityTypeConfiguration<UserProf
         builder.Property(profile => profile.ShowCommunityOnPassport)
             .IsRequired()
             .HasDefaultValue(false);
+
+        builder.Property(profile => profile.TotalXp)
+            .IsRequired()
+            .HasDefaultValue(0L);
+
+        builder.Property(profile => profile.Level)
+            .IsRequired()
+            .HasDefaultValue(1);
 
         builder.HasOne<ApplicationUser>()
             .WithOne()

@@ -62,6 +62,9 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 ["Auth:RateLimits:LoginPermitLimit"] = "100",
                 ["CompletionCodes:HmacKey"] = Convert.ToBase64String(
                     Enumerable.Range(1, 32).Select(value => (byte)value).ToArray()),
+                // Hosted reconciliation must never race seeded API fixtures;
+                // tests invoke reconciliation passes directly instead.
+                ["XpReconciliation:Enabled"] = "false",
             });
         });
 

@@ -58,4 +58,15 @@ internal static class ProblemDetailsHelper
             Detail = "The completion code is invalid."
         };
     }
+
+    public static ProblemDetails ProgressionNotReady()
+    {
+        return new ProblemDetails
+        {
+            Type = "https://kiwimpact.app/problems/progression-not-ready",
+            Title = "Progression Not Ready",
+            Status = StatusCodes.Status503ServiceUnavailable,
+            Detail = "Progression state is not ready yet."
+        };
+    }
 }

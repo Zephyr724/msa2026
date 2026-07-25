@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Kiwimpact.Api.Reconciliation;
 using Kiwimpact.Api.Security;
 using Kiwimpact.Core.Services;
 using Kiwimpact.Core.Security;
@@ -6,6 +7,7 @@ using Kiwimpact.Infrastructure;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
+using Kiwimpact.Infrastructure.Reconciliation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -45,6 +47,23 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
         "Connection string 'DefaultConnection' is not configured.");
 
 builder.Services.AddInfrastructure(connectionString);
+
+builder.Services.AddOptions<XpReconciliationOptions>()
+    .Bind(builder.Configuration.GetSection(XpReconciliationOptions.SectionName))
+    .Validate(
+        options => options.BatchSize > 0,
+        "XpReconciliation:BatchSize must be positive.")
+    .Validate(
+        options => options.InitialDelay >= TimeSpan.Zero,
+        "XpReconciliation:InitialDelay must not be negative.")
+    .Validate(
+        options => options.IdleInterval > TimeSpan.Zero,
+        "XpReconciliation:IdleInterval must be positive.")
+    .Validate(
+        options => options.MaxConsecutiveRowFailures > 0,
+        "XpReconciliation:MaxConsecutiveRowFailures must be positive.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<XpReconciliationHostedService>();
 
 builder.Services.AddOptions<CompletionCodeOptions>()
     .Bind(builder.Configuration.GetSection("CompletionCodes"))
@@ -181,6 +200,7 @@ builder.Services.AddScoped<IQuestDiscoveryService, QuestDiscoveryService>();
 builder.Services.AddScoped<IQuestManagementService, QuestManagementService>();
 builder.Services.AddScoped<IQuestParticipationService, QuestParticipationService>();
 builder.Services.AddScoped<IQuestCompletionService, QuestCompletionService>();
+builder.Services.AddScoped<IProgressionService, ProgressionService>();
 
 var app = builder.Build();
 

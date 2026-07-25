@@ -190,18 +190,19 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
                     QuestCompletionError.InvalidCompletionCode,
                     "The completion code is invalid.");
 
-            var communityRegionId = await _db.UserProfiles
-                .AsNoTracking()
-                .Where(profile => profile.Id == actorId)
-                .Select(profile => profile.HomeCommunityRegionId)
-                .SingleOrDefaultAsync(ct);
+            var profile = await LockUserProfileAsync(actorId, ct)
+                ?? throw new InvalidOperationException(
+                    "The authenticated user has no profile row.");
             var completion = QuestCompletion.CreateVerifiedWithCode(
                 actorId,
                 quest,
                 participation,
-                communityRegionId,
+                profile.HomeCommunityRegionId,
                 timestamp);
+            var xp = XpTransaction.CreateFromVerifiedCompletion(completion);
+            profile.ApplyXpAward(xp.XpAmount, timestamp);
             _db.QuestCompletions.Add(completion);
+            _db.XpTransactions.Add(xp);
 
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -264,6 +265,16 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
                 SELECT q.*, q.xmin
                 FROM "Quests" AS q
                 WHERE q."Id" = {{questId}}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync(ct);
+
+    private Task<UserProfile?> LockUserProfileAsync(Guid userId, CancellationToken ct) =>
+        _db.UserProfiles
+            .FromSqlInterpolated($$"""
+                SELECT p.*
+                FROM "UserProfiles" AS p
+                WHERE p."Id" = {{userId}}
                 FOR UPDATE
                 """)
             .SingleOrDefaultAsync(ct);
