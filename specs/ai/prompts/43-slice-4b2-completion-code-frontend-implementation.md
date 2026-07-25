@@ -3,7 +3,7 @@
 - **Date:** 2026-07-25
 - **Tool/model:** Kimi K3 (Kimi Code CLI)
 - **Role:** Sole implementation owner
-- **Review status:** INDEPENDENT REVIEW COMPLETE (Codex, TARGETED FIX REQUIRED — corrections applied; see report)
+- **Review status:** INDEPENDENT REVIEW COMPLETE (Codex, TARGETED FIX REQUIRED — corrections applied; see report)APPROVED AFTER TARGETED CLOSUR
 
 ## Actual implementation instruction
 
@@ -54,14 +54,14 @@ preserved):
 >
 > Also locate and read:
 >
-> * the accepted Slice 4B design or implementation contract;
-> * relevant architecture and frontend rules;
-> * accepted security decisions;
-> * existing Quest Detail and participation frontend implementation;
-> * current API client, CSRF, authentication and ProblemDetails conventions;
-> * current TanStack Query configuration;
-> * current Figma-aligned design tokens and reusable components;
-> * the actual backend controllers, DTOs and OpenAPI surface merged by Slice 4B-1.
+> - the accepted Slice 4B design or implementation contract;
+> - relevant architecture and frontend rules;
+> - accepted security decisions;
+> - existing Quest Detail and participation frontend implementation;
+> - current API client, CSRF, authentication and ProblemDetails conventions;
+> - current TanStack Query configuration;
+> - current Figma-aligned design tokens and reusable components;
+> - the actual backend controllers, DTOs and OpenAPI surface merged by Slice 4B-1.
 >
 > Repository code and the accepted contract are the source of truth. Do not invent endpoint paths, DTO properties, error codes or authorization behavior.
 >
@@ -84,23 +84,23 @@ preserved):
 >
 > Do not add or modify:
 >
-> * XP awarding or XP presentation resulting from redemption;
-> * level-up behavior;
-> * achievements or badges;
-> * leaderboard behavior;
-> * share cards;
-> * admin review flows;
-> * evidence-claim flows;
-> * SelfReported completion flows;
-> * new backend endpoints;
-> * backend business logic;
-> * database entities or migrations;
-> * authentication architecture;
-> * new dependencies;
-> * Docker, staging, production or deployment configuration;
-> * unrelated Quest Detail redesign;
-> * broad design-system refactoring;
-> * Storybook unless it already exists and the accepted workflow requires it.
+> - XP awarding or XP presentation resulting from redemption;
+> - level-up behavior;
+> - achievements or badges;
+> - leaderboard behavior;
+> - share cards;
+> - admin review flows;
+> - evidence-claim flows;
+> - SelfReported completion flows;
+> - new backend endpoints;
+> - backend business logic;
+> - database entities or migrations;
+> - authentication architecture;
+> - new dependencies;
+> - Docker, staging, production or deployment configuration;
+> - unrelated Quest Detail redesign;
+> - broad design-system refactoring;
+> - Storybook unless it already exists and the accepted workflow requires it.
 >
 > Do not commit or push.
 >
@@ -112,13 +112,13 @@ preserved):
 >
 > Requirements:
 >
-> * use exact property names and nullability from the backend contract;
-> * use existing runtime validation conventions;
-> * reject malformed responses rather than silently accepting partial data;
-> * avoid permissive passthrough schemas unless already required by repository conventions;
-> * do not model fields that the backend does not expose;
-> * plaintext code must exist only in the successful generation or rotation response contract;
-> * status and current-user completion-state DTOs must not contain plaintext.
+> - use exact property names and nullability from the backend contract;
+> - use existing runtime validation conventions;
+> - reject malformed responses rather than silently accepting partial data;
+> - avoid permissive passthrough schemas unless already required by repository conventions;
+> - do not model fields that the backend does not expose;
+> - plaintext code must exist only in the successful generation or rotation response contract;
+> - status and current-user completion-state DTOs must not contain plaintext.
 >
 > Add focused frontend contract tests for the new DTOs.
 >
@@ -142,13 +142,13 @@ preserved):
 >
 > On success:
 >
-> * display the newly returned plaintext code once;
-> * make it easy to copy;
-> * clearly state that it cannot be viewed again;
-> * clearly state that generating or rotating a code invalidates the predecessor where applicable;
-> * update status metadata after successful generation;
-> * do not navigate to a URL containing the plaintext;
-> * do not include the plaintext in toast history or global notifications.
+> - display the newly returned plaintext code once;
+> - make it easy to copy;
+> - clearly state that it cannot be viewed again;
+> - clearly state that generating or rotating a code invalidates the predecessor where applicable;
+> - update status metadata after successful generation;
+> - do not navigate to a URL containing the plaintext;
+> - do not include the plaintext in toast history or global notifications.
 >
 > Do not regenerate automatically after refresh or component remount.
 >
@@ -158,13 +158,13 @@ preserved):
 >
 > Requirements:
 >
-> * rotation must require an intentional user action;
-> * provide an appropriate confirmation explaining that the previous code will stop working;
-> * do not display the previous code;
-> * on success, reveal only the newly returned plaintext;
-> * refresh status metadata;
-> * do not treat failed rotation as success;
-> * preserve accurate UI state when the backend rejects or fails the operation.
+> - rotation must require an intentional user action;
+> - provide an appropriate confirmation explaining that the previous code will stop working;
+> - do not display the previous code;
+> - on success, reveal only the newly returned plaintext;
+> - refresh status metadata;
+> - do not treat failed rotation as success;
+> - preserve accurate UI state when the backend rejects or fails the operation.
 >
 > Do not create optimistic plaintext or optimistic rotation state.
 >
@@ -176,33 +176,33 @@ preserved):
 >
 > The raw code must not be placed in:
 >
-> * TanStack Query `QueryCache`;
-> * TanStack Query `MutationCache`;
-> * Zustand stores;
-> * React Context used as application state;
-> * URL path, query string, fragment or navigation state;
-> * `localStorage`;
-> * `sessionStorage`;
-> * IndexedDB;
-> * cookies;
-> * service-worker caches;
-> * persisted form state;
-> * analytics events;
-> * console output;
-> * error reporting;
-> * reusable toast or notification queues;
-> * test snapshots;
-> * DOM attributes not required for visible rendering.
+> - TanStack Query `QueryCache`;
+> - TanStack Query `MutationCache`;
+> - Zustand stores;
+> - React Context used as application state;
+> - URL path, query string, fragment or navigation state;
+> - `localStorage`;
+> - `sessionStorage`;
+> - IndexedDB;
+> - cookies;
+> - service-worker caches;
+> - persisted form state;
+> - analytics events;
+> - console output;
+> - error reporting;
+> - reusable toast or notification queues;
+> - test snapshots;
+> - DOM attributes not required for visible rendering.
 >
 > Important:
 >
-> * `mutation.reset()` alone is not security cleanup.
-> * Prefer an implementation where the plaintext response never enters persistent TanStack MutationCache storage.
-> * If the application architecture necessarily creates a mutation entry containing the response, remove the exact entry after extracting the plaintext rather than relying only on observer reset.
-> * Do not use a globally retained mutation result object for generation or rotation.
-> * Clear component-local plaintext when the reveal surface is dismissed, unmounted, replaced or otherwise no longer needed.
-> * A page reload must not restore the plaintext.
-> * Rotation must replace and clear any previously displayed plaintext.
+> - `mutation.reset()` alone is not security cleanup.
+> - Prefer an implementation where the plaintext response never enters persistent TanStack MutationCache storage.
+> - If the application architecture necessarily creates a mutation entry containing the response, remove the exact entry after extracting the plaintext rather than relying only on observer reset.
+> - Do not use a globally retained mutation result object for generation or rotation.
+> - Clear component-local plaintext when the reveal surface is dismissed, unmounted, replaced or otherwise no longer needed.
+> - A page reload must not restore the plaintext.
+> - Rotation must replace and clear any previously displayed plaintext.
 >
 > Tests must directly inspect relevant QueryCache, MutationCache and browser storage state rather than merely asserting that the UI no longer displays the code.
 >
@@ -212,11 +212,11 @@ preserved):
 >
 > Requirements:
 >
-> * do not copy automatically;
-> * handle clipboard failure gracefully;
-> * do not log the code;
-> * do not place the code in a global toast message;
-> * copied-state feedback must not itself include the raw value.
+> - do not copy automatically;
+> - handle clipboard failure gracefully;
+> - do not log the code;
+> - do not place the code in a global toast message;
+> - copied-state feedback must not itself include the raw value.
 >
 > ### 7. Participant redemption
 >
@@ -224,29 +224,29 @@ preserved):
 >
 > Requirements:
 >
-> * use the backend contract as the authority for formatting and normalization;
-> * provide an accessible label and validation feedback;
-> * avoid leaking whether a particular secret code exists beyond the accepted backend disclosure policy;
-> * use the existing authenticated API and CSRF conventions;
-> * submit canonical Quest identity from the route or trusted page context;
-> * do not allow the client to choose another user identity;
-> * do not implement client-only authorization as a security boundary;
-> * disable duplicate submission while the request is active;
-> * do not optimistically mark the Quest as completed;
-> * refresh completion state only after confirmed success.
+> - use the backend contract as the authority for formatting and normalization;
+> - provide an accessible label and validation feedback;
+> - avoid leaking whether a particular secret code exists beyond the accepted backend disclosure policy;
+> - use the existing authenticated API and CSRF conventions;
+> - submit canonical Quest identity from the route or trusted page context;
+> - do not allow the client to choose another user identity;
+> - do not implement client-only authorization as a security boundary;
+> - disable duplicate submission while the request is active;
+> - do not optimistically mark the Quest as completed;
+> - refresh completion state only after confirmed success.
 >
 > Handle accepted responses for at least:
 >
-> * successful redemption;
-> * invalid or inactive code;
-> * creator attempting to redeem their own Quest;
-> * missing or inactive participation;
-> * already Verified completion;
-> * unsupported Quest source or registration mode;
-> * rate-limit rejection;
-> * authentication or authorization failure;
-> * validation failure;
-> * unexpected server failure.
+> - successful redemption;
+> - invalid or inactive code;
+> - creator attempting to redeem their own Quest;
+> - missing or inactive participation;
+> - already Verified completion;
+> - unsupported Quest source or registration mode;
+> - rate-limit rejection;
+> - authentication or authorization failure;
+> - validation failure;
+> - unexpected server failure.
 >
 > Use existing ProblemDetails mapping conventions. Do not expose raw backend exception details.
 >
@@ -258,12 +258,12 @@ preserved):
 >
 > Requirements:
 >
-> * do not infer Verified completion only from local redemption success;
-> * refetch authoritative state after successful redemption;
-> * preserve correct behavior after reload;
-> * do not display XP, achievements or level-up results;
-> * distinguish loading, unavailable, not completed and completed states according to the accepted contract;
-> * avoid adding a new application-wide state store for this data.
+> - do not infer Verified completion only from local redemption success;
+> - refetch authoritative state after successful redemption;
+> - preserve correct behavior after reload;
+> - do not display XP, achievements or level-up results;
+> - distinguish loading, unavailable, not completed and completed states according to the accepted contract;
+> - avoid adding a new application-wide state store for this data.
 >
 > ### 9. TanStack Query behavior
 >
@@ -271,14 +271,14 @@ preserved):
 >
 > Ensure:
 >
-> * query keys use canonical Quest identity;
-> * organizer status and participant completion-state queries cannot collide;
-> * successful generation or rotation invalidates only relevant status data;
-> * successful redemption invalidates relevant completion-state and existing Quest/participation data only when required;
-> * sensitive generation responses are not retained;
-> * query retries do not cause unintended duplicate generation, rotation or redemption;
-> * mutation retries for these state-changing operations are disabled unless the existing accepted contract explicitly requires otherwise;
-> * rate-limit responses are not automatically retried.
+> - query keys use canonical Quest identity;
+> - organizer status and participant completion-state queries cannot collide;
+> - successful generation or rotation invalidates only relevant status data;
+> - successful redemption invalidates relevant completion-state and existing Quest/participation data only when required;
+> - sensitive generation responses are not retained;
+> - query retries do not cause unintended duplicate generation, rotation or redemption;
+> - mutation retries for these state-changing operations are disabled unless the existing accepted contract explicitly requires otherwise;
+> - rate-limit responses are not automatically retried.
 >
 > Do not perform automatic generation, rotation or redemption during mount.
 >
@@ -288,15 +288,15 @@ preserved):
 >
 > Requirements:
 >
-> * integrate into the existing Quest-related page rather than creating an unrelated visual system;
-> * use current spacing, typography, border, radius, button and alert conventions;
-> * remain responsive on mobile and desktop;
-> * preserve the established bright, rounded Kiwimpact visual style;
-> * avoid a broad redesign of previously accepted pages;
-> * keep organizer actions visually distinct from participant redemption;
-> * make reveal-once and rotation warnings prominent but not alarming;
-> * provide accessible keyboard interaction and focus handling for dialogs or reveal surfaces;
-> * use semantic labels and meaningful button text.
+> - integrate into the existing Quest-related page rather than creating an unrelated visual system;
+> - use current spacing, typography, border, radius, button and alert conventions;
+> - remain responsive on mobile and desktop;
+> - preserve the established bright, rounded Kiwimpact visual style;
+> - avoid a broad redesign of previously accepted pages;
+> - keep organizer actions visually distinct from participant redemption;
+> - make reveal-once and rotation warnings prominent but not alarming;
+> - provide accessible keyboard interaction and focus handling for dialogs or reveal surfaces;
+> - use semantic labels and meaningful button text.
 >
 > All user-facing wording should be concise and understandable for Kiwimpact's all-ages audience.
 >
@@ -304,14 +304,14 @@ preserved):
 >
 > Every new network surface must have deliberate:
 >
-> * loading state;
-> * empty state where applicable;
-> * success state;
-> * validation state;
-> * authorization state;
-> * rate-limit state;
-> * recoverable failure state;
-> * unexpected failure state.
+> - loading state;
+> - empty state where applicable;
+> - success state;
+> - validation state;
+> - authorization state;
+> - rate-limit state;
+> - recoverable failure state;
+> - unexpected failure state.
 >
 > Do not show indefinite spinners after a failed request.
 >
@@ -338,63 +338,63 @@ preserved):
 >
 > ### Contract tests
 >
-> * exact generation/rotation response schema;
-> * exact status response schema;
-> * exact redemption response schema;
-> * exact current-user completion-state response schema;
-> * malformed responses are rejected;
-> * status responses cannot contain plaintext fields.
+> - exact generation/rotation response schema;
+> - exact status response schema;
+> - exact redemption response schema;
+> - exact current-user completion-state response schema;
+> - malformed responses are rejected;
+> - status responses cannot contain plaintext fields.
 >
 > ### Organizer behavior
 >
-> * empty status permits generation;
-> * active status permits rotation;
-> * successful generation reveals the returned code;
-> * successful rotation reveals only the new code;
-> * dismissal removes plaintext from the rendered UI;
-> * remount or reload does not restore plaintext;
-> * failed generation or rotation does not show fabricated plaintext;
-> * unauthorized organizer responses do not expose controls as usable actions.
+> - empty status permits generation;
+> - active status permits rotation;
+> - successful generation reveals the returned code;
+> - successful rotation reveals only the new code;
+> - dismissal removes plaintext from the rendered UI;
+> - remount or reload does not restore plaintext;
+> - failed generation or rotation does not show fabricated plaintext;
+> - unauthorized organizer responses do not expose controls as usable actions.
 >
 > ### Plaintext retention
 >
 > After successful generation and after successful rotation, directly verify that the raw code is absent from:
 >
-> * QueryCache;
-> * MutationCache;
-> * Zustand or other existing global UI state;
-> * `localStorage`;
-> * `sessionStorage`;
-> * URL and navigation state;
-> * persisted test containers or reusable notification state.
+> - QueryCache;
+> - MutationCache;
+> - Zustand or other existing global UI state;
+> - `localStorage`;
+> - `sessionStorage`;
+> - URL and navigation state;
+> - persisted test containers or reusable notification state.
 >
 > Also verify cleanup on:
 >
-> * reveal dismissal;
-> * component unmount;
-> * replacement by a later rotation result.
+> - reveal dismissal;
+> - component unmount;
+> - replacement by a later rotation result.
 >
 > A test that checks only DOM disappearance is insufficient.
 >
 > ### Redemption
 >
-> * successful redemption refetches authoritative completion state;
-> * invalid code displays accepted bounded feedback;
-> * duplicate Verified completion maps correctly;
-> * inactive or missing participation maps correctly;
-> * creator redemption rejection maps correctly;
-> * unsupported Quest mode maps correctly;
-> * HTTP 429 displays rate-limit feedback and is not automatically retried;
-> * multiple clicks do not create duplicate simultaneous requests;
-> * plaintext entered by a participant is not persisted in global or browser storage;
-> * no XP, achievement or level-up UI appears.
+> - successful redemption refetches authoritative completion state;
+> - invalid code displays accepted bounded feedback;
+> - duplicate Verified completion maps correctly;
+> - inactive or missing participation maps correctly;
+> - creator redemption rejection maps correctly;
+> - unsupported Quest mode maps correctly;
+> - HTTP 429 displays rate-limit feedback and is not automatically retried;
+> - multiple clicks do not create duplicate simultaneous requests;
+> - plaintext entered by a participant is not persisted in global or browser storage;
+> - no XP, achievement or level-up UI appears.
 >
 > ### Regression
 >
-> * existing Quest Detail behavior still works;
-> * existing participation behavior still works;
-> * authentication and CSRF conventions remain intact;
-> * existing frontend tests continue to pass.
+> - existing Quest Detail behavior still works;
+> - existing participation behavior still works;
+> - authentication and CSRF conventions remain intact;
+> - existing frontend tests continue to pass.
 >
 > Tests must exercise the real frontend API client and state-management integration where practical. Avoid tests that simply reproduce implementation logic in isolated mocks.
 >
@@ -424,9 +424,9 @@ preserved):
 >
 > If an environment or infrastructure failure occurs, report:
 >
-> * the exact command;
-> * the exact failure;
-> * whether it is an implementation failure or an environmental blocker.
+> - the exact command;
+> - the exact failure;
+> - whether it is an implementation failure or an environmental blocker.
 >
 > ## Documentation evidence
 >
@@ -438,19 +438,19 @@ preserved):
 >
 > The report must include:
 >
-> * implemented scope;
-> * files changed;
-> * exact endpoint and DTO integration;
-> * plaintext-lifecycle design;
-> * exact QueryCache and MutationCache handling;
-> * browser-storage handling;
-> * query invalidation behavior;
-> * UX placement;
-> * tests added;
-> * exact commands run;
-> * observed pass/fail counts;
-> * known limitations;
-> * confirmation that no XP, achievements, leaderboard, backend, dependency, deployment or commit changes were added.
+> - implemented scope;
+> - files changed;
+> - exact endpoint and DTO integration;
+> - plaintext-lifecycle design;
+> - exact QueryCache and MutationCache handling;
+> - browser-storage handling;
+> - query invalidation behavior;
+> - UX placement;
+> - tests added;
+> - exact commands run;
+> - observed pass/fail counts;
+> - known limitations;
+> - confirmation that no XP, achievements, leaderboard, backend, dependency, deployment or commit changes were added.
 >
 > Do not mark the report complete before all verification commands have actually been run.
 >
