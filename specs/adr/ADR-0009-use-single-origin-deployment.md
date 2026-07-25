@@ -1,10 +1,15 @@
 # ADR-0009: Use a Single Public Origin for Production
 
-- **Status:** Proposed — pending design review
+- **Status:** Accepted
 - **Date:** 2026-07-24
 - **Decider:** Product owner
 - **Decision source:** Phase 2 delivery-scope planning
 - **Supersedes:** None
+
+Acceptance fixes the browser-visible topology described below. Hosting-provider
+selection remains separate and unresolved. This acceptance does not authorize
+deployment, spending, resource creation, secret creation, or production
+migration.
 
 ## Context
 
