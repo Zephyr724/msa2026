@@ -56,6 +56,8 @@ public sealed class MigrationSmokeTests : IAsyncLifetime
         Assert.Contains(tables, t => t == "AspNetUsers");
         Assert.Contains(tables, t => t == "UserProfiles");
         Assert.Contains(tables, t => t == "QuestParticipations");
+        Assert.Contains(tables, t => t == "QuestCompletions");
+        Assert.Contains(tables, t => t == "CompletionCodes");
     }
 
     [Fact]

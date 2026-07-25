@@ -60,6 +60,8 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             {
                 ["Auth:RateLimits:RegisterPermitLimit"] = "100",
                 ["Auth:RateLimits:LoginPermitLimit"] = "100",
+                ["CompletionCodes:HmacKey"] = Convert.ToBase64String(
+                    Enumerable.Range(1, 32).Select(value => (byte)value).ToArray()),
             });
         });
 

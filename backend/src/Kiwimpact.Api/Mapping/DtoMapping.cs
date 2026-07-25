@@ -169,6 +169,32 @@ internal static class DtoMapping
             state.CapacityFull);
     }
 
+    public static GeneratedCompletionCodeDto ToDto(this GeneratedCompletionCode generated)
+    {
+        return new GeneratedCompletionCodeDto(
+            generated.Code,
+            generated.ValidFromUtc.ToString("O"),
+            generated.ValidToUtc?.ToString("O"));
+    }
+
+    public static CompletionCodeStatusDto ToDto(this CompletionCodeStatus status)
+    {
+        return new CompletionCodeStatusDto(
+            status.IsConfigured,
+            status.ValidFromUtc?.ToString("O"),
+            status.ValidToUtc?.ToString("O"),
+            status.CreatedAtUtc?.ToString("O"));
+    }
+
+    public static MyQuestCompletionDto ToDto(this MyQuestCompletionState state)
+    {
+        return new MyQuestCompletionDto(
+            state.Status.ToString(),
+            state.Method?.ToString(),
+            state.CompletedAtUtc?.ToString("O"),
+            state.VerifiedAtUtc?.ToString("O"));
+    }
+
     public static CreateQuestCommand ToCommand(this CreateQuestRequest request) => new(
         request.Title,
         request.Description,
