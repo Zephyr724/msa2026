@@ -10,6 +10,13 @@ public enum QuestParticipationStatus
     Cancelled,
 }
 
+public enum MyQuestParticipationFilter
+{
+    All,
+    Active,
+    Cancelled,
+}
+
 public enum ParticipationIneligibilityReason
 {
     OwnQuest,

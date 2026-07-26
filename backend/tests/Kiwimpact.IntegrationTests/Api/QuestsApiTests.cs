@@ -528,6 +528,7 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
         Assert.True(firstQuest.GetProperty("coverImage").ValueKind is JsonValueKind.Object or JsonValueKind.Null);
         Assert.True(firstQuest.GetProperty("registrationMode").ValueKind is JsonValueKind.Null or JsonValueKind.String);
         Assert.Equal(JsonValueKind.Number, firstQuest.GetProperty("xpAward").ValueKind);
+        Assert.Equal(50, firstQuest.GetProperty("xpAward").GetInt32());
         Assert.True(firstQuest.GetProperty("capacity").ValueKind is JsonValueKind.Null or JsonValueKind.Number);
         Assert.True(firstQuest.GetProperty("startAtUtc").ValueKind is JsonValueKind.Null or JsonValueKind.String);
         Assert.True(firstQuest.GetProperty("endAtUtc").ValueKind is JsonValueKind.Null or JsonValueKind.String);

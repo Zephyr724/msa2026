@@ -2,8 +2,10 @@ import {
   PARTICIPATION_INELIGIBILITY_REASONS,
   PARTICIPATION_STATUSES,
   type MyQuestParticipationDto,
+  type MyQuestParticipationListItemDto,
   type QuestParticipationDto,
 } from '../../types/participation';
+import { validateQuestListItem } from './questDto.ts';
 
 const statuses = new Set<string>(PARTICIPATION_STATUSES);
 const ineligibilityReasons = new Set<string>(PARTICIPATION_INELIGIBILITY_REASONS);
@@ -67,4 +69,40 @@ export function validateQuestParticipation(payload: unknown): QuestParticipation
   }
 
   return payload as unknown as QuestParticipationDto;
+}
+
+export function validateMyQuestParticipationList(
+  payload: unknown,
+): MyQuestParticipationListItemDto[] {
+  if (!Array.isArray(payload)) {
+    throw new Error('My Quests response is not an array.');
+  }
+
+  return payload.map((item, index) => {
+    if (
+      !isRecord(item)
+      || !hasExactKeys(item, [
+        'participationId',
+        'status',
+        'joinedAtUtc',
+        'cancelledAtUtc',
+        'quest',
+      ])
+      || typeof item.participationId !== 'string'
+      || !uuidPattern.test(item.participationId)
+      || (item.status !== 'Active' && item.status !== 'Cancelled')
+      || !isUtcTimestamp(item.joinedAtUtc)
+      || (item.cancelledAtUtc !== null && !isUtcTimestamp(item.cancelledAtUtc))
+    ) {
+      throw new Error(`Invalid My Quests item at index ${index}.`);
+    }
+
+    return {
+      participationId: item.participationId,
+      status: item.status,
+      joinedAtUtc: item.joinedAtUtc,
+      cancelledAtUtc: item.cancelledAtUtc,
+      quest: validateQuestListItem(item.quest),
+    };
+  });
 }

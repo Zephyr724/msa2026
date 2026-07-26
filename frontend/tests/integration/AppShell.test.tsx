@@ -20,6 +20,13 @@ function stubSessionFetch(session: unknown) {
     if (url.endsWith('/v1/auth/me')) {
       return Promise.resolve(jsonResponse(session));
     }
+    if (url.endsWith('/v1/users/me/progression')) {
+      return Promise.resolve(jsonResponse({
+        totalXp: 120,
+        level: 3,
+        rankTitle: 'Novice',
+      }));
+    }
     return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
   }));
 }
@@ -35,22 +42,26 @@ describe('App shell', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Kiwimpact' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', {
+      name: /Kiwimpact.*Turn local action into lasting progress/i,
+    })).toBeInTheDocument();
     expect(
-      screen.getByText('Community eco quests across New Zealand'),
+      screen.getByText(/Community eco quests across New Zealand\./),
     ).toBeInTheDocument();
-    const questsLink = screen.getByRole('link', { name: 'Quests' });
-    expect(within(questsLink).getByText('Quests')).toHaveClass('hidden sm:inline');
-    const leaderboardLink = screen.getByRole('link', { name: 'Leaderboard' });
-    expect(leaderboardLink).toHaveAttribute('href', '/leaderboard');
-    expect(within(leaderboardLink).getByText('Leaderboard'))
-      .toHaveClass('hidden sm:inline');
+    for (const link of screen.getAllByRole('link', { name: 'Discover' })) {
+      expect(link).toHaveAttribute('href', '/quests');
+    }
+    for (const link of screen.getAllByRole('link', { name: 'Leaderboard' })) {
+      expect(link).toHaveAttribute('href', '/leaderboard');
+    }
+    expect(await screen.findByRole('navigation', { name: 'Public navigation' }))
+      .toBeInTheDocument();
     const themeSwitcher = screen.getByRole('button', {
       name: 'Theme preference: System',
     });
-    expect(within(themeSwitcher).getByText('System')).toHaveClass('hidden lg:inline');
+    expect(themeSwitcher).toBeInTheDocument();
     const signInLink = await screen.findByRole('link', { name: 'Sign in' });
-    expect(within(signInLink).getByText('Sign in')).toHaveClass('hidden sm:inline');
+    expect(signInLink).toHaveAttribute('href', '/login');
   });
 
   // Review 39 M1: the complete authenticated cluster — including the
@@ -63,20 +74,22 @@ describe('App shell', () => {
       render(<App />);
 
       const manageLink = await screen.findByRole('link', { name: 'Manage quests' });
-      expect(within(manageLink).getByText('Manage quests')).toHaveClass('hidden sm:inline');
+      expect(manageLink).toHaveAttribute('href', '/organizer/quests');
+      expect(within(manageLink).getByText('Manage')).toHaveClass('hidden xl:inline');
 
-      const leaderboardLink = screen.getByRole('link', { name: 'Leaderboard' });
-      expect(within(leaderboardLink).getByText('Leaderboard'))
-        .toHaveClass('hidden sm:inline');
+      expect(screen.getAllByRole('link', { name: 'Leaderboard' }))
+        .toHaveLength(2);
 
-      const passportLink = screen.getByRole('link', { name: 'Passport' });
-      expect(within(passportLink).getByText('Passport')).toHaveClass('hidden sm:inline');
+      expect(screen.getAllByRole('link', { name: 'Passport' }))
+        .toHaveLength(2);
+      expect(screen.getByRole('navigation', { name: 'Member navigation' }))
+        .toBeInTheDocument();
 
       expect(screen.getAllByRole('button', { name: 'Theme preference: System' }))
         .toHaveLength(1);
 
       const signOut = screen.getByRole('button', { name: 'Sign out' });
-      expect(within(signOut).getByText('Sign out')).toHaveClass('hidden sm:inline');
+      expect(signOut).toHaveClass('btn-square');
     },
   );
 
@@ -84,9 +97,11 @@ describe('App shell', () => {
     stubSessionFetch(sessionWith(['Member']));
     render(<App />);
 
-    await screen.findByRole('link', { name: 'Passport' });
-    expect(screen.getByRole('link', { name: 'Leaderboard' }))
-      .toHaveAttribute('href', '/leaderboard');
+    expect(await screen.findAllByRole('link', { name: 'Passport' }))
+      .toHaveLength(2);
+    for (const link of screen.getAllByRole('link', { name: 'Leaderboard' })) {
+      expect(link).toHaveAttribute('href', '/leaderboard');
+    }
     expect(screen.getByRole('button', { name: 'Theme preference: System' }))
       .toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Manage quests' })).not.toBeInTheDocument();
@@ -110,7 +125,7 @@ describe('App shell', () => {
     const user = userEvent.setup();
 
     render(<App />);
-    await user.click(screen.getByRole('link', { name: 'Leaderboard' }));
+    await user.click(screen.getAllByRole('link', { name: 'Leaderboard' })[0]!);
 
     expect(await screen.findByRole('heading', { name: 'Leaderboard' }))
       .toBeInTheDocument();

@@ -189,6 +189,13 @@ function isValidQuestListItem(value: unknown): value is QuestListItemDto {
     && hasValidQuestListFields(value);
 }
 
+export function validateQuestListItem(payload: unknown): QuestListItemDto {
+  if (!isValidQuestListItem(payload)) {
+    throw new Error('Quest list item response is not valid.');
+  }
+  return payload;
+}
+
 function isValidQuestDetail(value: unknown): value is QuestDetailDto {
   if (!isRecord(value) || !hasExactKeys(value, QUEST_DETAIL_KEYS)) return false;
   if (!hasValidQuestListFields(value)) return false;

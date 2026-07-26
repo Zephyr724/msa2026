@@ -91,7 +91,7 @@ export default function AchievementsSection() {
     );
   } else if (catalog.data.length === 0) {
     content = (
-      <div className="rounded-box border border-base-300 bg-base-100 p-6 text-center">
+      <div className="kiwi-panel p-8 text-center">
         <p className="text-base-content/70">No achievements available yet.</p>
       </div>
     );
@@ -122,10 +122,9 @@ export default function AchievementsSection() {
   }
 
   return (
-    <section aria-labelledby="passport-achievements-heading" className="mt-6">
-      <h2 className="text-xl font-semibold" id="passport-achievements-heading">
-        Achievements
-      </h2>
+    <section aria-labelledby="passport-achievements-heading" className="mt-10">
+      <p className="kiwi-stat-label">Milestones</p>
+      <h2 className="mt-1 text-2xl" id="passport-achievements-heading">Achievements</h2>
       <div className="mt-4">{content}</div>
     </section>
   );

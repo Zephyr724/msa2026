@@ -106,14 +106,21 @@ export default function PassportPage() {
   const displayName = auth.data?.displayName ?? '';
 
   return (
-    <main className="container mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-3xl font-bold">{displayName} — Passport</h1>
-      <div className="mt-6">
+    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-10 sm:py-14">
+      <main className="kiwi-page max-w-5xl">
+        <header>
+          <p className="kiwi-stat-label">Personal Impact Passport</p>
+          <h1 className="mt-2 text-4xl sm:text-5xl">{displayName} — Passport</h1>
+          <p className="mt-3 max-w-2xl text-lg text-base-content/62">
+            Your verified participation, progression, and achievements in one place.
+          </p>
+        </header>
+        <div className="mt-8">
         <section aria-labelledby="passport-summary-heading">
-          <h2 className="text-xl font-semibold" id="passport-summary-heading">
+          <h2 className="sr-only" id="passport-summary-heading">
             Progress
           </h2>
-          <div className="mt-4">
+          <div>
             {progression.isPending && (
               <RegionSkeleton label="Loading your progress…" />
             )}
@@ -125,16 +132,22 @@ export default function PassportPage() {
               />
             )}
             {progression.isSuccess && (
-              <PassportSummaryCard progression={progression.data} />
+              <PassportSummaryCard
+                displayName={displayName}
+                progression={progression.data}
+              />
             )}
           </div>
         </section>
         <AchievementsSection />
         <section aria-labelledby="passport-history-heading" className="mt-6">
-          <h2 className="text-xl font-semibold" id="passport-history-heading">
+          <div className="mb-4">
+            <p className="kiwi-stat-label">Verified record</p>
+            <h2 className="mt-1 text-2xl" id="passport-history-heading">
             Completion history
-          </h2>
-          <div className="mt-4">
+            </h2>
+          </div>
+          <div>
             {history.isPending && (
               <RegionSkeleton label="Loading your completion history…" />
             )}
@@ -146,9 +159,9 @@ export default function PassportPage() {
               />
             )}
             {history.isSuccess && history.data.items.length === 0 && (
-              <div className="rounded-box border border-base-300 bg-base-100 p-6 text-center">
+              <div className="kiwi-panel p-10 text-center">
                 <p className="text-base-content/70">No verified completions yet.</p>
-                <Link className="btn btn-primary btn-sm mt-4" to="/quests">
+                <Link className="btn btn-primary btn-sm mt-4 rounded-full" to="/quests">
                   Discover quests
                 </Link>
               </div>
@@ -170,6 +183,7 @@ export default function PassportPage() {
           </div>
         </section>
       </div>
-    </main>
+      </main>
+    </div>
   );
 }

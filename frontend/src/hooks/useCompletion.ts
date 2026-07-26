@@ -115,6 +115,9 @@ function syncAuthoritativeCompletion(
       exact: true,
     }),
     queryClient.invalidateQueries({
+      queryKey: participationKeys.all,
+    }),
+    queryClient.invalidateQueries({
       queryKey: ['quest', questId],
       exact: true,
     }),

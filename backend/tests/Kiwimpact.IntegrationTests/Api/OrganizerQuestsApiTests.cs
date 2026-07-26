@@ -45,7 +45,9 @@ public sealed class OrganizerQuestsApiTests : IClassFixture<CustomWebApplication
         Assert.NotNull(dto);
         Assert.Equal("Draft", dto.Status);
         Assert.Equal("OrganizerOwned", dto.SourceType);
-        Assert.Equal(0, dto.XpAward);
+        // Public/management presentation follows the authoritative progression
+        // rule even though the deprecated persistence column remains untouched.
+        Assert.Equal(50, dto.XpAward);
         Assert.NotEqual(0u, dto.Version);
         Assert.Equal("/images/quests/organizer-cover.svg", dto.CoverImage.ImageUrl);
 

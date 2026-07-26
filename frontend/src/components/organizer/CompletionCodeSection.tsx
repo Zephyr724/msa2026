@@ -93,9 +93,9 @@ export default function CompletionCodeSection({ quest }: CompletionCodeSectionPr
   return (
     <section
       aria-labelledby="completion-code-heading"
-      className="mt-8 rounded-box bg-base-100 p-4 shadow-sm sm:p-6"
+      className="kiwi-panel mt-8 p-5 sm:p-6"
     >
-      <h2 className="font-semibold" id="completion-code-heading">
+      <h2 className="text-2xl" id="completion-code-heading">
         Completion code
       </h2>
       <p className="mt-1 text-sm text-base-content/65">

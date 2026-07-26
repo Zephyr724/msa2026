@@ -195,7 +195,7 @@ describe('PassportPage', () => {
     expect(screen.getByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
     expect(screen.getByText('45 XP to Level 4')).toBeInTheDocument();
 
-    expect(screen.getByText('RestoreNature')).toBeInTheDocument();
+    expect(screen.getByText('Restore Nature')).toBeInTheDocument();
     expect(screen.getByText('Verified')).toBeInTheDocument();
     expect(screen.getByText('50 XP')).toBeInTheDocument();
     const time = container.querySelector('time');
@@ -240,7 +240,7 @@ describe('PassportPage', () => {
 
     const row = (await screen.findByText('Harbour restoration day')).closest('li');
     expect(row).toHaveTextContent('XP pending');
-    expect(row?.textContent).not.toMatch(/\d+\s*XP/);
+    expect(row?.textContent).not.toMatch(/\d+\s+XP/);
   });
 
   it('F11: degrades only the summary on a progression 503, with a working retry', async () => {
@@ -471,7 +471,7 @@ describe('PassportPage', () => {
     await screen.findByText('First Steps');
 
     const main = container.querySelector('main');
-    expect(main?.className).toContain('max-w-4xl');
+    expect(main?.className).toContain('max-w-5xl');
     expect(main?.querySelector('.md\\:grid-cols-3')).not.toBeInTheDocument();
     expect(summaryRegion().className).not.toContain('md:col-span-1');
     expect(historyRegion().className).not.toContain('md:col-span-2');

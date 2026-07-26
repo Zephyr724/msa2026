@@ -44,7 +44,7 @@ describe('LeaderboardPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('Loading the leaderboard…'))
+    expect(screen.getByText('Loading the leaderboard…').parentElement)
       .toHaveAttribute('aria-live', 'polite');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
@@ -78,7 +78,7 @@ describe('LeaderboardPage', () => {
       expect(header).toHaveAttribute('scope', 'col');
     }
     expect(screen.getByLabelText('Rank 1')).toHaveTextContent('1');
-    const name = screen.getByText('Aroha with a deliberately long display name');
+    const name = within(table).getByText('Aroha with a deliberately long display name');
     expect(name).toHaveClass('min-w-0', 'truncate');
     expect(name).toHaveAttribute(
       'title',

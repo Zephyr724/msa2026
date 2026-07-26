@@ -25,9 +25,9 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-base-200">
-          <div className="text-center space-y-4">
-            <h1 className="text-2xl font-bold text-error">
+        <div className="kiwi-topography flex min-h-screen items-center justify-center bg-base-200 px-4">
+          <div className="kiwi-panel max-w-lg space-y-4 p-10 text-center">
+            <h1 className="text-3xl text-error">
               Something went wrong
             </h1>
             <p className="text-base-content/70">

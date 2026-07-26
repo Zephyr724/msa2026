@@ -26,3 +26,13 @@ export interface MyQuestParticipationDto {
   ineligibilityReason: ParticipationIneligibilityReason | null;
   capacityFull: boolean;
 }
+
+export type MyQuestParticipationFilter = 'all' | 'active' | 'cancelled';
+
+export interface MyQuestParticipationListItemDto {
+  participationId: string;
+  status: Exclude<ParticipationStatus, 'None'>;
+  joinedAtUtc: string;
+  cancelledAtUtc: string | null;
+  quest: import('./quest.ts').QuestListItemDto;
+}

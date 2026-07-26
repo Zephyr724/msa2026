@@ -1,5 +1,6 @@
 using Kiwimpact.Api.Contracts;
 using Kiwimpact.Core.Entities;
+using Kiwimpact.Core.Progression;
 using Kiwimpact.Core.Services;
 
 namespace Kiwimpact.Api.Mapping;
@@ -57,7 +58,7 @@ internal static class DtoMapping
             quest.SourceType.ToString(),
             quest.RegistrationMode?.ToString(),
             quest.Difficulty.ToString(),
-            quest.XpAward,
+            ProgressionRules.XpForDifficulty(quest.Difficulty),
             quest.Capacity,
             quest.StartAtUtc?.ToString("O"),
             quest.EndAtUtc?.ToString("O"),
@@ -81,7 +82,7 @@ internal static class DtoMapping
             quest.SourceType.ToString(),
             quest.RegistrationMode?.ToString(),
             quest.Difficulty.ToString(),
-            quest.XpAward,
+            ProgressionRules.XpForDifficulty(quest.Difficulty),
             quest.Capacity,
             quest.StartAtUtc?.ToString("O"),
             quest.EndAtUtc?.ToString("O"),
@@ -128,7 +129,7 @@ internal static class DtoMapping
             quest.SourceType.ToString(),
             quest.RegistrationMode?.ToString(),
             quest.Difficulty.ToString(),
-            quest.XpAward,
+            ProgressionRules.XpForDifficulty(quest.Difficulty),
             quest.Capacity,
             quest.StartAtUtc?.ToString("O"),
             quest.EndAtUtc?.ToString("O"),
@@ -167,6 +168,21 @@ internal static class DtoMapping
             state.CanJoin,
             state.IneligibilityReason?.ToString(),
             state.CapacityFull);
+    }
+
+    public static MyQuestParticipationListItemDto ToListDto(
+        this QuestParticipation participation)
+    {
+        var quest = participation.Quest
+            ?? throw new InvalidOperationException(
+                "My Quests participation is missing its Quest.");
+
+        return new MyQuestParticipationListItemDto(
+            participation.Id,
+            participation.CancelledAt.HasValue ? "Cancelled" : "Active",
+            participation.JoinedAt.ToString("O"),
+            participation.CancelledAt?.ToString("O"),
+            quest.ToListItem());
     }
 
     public static GeneratedCompletionCodeDto ToDto(this GeneratedCompletionCode generated)

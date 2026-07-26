@@ -1,9 +1,12 @@
 import type {
   MyQuestParticipationDto,
+  MyQuestParticipationFilter,
+  MyQuestParticipationListItemDto,
   QuestParticipationDto,
 } from '../../types/participation';
 import {
   validateMyQuestParticipation,
+  validateMyQuestParticipationList,
   validateQuestParticipation,
 } from '../validation/participationDto';
 import { apiFetch } from './apiFetch';
@@ -35,4 +38,14 @@ export async function cancelQuestParticipation(
     method: 'POST',
   });
   return validateQuestParticipation(payload);
+}
+
+export async function fetchMyQuestParticipations(
+  status: MyQuestParticipationFilter = 'all',
+): Promise<MyQuestParticipationListItemDto[]> {
+  const params = new URLSearchParams({ status });
+  const payload = await apiFetch<unknown>(
+    `/v1/users/me/participations?${params.toString()}`,
+  );
+  return validateMyQuestParticipationList(payload);
 }

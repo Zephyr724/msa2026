@@ -76,6 +76,13 @@ function stubParticipantApi({
       const next = completions.shift();
       return Promise.resolve(jsonResponse(next ?? completions.at(-1) ?? noCompletion));
     }
+    if (url.endsWith('/v1/users/me/progression')) {
+      return Promise.resolve(jsonResponse({
+        totalXp: 170,
+        level: 4,
+        rankTitle: 'Local Helper',
+      }));
+    }
     if (url.endsWith(`/v1/quests/${QUEST_ID}/redeem`) && init?.method === 'POST') {
       if (redeemHang) {
         return new Promise<Response>(() => {});
@@ -96,7 +103,12 @@ function renderPanel(
   const view = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <QuestCompletionPanel questId={QUEST_ID} registrationMode={registrationMode} />
+        <QuestCompletionPanel
+          questId={QUEST_ID}
+          questTitle="Dated Stream Cleanup"
+          registrationMode={registrationMode}
+          xpAward={50}
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -106,6 +118,11 @@ function renderPanel(
 function redeemCalls(fetchMock: ReturnType<typeof vi.fn>) {
   return fetchMock.mock.calls.filter(([url, init]) =>
     String(url).endsWith('/redeem') && (init as RequestInit | undefined)?.method === 'POST');
+}
+
+async function openCompletionDialog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: 'Complete quest' }));
+  return screen.getByLabelText('Completion code');
 }
 
 describe('Participant quest completion panel', () => {
@@ -127,7 +144,7 @@ describe('Participant quest completion panel', () => {
     expect(await screen.findByText('Sign in to redeem a completion code.'))
       .toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
-    expect(screen.queryByRole('button', { name: 'Redeem code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Complete quest' })).not.toBeInTheDocument();
   });
 
   it('renders nothing for quests without native registration', () => {
@@ -152,7 +169,7 @@ describe('Participant quest completion panel', () => {
     expect(await screen.findByText('Quest completed. Nice work!')).toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
     expect(screen.getByText('Verified')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Redeem code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Complete quest' })).not.toBeInTheDocument();
     const section = screen.getByRole('region', { name: 'Quest completion' });
     expect(section.textContent).not.toMatch(/XP|achievement|badge|level|leaderboard/i);
   });
@@ -170,7 +187,7 @@ describe('Participant quest completion panel', () => {
 
     expect(await screen.findByText(/created this Quest, so you cannot complete it/i))
       .toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Redeem code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Complete quest' })).not.toBeInTheDocument();
   });
 
   it('asks non-participants to join before redeeming', async () => {
@@ -186,7 +203,7 @@ describe('Participant quest completion panel', () => {
 
     expect(await screen.findByText('Join this Quest before redeeming a completion code.'))
       .toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Redeem code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Complete quest' })).not.toBeInTheDocument();
   });
 
   it('redeems a typed code once, sends canonical identity and CSRF, then shows server state', async () => {
@@ -196,12 +213,19 @@ describe('Participant quest completion panel', () => {
     });
     renderPanel();
 
-    const input = await screen.findByLabelText('Completion code');
+    const input = await openCompletionDialog(user);
     await user.type(input, ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect(await screen.findByText('Quest completed. Nice work!')).toBeInTheDocument();
     expect(screen.queryByLabelText('Completion code')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Quest complete!' })).toBeInTheDocument();
+    expect(screen.getByText('Dated Stream Cleanup')).toBeInTheDocument();
+    expect(screen.getByText('+50 XP')).toBeInTheDocument();
+    expect(screen.getByText('Level 4 · Local Helper')).toBeInTheDocument();
+    expect(screen.getByText('170 total XP')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View Passport' }))
+      .toHaveAttribute('href', '/passport');
 
     const posts = redeemCalls(fetchMock);
     expect(posts).toHaveLength(1);
@@ -213,6 +237,10 @@ describe('Participant quest completion panel', () => {
     // The Verified state comes from the refetched authoritative GET.
     expect(fetchMock.mock.calls.filter(([callUrl]) =>
       String(callUrl).endsWith('/completion')).length).toBeGreaterThanOrEqual(2);
+
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.queryByRole('dialog', { name: 'Quest complete!' }))
+      .not.toBeInTheDocument();
   });
 
   it('shows bounded feedback for an invalid code and keeps the code out of all stores', async () => {
@@ -227,8 +255,8 @@ describe('Participant quest completion panel', () => {
     });
     const { queryClient } = renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), ENTERED_TYPED);
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect((await screen.findByRole('alert')))
       .toHaveTextContent('That code is not valid. Check the code and try again.');
@@ -257,8 +285,8 @@ describe('Participant quest completion panel', () => {
     });
     renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), ENTERED_TYPED);
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect(await screen.findByText('Quest completed. Nice work!')).toBeInTheDocument();
   });
@@ -274,8 +302,8 @@ describe('Participant quest completion panel', () => {
     });
     renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), ENTERED_TYPED);
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect((await screen.findByRole('alert')))
       .toHaveTextContent('An active Quest participation is required.');
@@ -292,8 +320,8 @@ describe('Participant quest completion panel', () => {
     });
     renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), ENTERED_TYPED);
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect((await screen.findByRole('alert')))
       .toHaveTextContent('You cannot complete a Quest you created.');
@@ -311,8 +339,8 @@ describe('Participant quest completion panel', () => {
     });
     renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), ENTERED_TYPED);
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect((await screen.findByRole('alert')))
       .toHaveTextContent('Completion codes are not available for this Quest.');
@@ -328,12 +356,12 @@ describe('Participant quest completion panel', () => {
     });
     renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), ENTERED_TYPED);
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect((await screen.findByRole('alert')))
       .toHaveTextContent('Too many attempts. Please try again in about 10 minutes.');
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Redeem code' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Verify completion' }))
       .toBeEnabled());
     expect(redeemCalls(fetchMock)).toHaveLength(1);
   });
@@ -343,9 +371,9 @@ describe('Participant quest completion panel', () => {
     const fetchMock = stubParticipantApi({ redeemHang: true });
     renderPanel();
 
-    const input = await screen.findByLabelText('Completion code');
+    const input = await openCompletionDialog(user);
     await user.type(input, ENTERED_TYPED);
-    const button = screen.getByRole('button', { name: 'Redeem code' });
+    const button = screen.getByRole('button', { name: 'Verify completion' });
     await user.click(button);
 
     const pendingButton = await screen.findByRole('button', { name: 'Redeeming…' });
@@ -361,8 +389,8 @@ describe('Participant quest completion panel', () => {
     const fetchMock = stubParticipantApi();
     renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), 'ABC');
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), 'ABC');
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect((await screen.findByRole('alert')))
       .toHaveTextContent('Enter the 10-character code from your Quest organizer.');
@@ -376,8 +404,8 @@ describe('Participant quest completion panel', () => {
     });
     renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), ENTERED_TYPED);
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect((await screen.findByRole('alert')))
       .toHaveTextContent('Your session has expired. Please sign in again.');
@@ -394,8 +422,8 @@ describe('Participant quest completion panel', () => {
     });
     renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), ENTERED_TYPED);
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect((await screen.findByRole('alert')))
       .toHaveTextContent('You do not have access to complete this Quest.');
@@ -412,8 +440,8 @@ describe('Participant quest completion panel', () => {
     });
     renderPanel();
 
-    await user.type(await screen.findByLabelText('Completion code'), ENTERED_TYPED);
-    await user.click(screen.getByRole('button', { name: 'Redeem code' }));
+    await user.type(await openCompletionDialog(user), ENTERED_TYPED);
+    await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
     expect((await screen.findByRole('alert')))
       .toHaveTextContent('This Quest is no longer available.');
@@ -438,13 +466,14 @@ describe('Participant quest completion panel', () => {
     }
     const view = render(<Harness questId={QUEST_ID} />);
 
-    const input = await screen.findByLabelText('Completion code');
+    const input = await openCompletionDialog(user);
     await user.type(input, ENTERED_TYPED);
     expect(input).toHaveValue(ENTERED_TYPED);
 
     view.rerender(<Harness questId="b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e" />);
 
-    expect((await screen.findByLabelText('Completion code'))).toHaveValue('');
+    await user.click(await screen.findByRole('button', { name: 'Complete quest' }));
+    expect(screen.getByLabelText('Completion code')).toHaveValue('');
     expect(JSON.stringify(useUiStore.getState())).not.toContain(ENTERED_NORMALIZED);
     expect(JSON.stringify({ ...localStorage })).not.toContain(ENTERED_NORMALIZED);
     expect(JSON.stringify({ ...sessionStorage })).not.toContain(ENTERED_NORMALIZED);
@@ -459,7 +488,9 @@ describe('Participant quest completion panel', () => {
       .toHaveTextContent('We could not load your completion state.');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByLabelText('Completion code')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Complete quest' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Complete quest' }));
+    expect(screen.getByLabelText('Completion code')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalled();
   });
 });

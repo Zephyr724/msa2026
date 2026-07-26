@@ -86,6 +86,7 @@ describe('Quest discovery URL and card behavior', () => {
     expect(mockUseQuestList).toHaveBeenLastCalledWith(
       expect.objectContaining({ page: 2, pageSize: 24 }),
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     expect(screen.getByLabelText('Page size')).toHaveValue('24');
 
     fireEvent.change(screen.getByLabelText('Page size'), { target: { value: '48' } });
@@ -124,10 +125,10 @@ describe('Quest discovery URL and card behavior', () => {
 
     expect(container.querySelector('time[datetime="2026-08-01T00:00:00Z"]')).toBeInTheDocument();
     expect(screen.getByText('Schedule to be confirmed')).toBeInTheDocument();
-    expect(screen.getByText('Registration: Native')).toBeInTheDocument();
-    expect(screen.getByText('Source: OrganizerOwned')).toBeInTheDocument();
-    expect(screen.getByText('Registration: External')).toBeInTheDocument();
-    expect(screen.getByText('Source: AdminCuratedExternal')).toBeInTheDocument();
+    expect(screen.getByText('Join on Kiwimpact')).toBeInTheDocument();
+    expect(screen.getByText('Organizer quest')).toBeInTheDocument();
+    expect(screen.getByText('External registration')).toBeInTheDocument();
+    expect(screen.getByText('Official external event')).toBeInTheDocument();
     expect(screen.getByRole('img', {
       name: 'Fallback illustration for Undated External Quest',
     })).toHaveAttribute('src', '/images/quests/quest-fallback.svg');

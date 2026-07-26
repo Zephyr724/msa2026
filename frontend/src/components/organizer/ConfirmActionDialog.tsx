@@ -71,8 +71,8 @@ export default function ConfirmActionDialog({
       }}
       ref={dialogRef}
     >
-      <div className="modal-box max-w-lg">
-        <h2 className="text-xl font-bold" id="confirm-action-title">
+      <div className="modal-box max-w-lg rounded-[1.75rem] border border-base-300">
+        <h2 className="text-2xl" id="confirm-action-title">
           {title}
         </h2>
         <p className="mt-3 text-base-content/75">{description}</p>

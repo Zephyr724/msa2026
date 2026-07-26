@@ -159,9 +159,9 @@ function ParticipationShell({ children }: { children: React.ReactNode }) {
   return (
     <section
       aria-labelledby="participation-heading"
-      className="mb-6 rounded-xl border border-base-300 bg-base-100 p-4 sm:p-6"
+      className="kiwi-panel p-5"
     >
-      <h2 className="mb-3 text-xl font-semibold" id="participation-heading">
+      <h2 className="mb-3 text-xl" id="participation-heading">
         Your participation
       </h2>
       {children}

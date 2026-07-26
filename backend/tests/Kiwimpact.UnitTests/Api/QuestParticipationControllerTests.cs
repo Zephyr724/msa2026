@@ -124,5 +124,11 @@ public sealed class QuestParticipationControllerTests
             Exception is not null
                 ? Task.FromException<MyQuestParticipationState>(Exception)
                 : Task.FromResult(Assert.IsType<MyQuestParticipationState>(StateResult));
+
+        public Task<IReadOnlyList<QuestParticipation>> ListMineAsync(
+            Guid actorId,
+            MyQuestParticipationFilter filter,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<QuestParticipation>>([]);
     }
 }

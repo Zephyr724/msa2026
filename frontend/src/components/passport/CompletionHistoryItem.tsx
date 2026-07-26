@@ -1,3 +1,6 @@
+import { CheckCircle2, Zap } from 'lucide-react';
+import { CATEGORY_PRESENTATION } from '../../lib/questPresentation.ts';
+import CategoryEmblem from '../quest/CategoryEmblem.tsx';
 import type { PassportCompletionItem as PassportCompletionItemData } from '../../types/passport.ts';
 
 /**
@@ -14,23 +17,30 @@ export default function CompletionHistoryItem({
   item: PassportCompletionItemData;
 }) {
   return (
-    <li className="rounded-box border border-base-300 bg-base-100 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className="font-semibold">{item.questTitle}</h3>
-        <span className="text-sm font-semibold">
-          {item.xpAmount === null ? 'XP pending' : `${item.xpAmount} XP`}
-        </span>
+    <li className="kiwi-panel grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+      <CategoryEmblem category={item.questCategory} size="md" />
+      <div className="min-w-0">
+        <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-primary">
+          {CATEGORY_PRESENTATION[item.questCategory].label}
+        </p>
+        <h3 className="mt-1 truncate text-lg">{item.questTitle}</h3>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-base-content/60">
+          {item.questStatus !== 'Published' && (
+            <span className="badge badge-outline">{item.questStatus}</span>
+          )}
+          <span className="inline-flex items-center gap-1 font-bold text-success">
+            <CheckCircle2 aria-hidden="true" className="size-3.5" />
+            Verified
+          </span>
+          <time dateTime={item.completedAtUtc}>
+            {new Date(item.completedAtUtc).toLocaleDateString()}
+          </time>
+        </div>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        <span className="badge badge-outline">{item.questCategory}</span>
-        {item.questStatus !== 'Published' && (
-          <span className="badge badge-outline">{item.questStatus}</span>
-        )}
-        <span className="badge badge-success">Verified</span>
-        <time dateTime={item.completedAtUtc}>
-          {new Date(item.completedAtUtc).toLocaleDateString()}
-        </time>
-      </div>
+      <span className="inline-flex items-center gap-1.5 text-sm font-extrabold">
+        <Zap aria-hidden="true" className="size-4 text-warning" />
+        {item.xpAmount === null ? 'XP pending' : `${item.xpAmount} XP`}
+      </span>
     </li>
   );
 }

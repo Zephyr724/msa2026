@@ -1,9 +1,9 @@
 # Project Status
 
-Last reviewed: 2026-07-26
+Last reviewed: 2026-07-27
 
-Current `main` baseline: `a3e7309` (`Merge pull request #19 from
-Zephyr724/feat/slice-8-theme-switching`)
+Current `main` baseline: `73e79fa` (`Merge pull request #20 from
+Zephyr724/fix/slice-8-storage-access`)
 
 ## Current Implementation Status
 
@@ -36,22 +36,21 @@ has occurred.
 
 ## Current Work
 
-### Slice 8A — Storage Availability Correction
+### Slice 9 — MVP UI Convergence
 
-- **Branch:** `fix/slice-8-storage-access`
-- **Main baseline:** `a3e7309` (PR #19 merge of Slice 8)
-- **Status:** targeted post-merge correction committed and pushed as
-  `e16b31c`. Storage acquisition now occurs inside the guarded helper and a
-  `SecurityError` getter regression test passes. Targeted tests passed 15/15;
-  final frontend gates passed with clean lint and type-check, 309/309 tests
-  across 34 files, and a successful production build of 1,906 modules.
-  Independent Kimi K3 targeted closure Review 54 reproduced those results and
-  approved the correction with the original Review 53 Major closed.
-- **Git/review chronology:** `e16b31c` was committed and pushed before targeted
-  closure. Reviews 53/54 and the resulting evidence corrections are currently
-  unstaged and uncommitted; no history rewrite is planned.
-- **Boundary:** no backend, API, schema, migration, dependency, authentication,
-  Docker, deployment, accepted-spec, or server-state ownership change.
+- **Branch:** `codex/feat/slice-9-mvp-ui-convergence`
+- **Main baseline:** `73e79fa` (PR #20 merge of Slice 8A)
+- **Status:** 9A/9B/9C production implementation and local verification are
+  complete. The frontend visual system and production routes now follow the
+  local Figma Make reference; authenticated My Quests and the successful
+  Completion Reward Overlay are implemented. Final gates passed with clean
+  frontend lint/type-check, 314/314 frontend tests, a successful frontend
+  build, a clean backend build, 235/235 backend unit tests, and 278/278 backend
+  integration tests. Independent Kimi K3 Review 55 approved the implementation
+  with 0 Blockers and 0 Majors; the bounded correction pass closed the evidence
+  and service-test Minors before commit.
+- **Boundary:** no schema, migration, dependency, authentication-model,
+  deployment, or production-data change.
 
 ### Remaining P0 delivery gaps
 
@@ -63,10 +62,12 @@ has occurred.
 - Final full-product verification, README evidence, advanced-requirement
   selection, and a public submission video no longer than six minutes.
 
-Slice 2B account lifecycle, richer achievements, streaks, Cypress and SignalR
-remain P1 work and must not delay these P0 gaps. Google Maps, external-event
-claims, Community Challenge, multi-layer community leaderboards and Share Card
-remain Deferred under the current delivery scope.
+Slice 10 and Slice 11 planning will assess the remaining approved product
+scope after Slice 9 is reviewed and pushed. Slice 2B account lifecycle, richer
+achievements, streaks, Cypress and SignalR remain P1 work under the existing
+baseline. Google Maps, external-event claims, Community Challenge, multi-layer
+community leaderboards and Share Card remain Deferred until their Slice 10/11
+contracts explicitly accept them.
 
 ## Environment Prerequisites
 

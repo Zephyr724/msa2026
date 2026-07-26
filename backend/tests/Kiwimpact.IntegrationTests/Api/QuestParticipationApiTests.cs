@@ -328,6 +328,79 @@ public sealed class QuestParticipationApiTests
     }
 
     [Fact]
+    public async Task MyParticipations_RequiresAuthentication()
+    {
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var response = await client.GetAsync(
+            "/api/v1/users/me/participations",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MyParticipations_ReturnsOnlyLatestPerQuestAndAppliesCurrentStatus()
+    {
+        var creator = await CreateAuthenticatedClientAsync(AppRoles.Organizer);
+        var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var other = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var activeQuest = await SeedQuestAsync(creator.UserId);
+        var cancelledQuest = await SeedQuestAsync(creator.UserId);
+        var rejoinedQuest = await SeedQuestAsync(creator.UserId);
+        var otherQuest = await SeedQuestAsync(creator.UserId);
+
+        await PostWithCsrfAsync(actor.Client, JoinPath(activeQuest.Id));
+        await PostWithCsrfAsync(actor.Client, JoinPath(cancelledQuest.Id));
+        await PostWithCsrfAsync(actor.Client, CancelPath(cancelledQuest.Id));
+        await PostWithCsrfAsync(actor.Client, JoinPath(rejoinedQuest.Id));
+        await PostWithCsrfAsync(actor.Client, CancelPath(rejoinedQuest.Id));
+        await PostWithCsrfAsync(actor.Client, JoinPath(rejoinedQuest.Id));
+        await PostWithCsrfAsync(other.Client, JoinPath(otherQuest.Id));
+
+        var all = await actor.Client.GetFromJsonAsync<MyQuestParticipationListItemDto[]>(
+            "/api/v1/users/me/participations?status=all",
+            TestContext.Current.CancellationToken);
+        var active = await actor.Client.GetFromJsonAsync<MyQuestParticipationListItemDto[]>(
+            "/api/v1/users/me/participations?status=active",
+            TestContext.Current.CancellationToken);
+        var cancelled = await actor.Client.GetFromJsonAsync<MyQuestParticipationListItemDto[]>(
+            "/api/v1/users/me/participations?status=cancelled",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(all);
+        Assert.Equal(3, all.Length);
+        Assert.Equal(3, all.Select(item => item.Quest.Id).Distinct().Count());
+        Assert.DoesNotContain(all, item => item.Quest.Id == otherQuest.Id);
+        Assert.Equal(2, active?.Length);
+        Assert.All(active!, item => Assert.Equal("Active", item.Status));
+        var cancelledItem = Assert.Single(cancelled!);
+        Assert.Equal(cancelledQuest.Id, cancelledItem.Quest.Id);
+        Assert.Equal("Cancelled", cancelledItem.Status);
+        Assert.NotNull(cancelledItem.CancelledAtUtc);
+        Assert.Contains(all, item =>
+            item.Quest.Id == rejoinedQuest.Id && item.Status == "Active");
+    }
+
+    [Fact]
+    public async Task MyParticipations_RejectsUnknownStatusWithoutLeakingRows()
+    {
+        var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
+
+        var response = await actor.Client.GetAsync(
+            "/api/v1/users/me/participations?status=someone-else",
+            TestContext.Current.CancellationToken);
+
+        await AssertProblemAsync(
+            response,
+            HttpStatusCode.BadRequest,
+            "Status must be one of: active, cancelled, all.");
+    }
+
+    [Fact]
     public async Task StateChangingEndpointsEnforceCsrf()
     {
         var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
@@ -354,9 +427,13 @@ public sealed class QuestParticipationApiTests
 
         var join = paths.GetProperty("/api/v1/quests/{questId}/join").GetProperty("post");
         var cancel = paths.GetProperty("/api/v1/quests/{questId}/cancel").GetProperty("post");
+        var listMine = paths
+            .GetProperty("/api/v1/users/me/participations")
+            .GetProperty("get");
 
         Assert.False(join.TryGetProperty("requestBody", out _));
         Assert.False(cancel.TryGetProperty("requestBody", out _));
+        Assert.False(listMine.TryGetProperty("requestBody", out _));
     }
 
     [Fact]

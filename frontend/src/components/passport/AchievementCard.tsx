@@ -41,7 +41,7 @@ function AchievementIcon({
   const [imageFailed, setImageFailed] = useState(false);
   const Icon = ICONS_BY_CODE[code] ?? Award;
   const safeIconUrl = guardedIconUrl(iconUrl);
-  const className = `size-8 ${muted ? 'text-base-content/40' : 'text-primary'}`;
+  const className = `size-9 ${muted ? 'text-base-content/35' : 'text-primary'}`;
 
   if (safeIconUrl !== null && !imageFailed) {
     return (
@@ -79,15 +79,21 @@ export default function AchievementCard(props: AchievementCardProps) {
   const { achievement, unlocked } = props;
 
   return (
-    <li className="card border border-base-300 bg-base-100 shadow-sm">
+    <li className={`kiwi-card-hover card overflow-hidden border bg-base-100 ${
+      unlocked ? 'border-primary/35' : 'border-base-300'
+    }`}>
       <div className="card-body gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
-          <AchievementIcon
-            key={`${achievement.code}:${achievement.iconUrl ?? ''}`}
-            code={achievement.code}
-            iconUrl={achievement.iconUrl}
-            muted={!unlocked}
-          />
+          <span className={`grid size-14 place-items-center rounded-2xl ${
+            unlocked ? 'bg-primary/12' : 'bg-secondary'
+          }`}>
+            <AchievementIcon
+              key={`${achievement.code}:${achievement.iconUrl ?? ''}`}
+              code={achievement.code}
+              iconUrl={achievement.iconUrl}
+              muted={!unlocked}
+            />
+          </span>
           <span
             className={unlocked
               ? 'badge badge-success'
@@ -97,7 +103,7 @@ export default function AchievementCard(props: AchievementCardProps) {
           </span>
         </div>
         <div>
-          <h3 className="font-semibold">{achievement.name}</h3>
+          <h3 className="text-lg">{achievement.name}</h3>
           <p className="mt-1 text-sm text-base-content/70">
             {achievement.description}
           </p>

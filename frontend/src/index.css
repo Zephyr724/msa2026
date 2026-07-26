@@ -1,2 +1,180 @@
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@500&family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 @plugin "daisyui";
+
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f8fbf4;
+  --color-base-300: #d5e3d7;
+  --color-base-content: #183026;
+  --color-primary: #2f8f5b;
+  --color-primary-content: #ffffff;
+  --color-secondary: #eef5ec;
+  --color-secondary-content: #183026;
+  --color-accent: #f4b740;
+  --color-accent-content: #183026;
+  --color-neutral: #315244;
+  --color-neutral-content: #ffffff;
+  --color-info: #3c72c9;
+  --color-info-content: #ffffff;
+  --color-success: #2f8f5b;
+  --color-success-content: #ffffff;
+  --color-warning: #e7a92f;
+  --color-warning-content: #183026;
+  --color-error: #c74444;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.9rem;
+  --radius-field: 0.85rem;
+  --radius-box: 1.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "dark";
+  color-scheme: dark;
+  --color-base-100: #1b2c24;
+  --color-base-200: #13211b;
+  --color-base-300: #365144;
+  --color-base-content: #f2f7f3;
+  --color-primary: #6fd69a;
+  --color-primary-content: #13211b;
+  --color-secondary: #22372d;
+  --color-secondary-content: #f2f7f3;
+  --color-accent: #ffd166;
+  --color-accent-content: #13211b;
+  --color-neutral: #9db5a4;
+  --color-neutral-content: #13211b;
+  --color-info: #8db7ff;
+  --color-info-content: #13211b;
+  --color-success: #6fd69a;
+  --color-success-content: #13211b;
+  --color-warning: #ffd166;
+  --color-warning-content: #13211b;
+  --color-error: #ff8b8b;
+  --color-error-content: #13211b;
+  --radius-selector: 0.9rem;
+  --radius-field: 0.85rem;
+  --radius-box: 1.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-width: 320px;
+    margin: 0;
+    background: var(--color-base-200);
+    color: var(--color-base-content);
+    font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  .kiwi-display {
+    font-family: "Fredoka", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.018em;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 3px solid color-mix(in oklab, var(--color-primary) 60%, transparent);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-primary) 25%, transparent);
+  }
+}
+
+@layer components {
+  .kiwi-page {
+    width: min(100% - 2rem, 75rem);
+    margin-inline: auto;
+  }
+
+  .kiwi-panel {
+    border: 1px solid var(--color-base-300);
+    border-radius: 1.5rem;
+    background: var(--color-base-100);
+    box-shadow: 0 18px 48px color-mix(in oklab, #183026 7%, transparent);
+  }
+
+  .kiwi-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: fit-content;
+    border: 1px solid color-mix(in oklab, var(--color-primary) 24%, transparent);
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+    padding: 0.4rem 0.75rem;
+    color: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .kiwi-topography {
+    background-image:
+      radial-gradient(ellipse at 80% 10%, transparent 0 17%, color-mix(in oklab, var(--color-primary) 8%, transparent) 17.3% 17.7%, transparent 18% 24%, color-mix(in oklab, var(--color-primary) 7%, transparent) 24.3% 24.7%, transparent 25%),
+      radial-gradient(ellipse at 10% 90%, transparent 0 14%, color-mix(in oklab, var(--color-primary) 7%, transparent) 14.3% 14.8%, transparent 15% 22%, color-mix(in oklab, var(--color-primary) 6%, transparent) 22.3% 22.8%, transparent 23%);
+  }
+
+  .kiwi-card-hover {
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .kiwi-card-hover:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in oklab, var(--color-primary) 40%, var(--color-base-300));
+    box-shadow: 0 22px 45px color-mix(in oklab, #183026 10%, transparent);
+  }
+
+  .kiwi-stat-label {
+    color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -111,7 +111,10 @@ describe('participation Query hooks', () => {
     });
 
     expect(mockCancel).toHaveBeenCalledOnce();
-    expect(invalidate).toHaveBeenCalledTimes(2);
+    expect(invalidate).toHaveBeenCalledTimes(3);
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: participationKeys.all,
+    });
   });
 });
 

@@ -39,6 +39,21 @@ public sealed class QuestParticipationService : IQuestParticipationService
         return _repository.GetStateAsync(questId, actorId, DateTimeOffset.UtcNow, ct);
     }
 
+    public Task<IReadOnlyList<QuestParticipation>> ListMineAsync(
+        Guid actorId,
+        MyQuestParticipationFilter filter,
+        CancellationToken ct = default)
+    {
+        if (actorId == Guid.Empty)
+            throw new QuestParticipationException(
+                QuestParticipationError.NotFound,
+                "Authenticated user not found.");
+        if (!Enum.IsDefined(filter))
+            throw new ArgumentOutOfRangeException(nameof(filter));
+
+        return _repository.ListMineAsync(actorId, filter, ct);
+    }
+
     private static void EnsureRequest(Guid questId, Guid actorId)
     {
         if (questId == Guid.Empty)

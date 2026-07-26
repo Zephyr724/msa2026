@@ -28,13 +28,28 @@ describe('authentication frontend flow', () => {
 
     expect(screen.getByText('Checking session…')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument());
-    expect(screen.getByRole('link', { name: 'Create account' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Join free' }))
+      .toHaveAttribute('href', '/register');
     anonymous.unmount();
 
-    const authenticatedFetch = vi.fn()
-      .mockResolvedValueOnce(jsonResponse(session))
-      .mockResolvedValueOnce(jsonResponse({ token: 'csrf-logout' }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const authenticatedFetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) return Promise.resolve(jsonResponse(session));
+      if (url.endsWith('/v1/users/me/progression')) {
+        return Promise.resolve(jsonResponse({
+          totalXp: 120,
+          level: 3,
+          rankTitle: 'Novice',
+        }));
+      }
+      if (url.endsWith('/v1/auth/csrf-token')) {
+        return Promise.resolve(jsonResponse({ token: 'csrf-logout' }));
+      }
+      if (url.endsWith('/v1/auth/logout') && init?.method === 'POST') {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+    });
     vi.stubGlobal('fetch', authenticatedFetch);
     renderShell();
 
@@ -44,7 +59,10 @@ describe('authentication frontend flow', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
     await waitFor(() => expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument());
-    expect(authenticatedFetch).toHaveBeenCalledTimes(3);
+    expect(authenticatedFetch.mock.calls.some(([url]) =>
+      String(url).endsWith('/v1/users/me/progression'))).toBe(true);
+    expect(authenticatedFetch.mock.calls.filter(([url]) =>
+      String(url).endsWith('/v1/auth/logout'))).toHaveLength(1);
   });
 
   it('keeps public navigation available when session restoration fails', async () => {
