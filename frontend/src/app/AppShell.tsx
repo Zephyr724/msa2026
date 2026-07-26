@@ -1,4 +1,4 @@
-import { ClipboardList, IdCard, Leaf, LogOut } from 'lucide-react';
+import { ClipboardList, IdCard, Leaf, LogOut, Trophy } from 'lucide-react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthQuery, useLogoutMutation } from '../hooks/useAuth.ts';
 
@@ -37,6 +37,14 @@ export default function AppShell() {
           <div className="ml-auto flex items-center gap-2">
             <Link className="btn btn-ghost btn-sm" to="/quests">
               Quests
+            </Link>
+            <Link
+              aria-label="Leaderboard"
+              className="btn btn-ghost btn-sm"
+              to="/leaderboard"
+            >
+              <Trophy aria-hidden="true" className="size-4" />
+              <span className="hidden sm:inline">Leaderboard</span>
             </Link>
             {canManageQuests && (
               <Link

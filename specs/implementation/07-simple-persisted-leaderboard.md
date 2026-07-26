@@ -1,4 +1,4 @@
-Status: Implemented — Slice 7A independently approved, pending human Git approval
+Status: Implemented — Slice 7B independently approved, pending human Git approval
 
 # Slice 7 — Simple Persisted Leaderboard
 
@@ -7,7 +7,8 @@ Status: Implemented — Slice 7A independently approved, pending human Git appro
   migrations, dependencies, configuration, or accepted-spec changes)
 - **Implementation owner (after human approval):** Codex
 - **Independent design review:** Codex (Review 47; targeted closure Review 49)
-- **Independent implementation review:** Kimi K3 (Review 48: APPROVED)
+- **Independent implementation review:** Kimi K3 (Reviews 48 and 50:
+  APPROVED)
 
 ## 1. Status and planning boundary
 

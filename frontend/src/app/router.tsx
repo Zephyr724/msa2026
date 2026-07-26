@@ -11,6 +11,7 @@ import OrganizerQuestEditPage from '../pages/OrganizerQuestEditPage.tsx';
 import RequireManagementAccess from '../components/organizer/RequireManagementAccess.tsx';
 import RequireAuth from '../components/RequireAuth.tsx';
 import PassportPage from '../pages/PassportPage.tsx';
+import LeaderboardPage from '../pages/LeaderboardPage.tsx';
 import AppShell from './AppShell.tsx';
 
 export const router = createBrowserRouter([
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: '/quests/:questId', element: <QuestDetailPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/leaderboard', element: <LeaderboardPage /> },
       {
         element: <RequireAuth />,
         children: [{ path: '/passport', element: <PassportPage /> }],
