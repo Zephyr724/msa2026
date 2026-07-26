@@ -84,6 +84,16 @@ self access, anonymous `401`, profile-first `404`, both bounded `503`
 conditions, exact response keys, deterministic ordering, inactive exclusion,
 caller isolation, privacy exclusions, and OpenAPI operations/response codes.
 
+Post-review CI correction verification:
+
+- the previously failing
+  `EarnedReadIsExactOrderedPrivateAndExcludesInactiveAwards` test passed once
+  with a build and then 5/5 consecutive `--no-build` repetitions;
+- all Achievement integration tests passed 44/44;
+- `dotnet build Kiwimpact.slnx` succeeded with 0 warnings and 0 errors;
+- the exact CI command `dotnet test Kiwimpact.slnx --no-build` passed unit
+  218/218 and integration 257/257 in the same invocation.
+
 ## Boundaries and limitations
 
 - No schema, migration, seed, write-side award, backfill, reconciliation, XP
@@ -91,13 +101,14 @@ caller isolation, privacy exclusions, and OpenAPI operations/response codes.
 - No other-user read, write endpoint, progress-toward-next field, threshold,
   streak, richer achievement, or Community Challenge behavior was added.
 - `iconUrl` remains null for the current seeded catalog.
-- Review 43 Minor m1 records a non-blocking test-evidence gap: the integration
-  test proves the `code` tie-break but does not arrange timestamps opposite
-  code order to discriminate the primary `awardedAt ASC` key. The repository
-  implementation was independently verified as
-  `OrderBy(AwardedAt).ThenBy(Code)`; no behavior defect was found. The
-  suggested extra counter-order test is deferred to a convenient later pass
-  so the approved implementation diff is not changed after review.
+- Review 43 Minor m1 originally recorded a non-blocking ordering-test gap.
+  A post-review GitHub Actions failure then exposed a related test-only
+  precision issue: `DateTimeOffset.UtcNow` carried a 100 ns tail that
+  PostgreSQL `timestamp with time zone` correctly reduced to microsecond
+  precision. The corrected test uses fixed microsecond-aligned timestamps,
+  arranges `awardedAt` order opposite code order, and retains a tied pair for
+  the code tie-break. This closes m1 and fixes CI evidence without changing
+  production code.
 - No frontend gates were run because no frontend file changed.
 - Work remains uncommitted and unpushed. No PR, merge, or deployment action
   was performed.

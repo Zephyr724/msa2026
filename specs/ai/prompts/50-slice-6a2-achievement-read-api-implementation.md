@@ -30,3 +30,22 @@ that `main` contains the reviewed Slice 6A-1 merge and CI correction.
 - Run targeted Achievement tests followed by all three backend gates.
 - Do not stage, commit, push, merge, deploy, or create/update a pull request
   without separate explicit human approval.
+
+## Post-review CI test correction — 2026-07-26
+
+The human supplied a GitHub Actions failure in
+`EarnedReadIsExactOrderedPrivateAndExcludesInactiveAwards`: a raw-SQL
+`AwardedAt` update used `DateTimeOffset.UtcNow`, whose 100 ns final digit was
+not representable by PostgreSQL `timestamp with time zone` microsecond
+precision. The API correctly returned the persisted value ending in zero,
+while the test compared it to the pre-persistence in-memory string.
+
+Correct only the test evidence:
+
+- use fixed, microsecond-aligned timestamps;
+- arrange primary timestamp order opposite code order;
+- retain a same-timestamp pair to prove the code tie-break;
+- thereby close Review 43 Minor m1 while fixing the CI precision failure;
+- rerun the failing test repeatedly, targeted Achievement tests, the complete
+  backend gates, and the exact CI command;
+- do not change production code or any 6A-2 boundary.

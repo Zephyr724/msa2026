@@ -40,7 +40,10 @@ has occurred.
   Read API is implemented and locally verified (build 0 warnings/errors,
   unit 218/218, integration 257/257). Review 43 independently approved it
   with 0 Blockers, 0 Majors, and 1 non-blocking Minor test-evidence
-  suggestion. The work remains uncommitted and awaits human Git approval.
+  suggestion. A subsequent CI precision failure was corrected test-only and
+  the same change also closed that Minor by distinguishing `awardedAt` primary
+  ordering from the `code` tie-break; the exact CI command now passes
+  locally. The correction remains uncommitted and awaits human Git approval.
 - **Intended P0 outcome:** at least three simple persisted achievements,
   server-authoritative and idempotent award behaviour, and the accepted
   achievement read APIs.

@@ -189,12 +189,22 @@ public sealed class AchievementsApiTests
         await AwardCompletionsAsync(actor.UserId, 5);
         await AwardCompletionsAsync(other.UserId, 1);
 
-        var sameAwardedAt = DateTimeOffset.UtcNow.AddDays(-1);
+        // PostgreSQL timestamptz persists microsecond precision. Fixed,
+        // microsecond-aligned values avoid comparing an unpersisted 100 ns
+        // tail while deliberately making timestamp order oppose code order:
+        // code "-3" must sort before "-1", then "-1"/"-5" use the code
+        // tie-break at the same timestamp.
+        var earlierAwardedAt = new DateTimeOffset(
+            2026, 7, 25, 9, 58, 53, 123, TimeSpan.Zero);
+        var tiedAwardedAt = earlierAwardedAt.AddHours(1);
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
             await db.Database.ExecuteSqlInterpolatedAsync(
-                $"UPDATE \"UserAchievements\" SET \"AwardedAt\" = {sameAwardedAt} WHERE \"UserId\" = {actor.UserId}",
+                $"UPDATE \"UserAchievements\" SET \"AwardedAt\" = {tiedAwardedAt} WHERE \"UserId\" = {actor.UserId}",
+                TestContext.Current.CancellationToken);
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE \"UserAchievements\" SET \"AwardedAt\" = {earlierAwardedAt} WHERE \"UserId\" = {actor.UserId} AND \"AchievementId\" = {AchievementCatalog.BuildingMomentum.Id}",
                 TestContext.Current.CancellationToken);
         }
 
@@ -207,12 +217,21 @@ public sealed class AchievementsApiTests
         var items = json.EnumerateArray().ToArray();
         Assert.Equal(3, items.Length);
         Assert.Equal(
-            AchievementCatalog.Definitions
-                .Select(definition => definition.Code)
-                .Order(StringComparer.Ordinal),
+            [
+                AchievementCatalog.BuildingMomentum.Code,
+                AchievementCatalog.FirstSteps.Code,
+                AchievementCatalog.CommittedContributor.Code,
+            ],
             items.Select(item => item.GetProperty("code").GetString()));
-        foreach (var item in items)
+        var expectedAwardedAt = new[]
         {
+            earlierAwardedAt,
+            tiedAwardedAt,
+            tiedAwardedAt,
+        };
+        for (var index = 0; index < items.Length; index++)
+        {
+            var item = items[index];
             AssertExactKeys(
                 item,
                 "achievementId",
@@ -222,7 +241,9 @@ public sealed class AchievementsApiTests
                 "description",
                 "iconUrl",
                 "name");
-            Assert.Equal(sameAwardedAt.ToString("O"), item.GetProperty("awardedAt").GetString());
+            Assert.Equal(
+                expectedAwardedAt[index].ToString("O"),
+                item.GetProperty("awardedAt").GetString());
         }
 
         var raw = json.GetRawText();
