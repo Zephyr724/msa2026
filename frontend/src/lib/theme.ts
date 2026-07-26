@@ -4,6 +4,13 @@ export type ResolvedTheme = Exclude<ThemePreference, 'system'>;
 export const THEME_STORAGE_KEY = 'kiwimpact.theme-preference';
 export const SYSTEM_THEME_QUERY = '(prefers-color-scheme: dark)';
 
+type ThemeStorageReader = Pick<Storage, 'getItem'>;
+type ThemeStorageWriter = Pick<Storage, 'setItem'>;
+
+function getBrowserStorage(): Storage {
+  return window.localStorage;
+}
+
 export function isThemePreference(value: unknown): value is ThemePreference {
   return value === 'light' || value === 'dark' || value === 'system';
 }
@@ -20,9 +27,10 @@ export function resolveTheme(
 }
 
 export function readStoredThemePreference(
-  storage: Pick<Storage, 'getItem'>,
+  getStorage: () => ThemeStorageReader = getBrowserStorage,
 ): ThemePreference {
   try {
+    const storage = getStorage();
     const storedPreference = storage.getItem(THEME_STORAGE_KEY);
     return isThemePreference(storedPreference) ? storedPreference : 'system';
   } catch {
@@ -31,10 +39,11 @@ export function readStoredThemePreference(
 }
 
 export function writeStoredThemePreference(
-  storage: Pick<Storage, 'setItem'>,
   preference: ThemePreference,
+  getStorage: () => ThemeStorageWriter = getBrowserStorage,
 ): void {
   try {
+    const storage = getStorage();
     storage.setItem(THEME_STORAGE_KEY, preference);
   } catch {
     // The in-memory preference still applies when storage is unavailable.
