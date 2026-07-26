@@ -3,7 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 /**
  * The B1 authenticated-cache lifecycle (plan §6 D6, §12).
  *
- * Private per-principal server state lives under exactly these two key
+ * Private per-principal server state lives under exactly these three key
  * prefixes. Every principal boundary (logout, login/account replacement,
  * and any private-endpoint 401) runs this cleanup FIRST and only then
  * clears or replaces the auth session — there is never an intermediate
@@ -13,6 +13,7 @@ import type { QueryClient } from '@tanstack/react-query';
 export const PRIVATE_SERVER_QUERY_KEYS = [
   ['progression'],
   ['passport'],
+  ['achievements'],
 ] as const;
 
 /**
@@ -23,7 +24,7 @@ export const PRIVATE_SERVER_QUERY_KEYS = [
 export const authQueryKey = ['auth', 'me'] as const;
 
 /**
- * Ordered private-cache cleanup: first AWAIT `cancelQueries` for both
+ * Ordered private-cache cleanup: first AWAIT `cancelQueries` for all
  * prefixes, so an in-flight old-principal request cannot complete into the
  * cache; only then `removeQueries` for the same prefixes. Resolves only
  * after both phases complete. Idempotent under concurrent callers.

@@ -56,6 +56,17 @@ function emptyHistory() {
   };
 }
 
+function achievementCatalog() {
+  return [{
+    id: '11111111-1111-4111-8111-111111111111',
+    code: 'verified-completions-1',
+    name: 'First Steps',
+    description: 'Complete one verified quest.',
+    iconUrl: null,
+    category: 'Milestone',
+  }];
+}
+
 function historyPage(
   items: unknown[],
   { page = 1, totalPages = 1 }: { page?: number; totalPages?: number } = {},
@@ -74,9 +85,16 @@ function historyPage(
 interface StubOptions {
   progression?: () => Promise<Response>;
   completions?: (url: string) => Promise<Response>;
+  catalog?: () => Promise<Response>;
+  achievements?: () => Promise<Response>;
 }
 
-function stubPassportApi({ progression, completions }: StubOptions) {
+function stubPassportApi({
+  progression,
+  completions,
+  catalog,
+  achievements,
+}: StubOptions) {
   const fetchMock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
     const url = String(input);
     if (url.endsWith('/v1/users/me/progression')) {
@@ -84,6 +102,12 @@ function stubPassportApi({ progression, completions }: StubOptions) {
     }
     if (url.includes('/v1/users/me/passport/completions')) {
       return completions?.(url) ?? Promise.resolve(jsonResponse(emptyHistory()));
+    }
+    if (url.endsWith('/v1/achievements')) {
+      return catalog?.() ?? Promise.resolve(jsonResponse(achievementCatalog()));
+    }
+    if (url.endsWith('/v1/users/me/achievements')) {
+      return achievements?.() ?? Promise.resolve(jsonResponse([]));
     }
     return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
   });
@@ -149,7 +173,7 @@ describe('PassportPage', () => {
     expect(screen.getByText('No verified completions yet.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Discover quests' }))
       .toHaveAttribute('href', '/quests');
-    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    expect(historyRegion().querySelector('ul')).not.toBeInTheDocument();
   });
 
   it('F5: renders the populated summary and history from server data', async () => {
@@ -368,7 +392,7 @@ describe('PassportPage', () => {
     expect(screen.queryByText('Page 2 of 2')).not.toBeInTheDocument();
   });
 
-  it('F19: keeps progression, history, and identity out of stores and Web Storage', async () => {
+  it('F19: keeps progression, history, achievements, and identity out of stores and Web Storage', async () => {
     stubPassportApi({
       completions: () =>
         Promise.resolve(jsonResponse(historyPage([completionItem()]))),
@@ -377,12 +401,13 @@ describe('PassportPage', () => {
     await screen.findByText('Harbour restoration day');
 
     const storeState = JSON.stringify(useUiStore.getState());
-    expect(storeState).not.toMatch(/progression|passport|totalXp|rankTitle|displayName/i);
+    expect(storeState)
+      .not.toMatch(/progression|passport|achievement|totalXp|rankTitle|displayName/i);
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
   });
 
-  it('F20: contains no achievement, streak, leaderboard, share-card, or carbon text', async () => {
+  it('F20: includes achievements but no deferred Passport domains', async () => {
     stubPassportApi({
       completions: () =>
         Promise.resolve(jsonResponse(historyPage([completionItem()]))),
@@ -390,8 +415,9 @@ describe('PassportPage', () => {
     const { container } = renderPassport();
     await screen.findByText('Harbour restoration day');
 
+    expect(container.textContent).toMatch(/achievement/i);
     expect(container.textContent)
-      .not.toMatch(/achievement|streak|leaderboard|share.?card|carbon/i);
+      .not.toMatch(/streak|leaderboard|share.?card|carbon/i);
   });
 
   it('F21: meets the accessibility contract', async () => {
@@ -415,6 +441,8 @@ describe('PassportPage', () => {
     expect(h1s[0]).toHaveTextContent('Aroha — Passport');
     expect(screen.getByRole('heading', { level: 2, name: 'Progress' }))
       .toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Achievements' }))
+      .toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Completion history' }))
       .toBeInTheDocument();
 
@@ -437,17 +465,34 @@ describe('PassportPage', () => {
       .toHaveAttribute('dateTime', '2026-07-20T09:00:00.0000000Z');
   });
 
-  it('F22: keeps the responsive hierarchy classes (single column mobile, two-column desktop)', async () => {
+  it('F22: uses stacked regions and a responsive one-to-three-column achievement grid', async () => {
     stubPassportApi({});
     const { container } = renderPassport();
-    await screen.findByRole('heading', { name: 'Aroha — Passport' });
+    await screen.findByText('First Steps');
 
     const main = container.querySelector('main');
     expect(main?.className).toContain('max-w-4xl');
-    const grid = main?.querySelector('.grid');
-    expect(grid?.className).toContain('grid-cols-1');
-    expect(grid?.className).toContain('md:grid-cols-3');
-    expect(summaryRegion().className).toContain('md:col-span-1');
-    expect(historyRegion().className).toContain('md:col-span-2');
+    expect(main?.querySelector('.md\\:grid-cols-3')).not.toBeInTheDocument();
+    expect(summaryRegion().className).not.toContain('md:col-span-1');
+    expect(historyRegion().className).not.toContain('md:col-span-2');
+    const achievementGrid = screen.getByRole('region', { name: 'Achievements' })
+      .querySelector('ul');
+    expect(achievementGrid?.className).toContain('grid-cols-1');
+    expect(achievementGrid?.className).toContain('sm:grid-cols-2');
+    expect(achievementGrid?.className).toContain('lg:grid-cols-3');
+  });
+
+  it('F23: places Achievements between Progress and Completion history', async () => {
+    stubPassportApi({});
+    renderPassport();
+    await screen.findByText('First Steps');
+
+    const headings = screen.getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual([
+      'Progress',
+      'Achievements',
+      'Completion history',
+    ]);
   });
 });
