@@ -3,6 +3,7 @@ using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Repositories;
 using Kiwimpact.Core.Security;
 using Kiwimpact.Core.Services;
+using Kiwimpact.Infrastructure.Achievements;
 using Kiwimpact.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -17,13 +18,16 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
 
     private readonly KiwimpactDbContext _db;
     private readonly CompletionCodeProtector _protector;
+    private readonly AchievementAwardService _achievementAwards;
 
     public QuestCompletionRepository(
         KiwimpactDbContext db,
-        CompletionCodeProtector protector)
+        CompletionCodeProtector protector,
+        AchievementAwardService achievementAwards)
     {
         _db = db;
         _protector = protector;
+        _achievementAwards = achievementAwards;
     }
 
     public async Task<GeneratedCompletionCode> GenerateOrRotateAsync(
@@ -203,6 +207,10 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
             profile.ApplyXpAward(xp.XpAmount, timestamp);
             _db.QuestCompletions.Add(completion);
             _db.XpTransactions.Add(xp);
+            // Achievement hook: the profile lock is held; the service
+            // re-reads existing awards and stages only missing milestones
+            // against the snapshot (committed rows + the staged XP row).
+            await _achievementAwards.StageMissingMilestoneAwardsAsync(actorId, xp, ct);
 
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

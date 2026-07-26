@@ -35,9 +35,13 @@ has occurred.
 - **Branch:** `feat/slice-6a-simple-achievements-backend`
 - **Branch baseline:** `2706e0c`, identical to current `main` when the branch
   was inspected on 2026-07-26
-- **Status:** Corrected design approved on 2026-07-26 after Review 40 targeted
-  closure. Slice 6A-1 implementation is authorized but has not started;
-  Slice 6A-2 remains sequenced after 6A-1 completion and independent review.
+- **Status:** Corrected design approved on 2026-07-26 after Review 40.
+  Slice 6A-1 Achievement Award Core is implemented and locally verified
+  (build 0 warnings/errors, unit 216/216, integration 247/247). Review 41's
+  single Major was corrected and independently closed by Kimi K3 in Review
+  42 with verdict `APPROVE`. The human approved the Slice 6A-1 Git commit on
+  2026-07-26. Slice 6A-2 Achievement Read API is the next task and remains
+  unimplemented.
 - **Intended P0 outcome:** at least three simple persisted achievements,
   server-authoritative and idempotent award behaviour, and the accepted
   achievement read APIs.
@@ -48,7 +52,10 @@ has occurred.
 
 ### Remaining P0 delivery gaps
 
-- At least three simple achievements, including their Member-facing UI.
+- Achievement catalog/earned read APIs (Slice 6A-2) and Member-facing
+  achievement UI; the three persisted milestones and award core are
+  implemented on the active Slice 6A branch but are not yet merged to
+  `main`.
 - One simple persisted leaderboard and responsive frontend.
 - Complete, persisted light/dark/system theme switching using Zustand for
   genuine cross-component UI state.

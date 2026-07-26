@@ -69,8 +69,7 @@ public sealed class XpLedgerPersistenceTests : IClassFixture<TestDatabaseFixture
             await using var provider = _fixture.CreateServiceProvider();
             await using var scope = provider.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
-            var repository = new QuestCompletionRepository(
-                db, XpLedgerTestHelpers.Protector);
+            var repository = XpLedgerTestHelpers.NewQuestCompletionRepository(db);
 
             await Assert.ThrowsAsync<DbUpdateException>(() =>
                 repository.RedeemAsync(
@@ -369,7 +368,7 @@ public sealed class XpLedgerPersistenceTests : IClassFixture<TestDatabaseFixture
                  {now}, NULL, 'Easy', NULL, {now}, {now})
             """, TestContext.Current.CancellationToken);
 
-        var repository = new XpLedgerRepository(seedDb);
+        var repository = XpLedgerTestHelpers.NewXpLedgerRepository(seedDb);
         Assert.False(await repository.HasRewardPendingCompletionsAsync(
             TestContext.Current.CancellationToken));
         Assert.Equal(0, await repository.CountUnprocessableRewardPendingAsync(
@@ -385,8 +384,7 @@ public sealed class XpLedgerPersistenceTests : IClassFixture<TestDatabaseFixture
         await using var provider = _fixture.CreateServiceProvider();
         await using var scope = provider.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
-        var repository = new QuestCompletionRepository(
-            db, XpLedgerTestHelpers.Protector);
+        var repository = XpLedgerTestHelpers.NewQuestCompletionRepository(db);
         await repository.RedeemAsync(
             questId,
             actorId,

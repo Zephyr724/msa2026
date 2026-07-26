@@ -65,6 +65,23 @@ builder.Services.AddOptions<XpReconciliationOptions>()
     .ValidateOnStart();
 builder.Services.AddHostedService<XpReconciliationHostedService>();
 
+builder.Services.AddOptions<AchievementBackfillOptions>()
+    .Bind(builder.Configuration.GetSection(AchievementBackfillOptions.SectionName))
+    .Validate(
+        options => options.BatchSize > 0,
+        "AchievementBackfill:BatchSize must be positive.")
+    .Validate(
+        options => options.InitialDelay >= TimeSpan.Zero,
+        "AchievementBackfill:InitialDelay must not be negative.")
+    .Validate(
+        options => options.IdleInterval > TimeSpan.Zero,
+        "AchievementBackfill:IdleInterval must be positive.")
+    .Validate(
+        options => options.MaxConsecutiveRowFailures > 0,
+        "AchievementBackfill:MaxConsecutiveRowFailures must be positive.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<AchievementBackfillHostedService>();
+
 builder.Services.AddOptions<CompletionCodeOptions>()
     .Bind(builder.Configuration.GetSection("CompletionCodes"))
     .Validate(
@@ -323,6 +340,27 @@ if (seedRoles || (app.Environment.IsDevelopment() &&
                 builder.Configuration["DemoAccounts:Admin:Email"],
                 builder.Configuration["DemoAccounts:Admin:Password"]));
     }
+}
+
+// ── Achievement catalog seed and validation (every environment) ─────
+// The approved achievement catalog is a hard precondition of the award
+// core: it is seeded concurrency-safely and validated completely before the
+// host starts, so no hosted reconciliation/backfill pass and no request can
+// run against a missing or malformed catalog. Any catalog defect fails
+// startup; an empty catalog is never treated as ready.
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+    if (app.Environment.IsDevelopment())
+    {
+        // Same Development-only automatic migration as the seed block above;
+        // idempotent when it already ran. In other environments the
+        // deployment procedure must apply migrations before start — the
+        // fail-closed validation below reports a missing table as a startup
+        // failure rather than silently skipping awards.
+        await db.Database.MigrateAsync();
+    }
+    await AchievementSeed.SeedAndValidateAsync(db);
 }
 
 // OpenAPI JSON endpoint (available in all environments for Slice 0)

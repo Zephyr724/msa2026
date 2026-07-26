@@ -370,3 +370,27 @@
 > - confirmation that Slice 6A-2 remains unimplemented;
 > - confirmation that no prohibited Git or deployment action occurred;
 > - readiness for the single independent implementation review.
+
+## Concentrated correction prompt — 2026-07-26
+
+Actual human instruction, verbatim:
+
+> 换一下角色，你来写代码，k3审核，你直接修好这个问题
+
+Execution context applied by Codex:
+
+- Codex becomes the implementation owner for the single concentrated
+  correction; Kimi K3 becomes the targeted closure reviewer.
+- Fix only Review 41 M1:
+  `specs/ai/reviews/41-slice-6a1-codex-independent-implementation-review.md`.
+- Make PostgreSQL apply the eligible-and-missing milestone predicate before
+  deterministic `UserId` ordering and `BatchSize`.
+- Keep candidate IDs distinct, preserve the per-pass at-most-once rule, and
+  do not change schema, migration, seed, transaction, lock, dependency, HTTP,
+  or 6A-2 behavior.
+- Add a real-PostgreSQL integration test proving fully awarded users are
+  absent from candidate discovery, including more than one batch of fully
+  awarded users ordered before a genuinely missing user.
+- Run the directly affected tests and all three backend gates, update the
+  completion evidence with observed results, and leave all work uncommitted
+  for Kimi K3's targeted closure review.

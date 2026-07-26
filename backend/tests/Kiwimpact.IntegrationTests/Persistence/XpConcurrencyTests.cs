@@ -2,6 +2,7 @@ using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Repositories;
 using Kiwimpact.Core.Services;
+using Kiwimpact.Infrastructure.Achievements;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Identity;
 using Kiwimpact.Infrastructure.Reconciliation;
@@ -347,8 +348,7 @@ public sealed class XpConcurrencyTests : IClassFixture<TestDatabaseFixture>
         await using var provider = _fixture.CreateServiceProvider();
         await using var scope = provider.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
-        var repository = new QuestCompletionRepository(
-            db, XpLedgerTestHelpers.Protector);
+        var repository = XpLedgerTestHelpers.NewQuestCompletionRepository(db);
         await repository.RedeemAsync(
             questId,
             actorId,
@@ -362,7 +362,7 @@ public sealed class XpConcurrencyTests : IClassFixture<TestDatabaseFixture>
         await using var provider = _fixture.CreateServiceProvider();
         await using var scope = provider.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
-        var repository = new XpLedgerRepository(db);
+        var repository = XpLedgerTestHelpers.NewXpLedgerRepository(db);
         return await repository.AwardVerifiedCompletionAsync(
             completion,
             DateTimeOffset.UtcNow,
@@ -395,6 +395,7 @@ public sealed class XpConcurrencyTests : IClassFixture<TestDatabaseFixture>
                 npgsql => npgsql.MigrationsAssembly(
                     typeof(KiwimpactDbContext).Assembly.FullName)));
         collection.AddScoped<IXpLedgerRepository, XpLedgerRepository>();
+        collection.AddScoped<AchievementAwardService>();
         return collection.BuildServiceProvider();
     }
 

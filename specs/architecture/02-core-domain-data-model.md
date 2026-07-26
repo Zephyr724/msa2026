@@ -295,7 +295,22 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 | `CreatedAt` | `timestamp with time zone` | Not null |
 
 **Business rules:**
-- Achievement catalog content (exact list of 6–8 achievements, criteria) is deferred until before the Passport/Achievement slice. The schema is stable.
+- Achievement catalog content was originally deferred with a stable schema.
+  Slice 6A (2026-07-26) implemented the first three rows — the P0 cumulative
+  verified-rewarded-completion milestones, all `Category = 'Milestone'`,
+  `IconUrl = NULL`, with deterministic seed GUIDs and thresholds defined in
+  code (`AchievementCatalog`):
+
+| Code | Name | Threshold (committed `XpTransaction` count) |
+|------|------|----------------------------------------------|
+| `verified-completions-1` | First Steps | 1 |
+| `verified-completions-3` | Building Momentum | 3 |
+| `verified-completions-5` | Committed Contributor | 5 |
+
+- Catalog rows are written only by the every-environment, concurrency-safe
+  `AchievementSeed` (deterministic display-field upsert) and validated
+  fail-closed at application startup. Richer catalog content (6–8
+  achievements incl. other categories) remains deferred future direction.
 
 ### 3.12 UserAchievement
 
@@ -312,6 +327,18 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 - Partial unique index on `(UserId, AchievementId)` WHERE `SourceCommunityChallengeId IS NULL` — a Member earns each non-challenge achievement at most once.
 - Partial unique index on `(UserId, AchievementId, SourceCommunityChallengeId)` WHERE `SourceCommunityChallengeId IS NOT NULL` — a Member earns each challenge-reward achievement at most once per challenge.
 - `SourceCommunityChallengeId` is non-null when the achievement is awarded as a Community Challenge reward; null for all other achievement awards (milestones, streaks, category achievements).
+
+**Staged implementation (Slice 6A, 2026-07-26):** Community Challenge is
+Deferred and its table does not exist. The physical `UserAchievements` table
+implemented by Slice 6A deliberately **omits `SourceCommunityChallengeId`**;
+the accepted first partial unique index is staged as a plain unique index
+`UX_UserAchievements_UserId_AchievementId` on `(UserId, AchievementId)`,
+which is semantically identical while no challenge rows can exist. The
+nullable column, its `CommunityChallenge` FK, and the second partial unique
+index arrive with the future Community Challenge slice as an additive
+migration. All other columns match this accepted model; every Slice 6A award
+sets `XpTransactionId` non-null to the resolved triggering ledger row and
+`AwardedAt` to that row's `CreatedAt` (immutable once persisted).
 
 ### 3.13 CommunityChallenge
 
@@ -434,7 +461,8 @@ All entities and fields listed in §3 are MVP scope except as noted below.
 
 ### Deferred
 
-- Achievement catalog content (exact list, criteria) — schema stable, content deferred
+- Achievement catalog content beyond the three Slice 6A P0 milestones (see
+  §3.11) — schema stable, richer content deferred
 - Repeatable Quest completion (`QuestOccurrence`)
 - Virtual currency, Wallet, Shop, purchasing
 - Community Challenge seasons, leagues, editable scoring formulas

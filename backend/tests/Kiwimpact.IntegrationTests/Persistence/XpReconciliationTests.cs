@@ -1,5 +1,6 @@
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Repositories;
+using Kiwimpact.Infrastructure.Achievements;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Reconciliation;
 using Kiwimpact.Infrastructure.Repositories;
@@ -53,7 +54,7 @@ public sealed class XpReconciliationTests : IClassFixture<TestDatabaseFixture>
         await AssertExactAwardAsync(seedDb, easy, 50, community.Id);
         await AssertExactAwardAsync(seedDb, medium, 100, null);
         await AssertExactAwardAsync(seedDb, hard, 150, community.Id);
-        Assert.False(await new XpLedgerRepository(seedDb).HasRewardPendingCompletionsAsync(
+        Assert.False(await XpLedgerTestHelpers.NewXpLedgerRepository(seedDb).HasRewardPendingCompletionsAsync(
             TestContext.Current.CancellationToken));
     }
 
@@ -125,7 +126,7 @@ public sealed class XpReconciliationTests : IClassFixture<TestDatabaseFixture>
         Assert.Equal(5, result.Scanned);
         Assert.Equal(5, result.Awarded);
         Assert.True(result.PassComplete);
-        Assert.False(await new XpLedgerRepository(seedDb).HasRewardPendingCompletionsAsync(
+        Assert.False(await XpLedgerTestHelpers.NewXpLedgerRepository(seedDb).HasRewardPendingCompletionsAsync(
             TestContext.Current.CancellationToken));
     }
 
@@ -163,7 +164,7 @@ public sealed class XpReconciliationTests : IClassFixture<TestDatabaseFixture>
             Assert.False(result.PassComplete);
             Assert.Equal(0, await XpLedgerTestHelpers.CountXpRowsAsync(seedDb, impossibleId));
             Assert.Equal(1, await XpLedgerTestHelpers.CountXpRowsAsync(seedDb, normal.Id));
-            Assert.True(await new XpLedgerRepository(seedDb).HasRewardPendingCompletionsAsync(
+            Assert.True(await XpLedgerTestHelpers.NewXpLedgerRepository(seedDb).HasRewardPendingCompletionsAsync(
                 TestContext.Current.CancellationToken));
 
             // A second pass makes the same terminal accounting, never an award.
@@ -517,6 +518,7 @@ public sealed class XpReconciliationTests : IClassFixture<TestDatabaseFixture>
                 npgsql => npgsql.MigrationsAssembly(
                     typeof(KiwimpactDbContext).Assembly.FullName)));
         collection.AddScoped<IXpLedgerRepository, XpLedgerRepository>();
+        collection.AddScoped<AchievementAwardService>();
         return collection.BuildServiceProvider();
     }
 

@@ -611,7 +611,8 @@ public sealed class PassportApiTests
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
-        var repository = new XpLedgerRepository(db);
+        var repository = new XpLedgerRepository(
+            db, new Kiwimpact.Infrastructure.Achievements.AchievementAwardService(db));
         var outcome = await repository.AwardVerifiedCompletionAsync(
             completion,
             DateTimeOffset.UtcNow,

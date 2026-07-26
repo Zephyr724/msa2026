@@ -1,8 +1,10 @@
 using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Security;
+using Kiwimpact.Infrastructure.Achievements;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Identity;
+using Kiwimpact.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kiwimpact.IntegrationTests.Persistence;
@@ -149,6 +151,39 @@ internal static class XpLedgerTestHelpers
         await db.XpTransactions.CountAsync(
             transaction => transaction.SourceCompletionId == completionId,
             TestContext.Current.CancellationToken);
+
+    public static QuestCompletionRepository NewQuestCompletionRepository(
+        KiwimpactDbContext db) =>
+        new(db, Protector, new AchievementAwardService(db));
+
+    public static XpLedgerRepository NewXpLedgerRepository(KiwimpactDbContext db) =>
+        new(db, new AchievementAwardService(db));
+
+    /// <summary>
+    /// Seeds a pre-6A-style awarded completion: a Verified completion plus a
+    /// raw-inserted XP row, deliberately without any achievement award — the
+    /// exact historical backfill input shape.
+    /// </summary>
+    public static async Task<QuestCompletion> SeedLegacyAwardedCompletionAsync(
+        KiwimpactDbContext db,
+        QuestDifficulty difficulty = QuestDifficulty.Easy,
+        DateTimeOffset? verifiedAtUtc = null,
+        Guid? communityRegionId = null)
+    {
+        var completion = await SeedPendingCompletionAsync(
+            db, difficulty, communityRegionId, verifiedAtUtc);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "XpTransactions"
+                ("Id", "UserId", "QuestId", "SourceCompletionId", "XpAmount",
+                 "CommunityRegionIdAtAward", "CreatedAt")
+            VALUES
+                ({Guid.NewGuid()}, {completion.UserId}, {completion.QuestId},
+                 {completion.Id},
+                 {Kiwimpact.Core.Progression.ProgressionRules.XpForDifficulty(difficulty)},
+                 {communityRegionId}, {completion.VerifiedAtUtc!.Value})
+            """, TestContext.Current.CancellationToken);
+        return completion;
+    }
 
     public static async Task<bool> WaitForBlockedSessionsAsync(
         string connectionString,
