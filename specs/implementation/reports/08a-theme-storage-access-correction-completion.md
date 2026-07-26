@@ -2,9 +2,11 @@
 
 ## Status
 
-Implementation is complete locally on `fix/slice-8-storage-access`. Targeted
-and full verification results are recorded below. Independent targeted closure
-review remains pending.
+Implementation was committed as `e16b31c` on
+`fix/slice-8-storage-access` and pushed to
+`origin/fix/slice-8-storage-access`. Targeted and full verification results are
+recorded below. Independent Kimi K3 targeted closure Review 54 approved the
+correction with the original Major closed.
 
 ## Finding corrected
 
@@ -40,6 +42,8 @@ Status and evidence:
 
 - `PROJECT_STATUS.md`
 - `specs/ai/prompts/58-slice-8-storage-access-correction.md`
+- `specs/ai/reviews/53-slice-8-codex-post-merge-storage-review.md`
+- `specs/ai/reviews/54-slice-8a-k3-targeted-storage-closure-review.md`
 - `specs/implementation/reports/08-theme-switching-completion.md`
 - this report
 
@@ -63,9 +67,10 @@ Final frontend gates:
 Repository checks:
 
 - `git diff --check` — passed with no whitespace errors.
-- `git status --short --branch` — only the seven intended correction,
-  status, and evidence files are modified or untracked on
-  `fix/slice-8-storage-access`.
+- Commit `e16b31c` contains exactly the seven intended production, test, status,
+  prompt, and completion-evidence files recorded before the closure review.
+- After Review 54, the working tree contains only four unstaged documentation
+  updates: `PROJECT_STATUS.md`, this completion report, and new Reviews 53/54.
 
 ## Known limitations and boundaries
 
@@ -79,9 +84,15 @@ Repository checks:
 ## Review status
 
 - Original independent Slice 8 review: Kimi K3 Review 52.
-- Fresh post-merge review: 1 Major storage-acquisition finding, now corrected
-  locally.
-- Independent targeted closure check: pending; it must be performed by a
-  session that did not implement this correction.
-- Nothing is staged, committed, pushed, merged, submitted as a pull request, or
-  deployed.
+- Fresh post-merge Review 53: 1 Major storage-acquisition finding and 1 status
+  Minor. The production Major is corrected in `e16b31c`; the status Minor is
+  corrected in `PROJECT_STATUS.md`.
+- Independent Kimi K3 targeted closure Review 54: `APPROVED`; the original
+  Major is correctly closed and all reported verification results were
+  independently reproduced.
+- Chronology: `e16b31c` was committed and pushed before the targeted closure
+  review. This differs from the preferred review-before-commit order and is
+  disclosed in Review 54; history has not been rewritten.
+- `e16b31c` is committed and pushed. The Review 53/54 and status/report
+  evidence updates remain unstaged and uncommitted pending human Git approval.
+- Nothing is merged, submitted as a pull request, or deployed.

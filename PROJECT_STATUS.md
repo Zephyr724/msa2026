@@ -40,17 +40,16 @@ has occurred.
 
 - **Branch:** `fix/slice-8-storage-access`
 - **Main baseline:** `a3e7309` (PR #19 merge of Slice 8)
-- **Status:** targeted post-merge correction implemented locally. A fresh Codex
-  review found that `window.localStorage` was evaluated before the theme
-  helper's exception boundary, so a throwing storage property getter could
-  still fail application initialization. Storage acquisition now occurs inside
-  the guarded helper and a `SecurityError` getter regression test passes.
-  Targeted tests passed 15/15; final frontend gates passed with clean lint and
-  type-check, 309/309 tests across 34 files, and a successful production build
-  of 1,906 modules. Independent targeted closure remains pending.
-- **Review boundary:** the implementation session will run the applicable
-  frontend gates and prepare evidence, then a different session must perform
-  the targeted closure check for the original Major finding.
+- **Status:** targeted post-merge correction committed and pushed as
+  `e16b31c`. Storage acquisition now occurs inside the guarded helper and a
+  `SecurityError` getter regression test passes. Targeted tests passed 15/15;
+  final frontend gates passed with clean lint and type-check, 309/309 tests
+  across 34 files, and a successful production build of 1,906 modules.
+  Independent Kimi K3 targeted closure Review 54 reproduced those results and
+  approved the correction with the original Review 53 Major closed.
+- **Git/review chronology:** `e16b31c` was committed and pushed before targeted
+  closure. Reviews 53/54 and the resulting evidence corrections are currently
+  unstaged and uncommitted; no history rewrite is planned.
 - **Boundary:** no backend, API, schema, migration, dependency, authentication,
   Docker, deployment, accepted-spec, or server-state ownership change.
 
