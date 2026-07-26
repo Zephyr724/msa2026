@@ -59,9 +59,10 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
             Assert.Equal(2, await seedDb.XpTransactions.CountAsync(
                 row => row.UserId == graph.Actor.Id,
                 TestContext.Current.CancellationToken));
-            // Both evaluations saw milestone 1; the profile lock serialized
-            // them, so exactly one award row exists and its trigger is the
-            // snapshot's first row by (CreatedAt, Id).
+            // The profile lock serializes both evaluations, so the lock
+            // winner creates milestone 1 from its one-row creation snapshot.
+            // The other redemption may carry an earlier CreatedAt but commits
+            // later; immutable award semantics must not rewrite the trigger.
             var awards = await seedDb.UserAchievements
                 .AsNoTracking()
                 .Where(award => award.UserId == graph.Actor.Id)
@@ -71,9 +72,11 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
                 Kiwimpact.Core.Achievements.AchievementCatalog.FirstSteps.Id,
                 award.AchievementId);
             var snapshot = await OrderedSnapshotAsync(seedDb, graph.Actor.Id);
-            Assert.Equal(snapshot[0].Id, award.XpTransactionId);
+            var trigger = Assert.Single(
+                snapshot,
+                transaction => transaction.Id == award.XpTransactionId);
             Assert.Equal(
-                snapshot[0].CreatedAt,
+                trigger.CreatedAt,
                 award.AwardedAt,
                 TimeSpan.FromMicroseconds(1));
         }

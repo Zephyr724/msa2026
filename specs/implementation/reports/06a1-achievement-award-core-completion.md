@@ -12,22 +12,24 @@
   planning/evidence files (`PROJECT_STATUS.md`, Prompt 48, Prompt 49,
   Review 40, the 6A plan) as `b3502603be633c56d4f1ab0a0fa699602b4d79dc`
   (2026-07-26 14:21 +0800). No implementation file of this task was
-  included in that commit; all implementation work below remains
-  uncommitted on top of `b350260`.
+  included in that commit.
+- **Implementation commit:** `eb0b7de` (`feat: add achievement award core`),
+  created after explicit human approval; the remote feature branch currently
+  points to this commit.
 - **Independent implementation review status:** Review 41 found 0 Blockers,
   1 Major, and 0 Minors (`CHANGES REQUIRED`). Codex implemented the single
   concentrated M1 correction after the human explicitly switched roles;
-  Kimi K3 targeted closure review of original M1 is PENDING.
+  Review 42 independently closed M1 with verdict `APPROVE`.
 
 ## Implementation status
 
-Implementation of the approved Slice 6A-1 contract and the Review 41 M1
-concentrated correction is complete: catalog
+Implementation of the approved Slice 6A-1 contract, the Review 41 M1
+concentrated correction, and the post-closure CI test correction is complete:
+catalog
 persistence and fail-closed seeding/validation, pure milestone rules, the
 additive migration, atomic award integration on both XP-creation paths, and
 the bounded historical backfill — with the full unit and PostgreSQL
-integration test matrix executed and observed (below). Nothing was staged,
-committed, pushed, merged, deployed, or added to a pull request. Slice 6A-2
+integration test matrix executed and observed (below). Slice 6A-2
 (HTTP read APIs) remains entirely unimplemented: no controller, DTO,
 contract, read service, read repository, or OpenAPI operation was created
 (verified by source search — no achievement HTTP artifact exists).
@@ -128,6 +130,19 @@ Run from `backend/` on 2026-07-26:
   — Passed: 1, Failed: 0;
   `dotnet test tests/Kiwimpact.IntegrationTests/Kiwimpact.IntegrationTests.csproj --no-build --filter FullyQualifiedName~AchievementBackfillTests`
   — Passed: 10, Failed: 0.
+- Post-closure CI correction:
+  - two GitHub Actions runs of `dotnet test Kiwimpact.slnx --no-build`
+    independently failed the same invalid final-snapshot trigger assertion
+    in
+    `AchievementConcurrencyTests.SameUserConcurrentLiveAwardsAttachTheMilestoneExactlyOnce`;
+  - after correcting only that assertion, the test passed once with a build
+    and then 10/10 consecutive `--no-build` repetitions;
+  - the directly related achievement award/concurrency and retained 5A
+    concurrency/reconciliation filter passed 24/24;
+  - the complete gates were rerun: build succeeded with 0 warnings/errors,
+    unit passed 216/216, and integration passed 247/247.
+  - the exact CI command `dotnet test Kiwimpact.slnx --no-build` then passed
+    unit 216/216 and integration 247/247 in the same invocation.
 - `dotnet test tests/Kiwimpact.IntegrationTests/Kiwimpact.IntegrationTests.csproj --no-build`
   — Passed: 247, Failed: 0, Skipped: 0 (34 new 6A-1 cases:
   `AchievementMigrationUpgradeTests` 3, `AchievementPersistenceTests` 12,
@@ -182,8 +197,10 @@ frontend file was modified).
 - **Equal timestamps:** two ledger rows with identical `CreatedAt` are
   tie-broken by `Id` (unit and integration observed).
 - **Concurrency (no timing sleeps):** two concurrent same-user redemptions
-  serialize on the profile lock and attach milestone 1 exactly once with the
-  snapshot-first trigger; live redemption vs backfill serialize on the
+  serialize on the profile lock and attach milestone 1 exactly once to the
+  XP row in the lock winner's creation snapshot; a later-committing XP row
+  with an earlier `CreatedAt` does not rewrite that immutable award. Live
+  redemption vs backfill serialize on the
   profile lock and milestones 1 and 3 are awarded exactly once each
   regardless of lock winner; two lock-free backfill workers award the same
   user exactly once (winner awarded, loser already-awarded via the
@@ -280,6 +297,15 @@ All inside the approved boundary, recorded per Prompt 49:
    milestone, combines them with `UNION`, then excludes pass attempts,
    orders, and limits. This preserves the approved catalog-driven behavior
    without a new dependency or any transaction/lock/schema change.
+6. **Post-closure CI concurrency assertion.** Two GitHub Actions runs exposed
+   that `SameUserConcurrentLiveAwardsAttachTheMilestoneExactlyOnce` assumed
+   the first row of the final ledger snapshot must be the award trigger.
+   Concurrent request timestamps do not determine profile-lock acquisition
+   order, and the approved immutable-award rule forbids a later backdated row
+   from rewriting an existing award. The test now verifies that exactly one
+   award exists, its `XpTransactionId` identifies an actual ledger row, and
+   `AwardedAt` equals that trigger row's `CreatedAt`; production code is
+   unchanged.
 
 ## Known limitations and unrun verification
 
@@ -298,8 +324,9 @@ All inside the approved boundary, recorded per Prompt 49:
   between them is not correctness-relevant.
 - Deployment/rollback of a real environment was not performed; migration
   behavior was observed on Testcontainers PostgreSQL only.
-- CI has not been run for this change; all gates above were observed
-  locally.
+- GitHub Actions ran the committed implementation twice and exposed the
+  invalid concurrency assertion documented above. The corrected test has
+  been fully verified locally and still requires a green CI run after push.
 
 ## Confirmation
 
@@ -309,12 +336,17 @@ All inside the approved boundary, recorded per Prompt 49:
   rules-engine, dependency, or unrelated-refactor change was made.
 - `Kiwimpact.Infrastructure.csproj`, `Kiwimpact.Api.csproj`, and all
   dependency manifests/lockfiles are unchanged.
-- `PROJECT_STATUS.md` was not modified by this task.
-- Nothing was staged, committed, pushed, merged, reverted, deployed, or
-  opened as a pull request.
+- `PROJECT_STATUS.md` was updated before the implementation commit to record
+  the completed 6A-1 status and 6A-2 handoff.
+- The reviewed Slice 6A-1 implementation was committed as `eb0b7de` after
+  explicit human approval and the remote feature branch currently points to
+  that commit. The post-closure CI test correction is uncommitted at the time
+  of this report update. Codex did not merge, deploy, or create/update a pull
+  request.
 - Prompt 48, Review 40, and the 6A plan are preserved unchanged; Review 41
   received only a trailing-whitespace cleanup with no content change; Prompt
   49 was appended only with the actual concentrated-correction instruction
   and execution context.
-- Ready for Kimi K3's targeted closure review limited to original Review 41
-  M1 and its directly affected tests.
+- Review 42 closed original Review 41 M1 with verdict `APPROVE`. The
+  post-closure change is a test-only correction that restores the reviewed
+  immutable-trigger semantics; production code is unchanged.

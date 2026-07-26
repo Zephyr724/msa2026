@@ -394,3 +394,24 @@ Execution context applied by Codex:
 - Run the directly affected tests and all three backend gates, update the
   completion evidence with observed results, and leave all work uncommitted
   for Kimi K3's targeted closure review.
+
+## Post-closure CI test correction — 2026-07-26
+
+The human supplied two GitHub Actions failures from:
+
+`AchievementConcurrencyTests.SameUserConcurrentLiveAwardsAttachTheMilestoneExactlyOnce`
+
+Both failures showed that the persisted award trigger differed from the
+first row of the final `(CreatedAt, Id)`-ordered two-row ledger snapshot.
+Codex was asked to address the CI failure before merge.
+
+Bounded correction:
+
+- diagnose whether production behavior or the concurrency assertion violates
+  the approved locked-creation-snapshot and immutable-award semantics;
+- change production code only if the implementation is wrong;
+- otherwise correct only the invalid test expectation;
+- repeatedly run the failing test, its directly related concurrency and
+  award-path suites, and the complete backend gates;
+- update the completion evidence truthfully;
+- do not change schema, migration, seed, dependencies, HTTP, or 6A-2.
