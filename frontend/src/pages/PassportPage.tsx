@@ -9,6 +9,7 @@ import {
 } from '../hooks/usePassportCompletions.ts';
 import { ApiError } from '../lib/api/apiFetch.ts';
 import PassportSummaryCard from '../components/passport/PassportSummaryCard.tsx';
+import AchievementsSection from '../components/passport/AchievementsSection.tsx';
 import CompletionHistoryList from '../components/passport/CompletionHistoryList.tsx';
 import PassportPagination from '../components/passport/PassportPagination.tsx';
 
@@ -107,11 +108,8 @@ export default function PassportPage() {
   return (
     <main className="container mx-auto max-w-4xl px-4 py-8">
       <h1 className="text-3xl font-bold">{displayName} — Passport</h1>
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <section
-          aria-labelledby="passport-summary-heading"
-          className="md:col-span-1"
-        >
+      <div className="mt-6">
+        <section aria-labelledby="passport-summary-heading">
           <h2 className="text-xl font-semibold" id="passport-summary-heading">
             Progress
           </h2>
@@ -131,10 +129,8 @@ export default function PassportPage() {
             )}
           </div>
         </section>
-        <section
-          aria-labelledby="passport-history-heading"
-          className="md:col-span-2"
-        >
+        <AchievementsSection />
+        <section aria-labelledby="passport-history-heading" className="mt-6">
           <h2 className="text-xl font-semibold" id="passport-history-heading">
             Completion history
           </h2>

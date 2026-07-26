@@ -1,4 +1,4 @@
-Status: Proposed — pending human decisions and independent Codex design review
+Status: Implemented — independently approved, pending human Git approval
 
 # Slice 6B — Passport Achievements UI
 
@@ -16,9 +16,10 @@ Status: Proposed — pending human decisions and independent Codex design review
 
 ## 1. Status and planning boundary
 
-This document is the **first implementation plan** for Slice 6B. It is a
-proposal only. Every D1–D8 decision in §6 carries `REQUIRES HUMAN APPROVAL`
-and is unapproved until the human explicitly accepts the reviewed plan.
+This document began as the **first implementation plan** for Slice 6B. On
+2026-07-26 the human approved D1-A through D8-A, the documented cache
+side effects, and the 15-primary-file boundary after Review 45 closed every
+Review 44 finding.
 
 This planning task changed no production code, no test code, no accepted
 specification, no dependency, and no configuration. It created exactly two
@@ -268,11 +269,10 @@ decisions deferred by the §17 handoff contract.
 
 ## 6. D1–D8 decision table
 
-Each decision lists the recommendation, alternatives, and impact. Every row
-is **REQUIRES HUMAN APPROVAL**; implementation follows only the approved
-options.
+Each decision preserves the recommendation, alternatives, and impact for
+traceability. The human approved option A for D1-D8 on 2026-07-26.
 
-### D1 — Catalog coverage: all active items vs earned-only — REQUIRES HUMAN APPROVAL
+### D1 — Catalog coverage: all active items vs earned-only — APPROVED (A)
 
 - **Recommended (A): render the full active catalog.** Earned items show
   the unlocked state; all other active items show the locked state. This is
@@ -284,7 +284,7 @@ options.
 - Impact: (A) requires both queries in the section and the locked-card
   design (D3); (B) drops the catalog transport/hook and D3.
 
-### D2 — Section placement — REQUIRES HUMAN APPROVAL
+### D2 — Section placement — APPROVED (A)
 
 - **Recommended (A): between Level Summary (Progress) and Completion
   History**, as a full-width section; the page becomes three stacked
@@ -302,7 +302,7 @@ options.
   sections. The planning instruction fixes the *position* (between summary
   and history); the human decision is the *layout restructuring* cost.
 
-### D3 — Locked-card content — REQUIRES HUMAN APPROVAL
+### D3 — Locked-card content — APPROVED (A)
 
 - **Recommended (A):** decorative icon (code-mapped or fallback), the
   server `name`, the server `description`, and a text **Locked** badge. No
@@ -317,7 +317,7 @@ options.
   the earning criterion text (e.g. "Reach three verified quest
   completions") because the server description already contains it.
 
-### D4 — 503 `progression-not-ready` blast radius — REQUIRES HUMAN APPROVAL
+### D4 — 503 `progression-not-ready` blast radius — APPROVED (A)
 
 - **Recommended (A): section-level bounded state.** An earned-query 503
   replaces only the Achievements section body with the bounded not-ready
@@ -329,7 +329,7 @@ options.
   section-private helpers inside `AchievementsSection.tsx` (Review 44 m1;
   §10); no new error machinery, no shared file.
 
-### D5 — Icon mapping and fallback — REQUIRES HUMAN APPROVAL
+### D5 — Icon mapping and fallback — APPROVED (A)
 
 - **Recommended (A):** an explicit client map from the three known codes to
   Lucide components — `verified-completions-1` → `Footprints`,
@@ -348,7 +348,7 @@ options.
   name is absent the implementer substitutes the closest available icon and
   records it in the completion report — no dependency change is permitted.
 
-### D6 — Show unlock date — REQUIRES HUMAN APPROVAL
+### D6 — Show unlock date — APPROVED (A)
 
 - **Recommended (A): unlocked cards show the `awardedAt` date**, rendered
   as `<time dateTime={awardedAt}>{localized date}</time>` (the
@@ -358,7 +358,7 @@ options.
 - Impact: negligible complexity; date formatting follows the existing
   locale-date convention, not a new formatter.
 
-### D7 — Empty-state semantics — REQUIRES HUMAN APPROVAL
+### D7 — Empty-state semantics — APPROVED (A)
 
 - **Recommended (A):**
   - earned empty (normal new-user state): **not an error** — the grid
@@ -372,7 +372,7 @@ options.
   occurs; the bounded note is more honest.
 - Impact: one additional small render branch and one test case.
 
-### D8 — Confirmation of exclusions — REQUIRES HUMAN APPROVAL
+### D8 — Confirmation of exclusions — APPROVED (A)
 
 - **Recommended (A): explicitly confirm** that progress display, thresholds
   as data, streaks, toasts, unlock animations, other users' achievements,
@@ -936,29 +936,30 @@ A Slice 6B implementation is ready for commit only when:
    concentrated correction pass, one targeted closure check — the AGENTS.md
    bounded workflow).
 
-Process for this plan itself: this plan and its prompt record are the
-planning evidence. The next step is the **independent Codex design review**
-of this plan (read-only). After the human resolves D1–D8 and accepts the
-reviewed plan, Codex implements as sole implementation owner on a fresh
-`feat/` branch from `main`.
+Process for this plan itself: Review 44 identified M1/m1/m2, Kimi K3 made
+the single concentrated planning correction, and Review 45 closed all three.
+The human then approved the complete decision checklist. Codex implemented
+as sole owner. Review 46 independently approved the implementation with
+0 Blockers, 0 Majors, and 2 non-blocking Minors; Codex corrected both in one
+concentrated pass and reran the complete frontend gates.
 
 ## 19. Human approval checklist
 
-- [ ] D1 — full catalog vs earned-only (recommendation: full catalog)
-- [ ] D2 — section placement and layout restructuring (recommendation:
+- [x] D1 — full catalog vs earned-only (approved: full catalog)
+- [x] D2 — section placement and layout restructuring (approved:
       between summary and history, stacked sections)
-- [ ] D3 — locked-card content (recommendation: icon + name + description
+- [x] D3 — locked-card content (approved: icon + name + description
       + Locked badge, no progress)
-- [ ] D4 — 503 blast radius (recommendation: section-level bounded)
-- [ ] D5 — icon mapping/fallback (recommendation: Footprints / TrendingUp /
+- [x] D4 — 503 blast radius (approved: section-level bounded)
+- [x] D5 — icon mapping/fallback (approved: Footprints / TrendingUp /
       Medal, Award fallback, guarded iconUrl)
-- [ ] D6 — unlock date display (recommendation: show `awardedAt` date on
+- [x] D6 — unlock date display (approved: show `awardedAt` date on
       unlocked cards)
-- [ ] D7 — empty states (recommendation: earned-empty → all-locked grid;
+- [x] D7 — empty states (approved: earned-empty → all-locked grid;
       catalog-empty → bounded note)
-- [ ] D8 — exclusions confirmed (progress, thresholds, streaks, toasts,
+- [x] D8 — exclusions confirmed (progress, thresholds, streaks, toasts,
       animations, other users, write endpoints, backend changes — all out)
-- [ ] Cache-contract extensions approved (`syncAuthoritativeCompletion` +
+- [x] Cache-contract extensions approved (`syncAuthoritativeCompletion` +
       `PRIVATE_SERVER_QUERY_KEYS`, §11 side effects accepted)
-- [ ] File map and 15-file count approved (§16)
-- [ ] Independent Codex design review completed before implementation
+- [x] File map and 15-file count approved (§16)
+- [x] Independent Codex design review completed before implementation

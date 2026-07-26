@@ -64,8 +64,10 @@ function historyWith(title: string) {
 const EXPECTED_CLEANUP_ORDER = [
   'cancel:progression',
   'cancel:passport',
+  'cancel:achievements',
   'remove:progression',
   'remove:passport',
+  'remove:achievements',
   'setAuth',
 ];
 
@@ -76,14 +78,14 @@ function trackOrder(client: QueryClient, order: string[]) {
   const origSet = client.setQueryData.bind(client);
   vi.spyOn(client, 'cancelQueries').mockImplementation((filters) => {
     const first = (filters?.queryKey as readonly unknown[] | undefined)?.[0];
-    if (first === 'progression' || first === 'passport') {
+    if (first === 'progression' || first === 'passport' || first === 'achievements') {
       order.push(`cancel:${String(first)}`);
     }
     return origCancel(filters);
   });
   vi.spyOn(client, 'removeQueries').mockImplementation((filters) => {
     const first = (filters?.queryKey as readonly unknown[] | undefined)?.[0];
-    if (first === 'progression' || first === 'passport') {
+    if (first === 'progression' || first === 'passport' || first === 'achievements') {
       order.push(`remove:${String(first)}`);
     }
     origRemove(filters);
@@ -98,7 +100,9 @@ function trackOrder(client: QueryClient, order: string[]) {
 
 function privateCacheEntries(client: QueryClient) {
   return client.getQueryCache().findAll()
-    .filter((query) => ['progression', 'passport'].includes(String(query.queryKey[0])));
+    .filter((query) =>
+      ['progression', 'passport', 'achievements']
+        .includes(String(query.queryKey[0])));
 }
 
 /**
@@ -113,7 +117,7 @@ function expectEveryAuthWritePrecededByFullCleanup(order: string[]) {
   expect(setAuthIndexes.length).toBeGreaterThan(0);
   for (const index of setAuthIndexes) {
     const before = order.slice(0, index);
-    for (const required of EXPECTED_CLEANUP_ORDER.slice(0, 4)) {
+    for (const required of EXPECTED_CLEANUP_ORDER.slice(0, 6)) {
       expect(before).toContain(required);
     }
   }
@@ -158,6 +162,12 @@ describe('authenticated-cache lifecycle at principal boundaries', () => {
         return Promise.resolve(jsonResponse({ detail: 'Authentication required.' }, 401));
       }
       if (url.includes('/v1/users/me/passport/completions')) {
+        return Promise.resolve(jsonResponse({ detail: 'Authentication required.' }, 401));
+      }
+      if (url.endsWith('/v1/achievements')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.endsWith('/v1/users/me/achievements')) {
         return Promise.resolve(jsonResponse({ detail: 'Authentication required.' }, 401));
       }
       return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
@@ -225,6 +235,12 @@ describe('authenticated-cache lifecycle at principal boundaries', () => {
             ? historyWith('Aroha river clean-up')
             : historyWith('Kauri planting morning'),
         ));
+      }
+      if (url.endsWith('/v1/achievements')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.endsWith('/v1/users/me/achievements')) {
+        return Promise.resolve(jsonResponse([]));
       }
       return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
     });

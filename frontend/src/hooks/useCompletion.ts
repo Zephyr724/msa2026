@@ -4,6 +4,7 @@ import { useAuthQuery } from './useAuth';
 import { participationKeys } from './useParticipation';
 import { progressionKeys } from './useProgression.ts';
 import { passportKeys } from './usePassportCompletions.ts';
+import { achievementKeys } from './useAchievements.ts';
 import {
   fetchCompletionCodeStatus,
   fetchMyQuestCompletion,
@@ -122,6 +123,9 @@ function syncAuthoritativeCompletion(
     }),
     queryClient.invalidateQueries({
       queryKey: passportKeys.all,
+    }),
+    queryClient.invalidateQueries({
+      queryKey: achievementKeys.all,
     }),
   ]).then(() => undefined);
 }
