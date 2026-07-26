@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import App from '../../src/App.tsx';
 import { queryClient } from '../../src/app/queryClient.ts';
 import { jsonResponse } from '../organizerTestUtils.tsx';
@@ -27,6 +28,7 @@ describe('App shell', () => {
   afterEach(() => {
     queryClient.clear();
     vi.unstubAllGlobals();
+    window.history.replaceState({}, '', '/');
   });
 
   it('renders the public home page and signed-out navigation', async () => {
@@ -37,6 +39,10 @@ describe('App shell', () => {
     expect(
       screen.getByText('Community eco quests across New Zealand'),
     ).toBeInTheDocument();
+    const leaderboardLink = screen.getByRole('link', { name: 'Leaderboard' });
+    expect(leaderboardLink).toHaveAttribute('href', '/leaderboard');
+    expect(within(leaderboardLink).getByText('Leaderboard'))
+      .toHaveClass('hidden sm:inline');
     await waitFor(() => expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument());
   });
 
@@ -52,6 +58,10 @@ describe('App shell', () => {
       const manageLink = await screen.findByRole('link', { name: 'Manage quests' });
       expect(within(manageLink).getByText('Manage quests')).toHaveClass('hidden sm:inline');
 
+      const leaderboardLink = screen.getByRole('link', { name: 'Leaderboard' });
+      expect(within(leaderboardLink).getByText('Leaderboard'))
+        .toHaveClass('hidden sm:inline');
+
       const passportLink = screen.getByRole('link', { name: 'Passport' });
       expect(within(passportLink).getByText('Passport')).toHaveClass('hidden sm:inline');
 
@@ -65,6 +75,34 @@ describe('App shell', () => {
     render(<App />);
 
     await screen.findByRole('link', { name: 'Passport' });
+    expect(screen.getByRole('link', { name: 'Leaderboard' }))
+      .toHaveAttribute('href', '/leaderboard');
     expect(screen.queryByRole('link', { name: 'Manage quests' })).not.toBeInTheDocument();
+  });
+
+  it('serves the leaderboard route publicly without a login redirect', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL): Promise<Response> => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) {
+        return Promise.resolve(new Response(null, { status: 401 }));
+      }
+      if (url.endsWith('/v1/leaderboards/people')) {
+        return Promise.resolve(jsonResponse({
+          scope: 'nz',
+          period: 'allTime',
+          rows: [],
+        }));
+      }
+      return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+    }));
+    const user = userEvent.setup();
+
+    render(<App />);
+    await user.click(screen.getByRole('link', { name: 'Leaderboard' }));
+
+    expect(await screen.findByRole('heading', { name: 'Leaderboard' }))
+      .toBeInTheDocument();
+    expect(screen.getByText('No ranked members yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
   });
 });

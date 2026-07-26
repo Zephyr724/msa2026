@@ -5,6 +5,7 @@ import { participationKeys } from './useParticipation';
 import { progressionKeys } from './useProgression.ts';
 import { passportKeys } from './usePassportCompletions.ts';
 import { achievementKeys } from './useAchievements.ts';
+import { leaderboardKeys } from './useLeaderboard.ts';
 import {
   fetchCompletionCodeStatus,
   fetchMyQuestCompletion,
@@ -126,6 +127,9 @@ function syncAuthoritativeCompletion(
     }),
     queryClient.invalidateQueries({
       queryKey: achievementKeys.all,
+    }),
+    queryClient.invalidateQueries({
+      queryKey: leaderboardKeys.all,
     }),
   ]).then(() => undefined);
 }

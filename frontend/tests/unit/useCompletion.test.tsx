@@ -15,6 +15,7 @@ import { participationKeys } from '../../src/hooks/useParticipation';
 import { progressionKeys } from '../../src/hooks/useProgression.ts';
 import { passportKeys } from '../../src/hooks/usePassportCompletions.ts';
 import { achievementKeys } from '../../src/hooks/useAchievements.ts';
+import { leaderboardKeys } from '../../src/hooks/useLeaderboard.ts';
 import {
   fetchCompletionCodeStatus,
   fetchMyQuestCompletion,
@@ -164,6 +165,9 @@ describe('completion Query hooks', () => {
     });
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: achievementKeys.all,
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: leaderboardKeys.all,
     });
   });
 

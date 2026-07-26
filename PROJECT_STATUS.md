@@ -2,8 +2,8 @@
 
 Last reviewed: 2026-07-26
 
-Current `main` baseline: `ade8f1e` (`Merge pull request #16 from
-Zephyr724/feat/slice-6b-passport-achievements-ui`)
+Current `main` baseline: `5fb7be0` (`Merge pull request #17 from
+Zephyr724/feat/slice-7-simple-leaderboard`)
 
 ## Current Implementation Status
 
@@ -26,6 +26,7 @@ in the linked completion and review evidence.
 | 6A-1 | Persisted achievement catalog, atomic milestone awards and historical backfill | PR #14 | `specs/implementation/reports/06a1-achievement-award-core-completion.md` |
 | 6A-2 | Anonymous achievement catalog and private earned-achievement read APIs | PR #15 | `specs/implementation/reports/06a2-achievement-read-api-completion.md` |
 | 6B | Responsive Passport achievement catalog with authoritative locked/unlocked state and redemption resync | PR #16 | `specs/implementation/reports/06b-passport-achievements-ui-completion.md` |
+| 7A | Anonymous ledger-authoritative NZ/all-time Top-10 people leaderboard backend | PR #17 | `specs/implementation/reports/07a-simple-leaderboard-backend-completion.md` |
 
 The R1 production deployment baseline is also merged through PR #9. It is an
 accepted deployment plan only; it does not prove that production deployment
@@ -33,30 +34,30 @@ has occurred.
 
 ## Current Work
 
-### Slice 7A — Simple Persisted Leaderboard Backend
+### Slice 7B — Simple Leaderboard Frontend
 
-- **Branch:** `feat/slice-7-simple-leaderboard`
-- **Main baseline:** `ade8f1e` (PR #16 merge of Slice 6B)
+- **Branch:** `feat/slice-7b-simple-leaderboard-frontend`
+- **Main baseline:** `5fb7be0` (PR #17 merge of Slice 7A)
 - **Status:** implemented locally by Codex within the approved 13-primary-file
-  backend boundary. The build succeeded with 5 pre-existing EF1002 warnings
-  in unchanged test files; unit tests passed 233/233 and PostgreSQL integration
-  tests passed 275/275. Kimi K3 Review 48 independently approved the
-  implementation with 0 Blockers, 0 Majors, and 2 non-blocking Minors.
-  Review 49 closes the evidence-only Minor; the cosmetic namespace-style
-  Minor is deliberately deferred. The Slice is ready for human Git approval.
-- **Delivered locally:** anonymous NZ/all-time Top-10 people leaderboard,
-  ledger-authoritative XP and completion aggregation, deterministic ordinal
-  ranking, exact privacy-bounded response fields, staged query rejection,
-  reward-pending 503 readiness, DI, and OpenAPI documentation.
-- **Boundary:** no schema, migration, index, dependency, authentication,
-  configuration, frontend, XP write, reconciliation, progression, or
-  achievement behaviour changed.
+  frontend boundary. Targeted tests passed 40/40. Full frontend gates passed
+  with no lint or type errors, 288/288 tests across 31 files, and a successful
+  production build (1,899 modules). Kimi K3 Review 50 independently approved
+  the implementation with 0 Blockers, 0 Majors, and 2 non-blocking
+  evidence/test-table Minors. No post-review code change was made; the Slice
+  is ready for human Git approval.
+- **Delivered locally:** strict leaderboard response validation, cancellable
+  60-second TanStack Query cache, public responsive leaderboard route,
+  accessible fixed-layout ranking table, bounded loading/empty/error/Retry
+  states, all-principal compact navigation, and redemption-driven leaderboard
+  invalidation.
+- **Boundary:** no backend, schema, migration, dependency, configuration,
+  authentication, Zustand store, Web Storage, or excluded leaderboard
+  capability changed.
 
 ### Remaining P0 delivery gaps
 
-- Slice 7A leaderboard backend is implemented, locally verified, and
+- Slice 7B leaderboard frontend is implemented, locally verified, and
   independently approved; it still requires human Git approval and merge.
-- Slice 7B responsive leaderboard frontend, starting from merged 7A.
 - Complete, persisted light/dark/system theme switching using Zustand for
   genuine cross-component UI state.
 - Full frontend/backend/PostgreSQL Dockerization with one documented startup
