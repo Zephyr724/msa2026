@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../src/App.tsx';
 import { queryClient } from '../../src/app/queryClient.ts';
@@ -39,11 +39,18 @@ describe('App shell', () => {
     expect(
       screen.getByText('Community eco quests across New Zealand'),
     ).toBeInTheDocument();
+    const questsLink = screen.getByRole('link', { name: 'Quests' });
+    expect(within(questsLink).getByText('Quests')).toHaveClass('hidden sm:inline');
     const leaderboardLink = screen.getByRole('link', { name: 'Leaderboard' });
     expect(leaderboardLink).toHaveAttribute('href', '/leaderboard');
     expect(within(leaderboardLink).getByText('Leaderboard'))
       .toHaveClass('hidden sm:inline');
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument());
+    const themeSwitcher = screen.getByRole('button', {
+      name: 'Theme preference: System',
+    });
+    expect(within(themeSwitcher).getByText('System')).toHaveClass('hidden lg:inline');
+    const signInLink = await screen.findByRole('link', { name: 'Sign in' });
+    expect(within(signInLink).getByText('Sign in')).toHaveClass('hidden sm:inline');
   });
 
   // Review 39 M1: the complete authenticated cluster — including the
@@ -65,6 +72,9 @@ describe('App shell', () => {
       const passportLink = screen.getByRole('link', { name: 'Passport' });
       expect(within(passportLink).getByText('Passport')).toHaveClass('hidden sm:inline');
 
+      expect(screen.getAllByRole('button', { name: 'Theme preference: System' }))
+        .toHaveLength(1);
+
       const signOut = screen.getByRole('button', { name: 'Sign out' });
       expect(within(signOut).getByText('Sign out')).toHaveClass('hidden sm:inline');
     },
@@ -77,6 +87,8 @@ describe('App shell', () => {
     await screen.findByRole('link', { name: 'Passport' });
     expect(screen.getByRole('link', { name: 'Leaderboard' }))
       .toHaveAttribute('href', '/leaderboard');
+    expect(screen.getByRole('button', { name: 'Theme preference: System' }))
+      .toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Manage quests' })).not.toBeInTheDocument();
   });
 

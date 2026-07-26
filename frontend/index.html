@@ -4,6 +4,28 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const storageKey = 'kiwimpact.theme-preference';
+        const validPreferences = ['light', 'dark', 'system'];
+        let preference = 'system';
+
+        try {
+          const storedPreference = localStorage.getItem(storageKey);
+          if (validPreferences.includes(storedPreference)) {
+            preference = storedPreference;
+          }
+        } catch {
+          // Storage can be unavailable; system preference remains the fallback.
+        }
+
+        const systemPrefersDark = typeof matchMedia === 'function'
+          && matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = preference === 'system'
+          ? (systemPrefersDark ? 'dark' : 'light')
+          : preference;
+      })();
+    </script>
     <title>frontend</title>
   </head>
   <body>

@@ -1,8 +1,19 @@
-import { ClipboardList, IdCard, Leaf, LogOut, Trophy } from 'lucide-react';
+import {
+  ClipboardList,
+  Compass,
+  IdCard,
+  Leaf,
+  LogIn,
+  LogOut,
+  Trophy,
+} from 'lucide-react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
+import ThemeSwitcher from '../components/ThemeSwitcher.tsx';
 import { useAuthQuery, useLogoutMutation } from '../hooks/useAuth.ts';
+import { useThemeSync } from '../hooks/useThemeSync.ts';
 
 export default function AppShell() {
+  useThemeSync();
   const auth = useAuthQuery();
   const logout = useLogoutMutation();
   const navigate = useNavigate();
@@ -35,8 +46,13 @@ export default function AppShell() {
             <span className="hidden sm:inline">Kiwimpact</span>
           </Link>
           <div className="ml-auto flex items-center gap-2">
-            <Link className="btn btn-ghost btn-sm" to="/quests">
-              Quests
+            <Link
+              aria-label="Quests"
+              className="btn btn-ghost btn-sm"
+              to="/quests"
+            >
+              <Compass aria-hidden="true" className="size-4" />
+              <span className="hidden sm:inline">Quests</span>
             </Link>
             <Link
               aria-label="Leaderboard"
@@ -46,6 +62,7 @@ export default function AppShell() {
               <Trophy aria-hidden="true" className="size-4" />
               <span className="hidden sm:inline">Leaderboard</span>
             </Link>
+            <ThemeSwitcher />
             {canManageQuests && (
               <Link
                 aria-label="Manage quests"
@@ -88,8 +105,13 @@ export default function AppShell() {
               </>
             ) : (
               <>
-                <Link className="btn btn-ghost btn-sm" to="/login">
-                  Sign in
+                <Link
+                  aria-label="Sign in"
+                  className="btn btn-ghost btn-sm"
+                  to="/login"
+                >
+                  <LogIn aria-hidden="true" className="size-4" />
+                  <span className="hidden sm:inline">Sign in</span>
                 </Link>
                 <Link
                   aria-label="Create account"

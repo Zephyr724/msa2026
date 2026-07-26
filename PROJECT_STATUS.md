@@ -2,8 +2,8 @@
 
 Last reviewed: 2026-07-26
 
-Current `main` baseline: `5fb7be0` (`Merge pull request #17 from
-Zephyr724/feat/slice-7-simple-leaderboard`)
+Current `main` baseline: `81cfe94` (`Merge pull request #18 from
+Zephyr724/feat/slice-7b-simple-leaderboard-frontend`)
 
 ## Current Implementation Status
 
@@ -27,6 +27,7 @@ in the linked completion and review evidence.
 | 6A-2 | Anonymous achievement catalog and private earned-achievement read APIs | PR #15 | `specs/implementation/reports/06a2-achievement-read-api-completion.md` |
 | 6B | Responsive Passport achievement catalog with authoritative locked/unlocked state and redemption resync | PR #16 | `specs/implementation/reports/06b-passport-achievements-ui-completion.md` |
 | 7A | Anonymous ledger-authoritative NZ/all-time Top-10 people leaderboard backend | PR #17 | `specs/implementation/reports/07a-simple-leaderboard-backend-completion.md` |
+| 7B | Responsive public NZ/all-time leaderboard frontend with strict validation and TanStack Query ownership | PR #18 | `specs/implementation/reports/07b-simple-leaderboard-frontend-completion.md` |
 
 The R1 production deployment baseline is also merged through PR #9. It is an
 accepted deployment plan only; it does not prove that production deployment
@@ -34,32 +35,31 @@ has occurred.
 
 ## Current Work
 
-### Slice 7B — Simple Leaderboard Frontend
+### Slice 8 — Theme Switching
 
-- **Branch:** `feat/slice-7b-simple-leaderboard-frontend`
-- **Main baseline:** `5fb7be0` (PR #17 merge of Slice 7A)
-- **Status:** implemented locally by Codex within the approved 13-primary-file
-  frontend boundary. Targeted tests passed 40/40. Full frontend gates passed
-  with no lint or type errors, 288/288 tests across 31 files, and a successful
-  production build (1,899 modules). Kimi K3 Review 50 independently approved
-  the implementation with 0 Blockers, 0 Majors, and 2 non-blocking
-  evidence/test-table Minors. No post-review code change was made; the Slice
-  is ready for human Git approval.
-- **Delivered locally:** strict leaderboard response validation, cancellable
-  60-second TanStack Query cache, public responsive leaderboard route,
-  accessible fixed-layout ranking table, bounded loading/empty/error/Retry
-  states, all-principal compact navigation, and redemption-driven leaderboard
-  invalidation.
-- **Boundary:** no backend, schema, migration, dependency, configuration,
-  authentication, Zustand store, Web Storage, or excluded leaderboard
-  capability changed.
+- **Branch:** `feat/slice-8-theme-switching`
+- **Main baseline:** `81cfe94` (PR #18 merge of Slice 7B)
+- **Status:** implemented locally by Codex within the corrected 10-primary-file
+  frontend boundary. Targeted theme/Shell tests passed 25/25; the final full
+  frontend gates passed with clean lint and type-check, 308/308 tests across 34
+  files, and a successful production build (1,906 modules). Runtime browser
+  verification observed persisted Light/Dark selections across reload,
+  system-dark initial resolution, accessible selection states, readable public
+  Home/Login/Quests/Leaderboard surfaces, and no horizontal overflow at 375px
+  or the corrected 320px layout. Independent Kimi K3 Review 52 approved the
+  implementation with 0 Blockers, 0 Majors, and 1 non-blocking evidence Minor.
+  The completion report now explicitly records the omitted runtime screen
+  checks, closing the evidence-only Minor; the Slice is ready for human Git
+  approval.
+- **Delivered locally:** Zustand-owned Light/Dark/System preference, guarded
+  bare-literal Web Storage persistence, pre-paint document-root daisyUI theme
+  application, live system-theme synchronization with listener cleanup, and a
+  compact cross-route accessible theme disclosure.
+- **Boundary:** no backend, API, schema, migration, dependency, authentication,
+  Docker, deployment, accepted-spec, or server-state ownership change.
 
 ### Remaining P0 delivery gaps
 
-- Slice 7B leaderboard frontend is implemented, locally verified, and
-  independently approved; it still requires human Git approval and merge.
-- Complete, persisted light/dark/system theme switching using Zustand for
-  genuine cross-component UI state.
 - Full frontend/backend/PostgreSQL Dockerization with one documented startup
   path.
 - Same-origin production deployment and observed deployed behaviour.
