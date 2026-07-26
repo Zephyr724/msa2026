@@ -1,7 +1,27 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import App from '../../src/App.tsx';
 import { queryClient } from '../../src/app/queryClient.ts';
+import { jsonResponse } from '../organizerTestUtils.tsx';
+
+function sessionWith(roles: string[]) {
+  return {
+    userId: 'user-nav',
+    displayName: 'Navigator',
+    email: 'nav@example.test',
+    roles,
+  };
+}
+
+function stubSessionFetch(session: unknown) {
+  vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL): Promise<Response> => {
+    const url = String(input);
+    if (url.endsWith('/v1/auth/me')) {
+      return Promise.resolve(jsonResponse(session));
+    }
+    return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+  }));
+}
 
 describe('App shell', () => {
   afterEach(() => {
@@ -18,5 +38,33 @@ describe('App shell', () => {
       screen.getByText('Community eco quests across New Zealand'),
     ).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument());
+  });
+
+  // Review 39 M1: the complete authenticated cluster — including the
+  // management item — must fit at 320/375px using the existing
+  // compact-label idiom (icon + `hidden sm:inline` label + aria-label).
+  it.each(['Organizer', 'Admin'])(
+    'compacts the %s navigation cluster below the sm breakpoint',
+    async (role) => {
+      stubSessionFetch(sessionWith([role]));
+      render(<App />);
+
+      const manageLink = await screen.findByRole('link', { name: 'Manage quests' });
+      expect(within(manageLink).getByText('Manage quests')).toHaveClass('hidden sm:inline');
+
+      const passportLink = screen.getByRole('link', { name: 'Passport' });
+      expect(within(passportLink).getByText('Passport')).toHaveClass('hidden sm:inline');
+
+      const signOut = screen.getByRole('button', { name: 'Sign out' });
+      expect(within(signOut).getByText('Sign out')).toHaveClass('hidden sm:inline');
+    },
+  );
+
+  it('does not render the management item for a Member', async () => {
+    stubSessionFetch(sessionWith(['Member']));
+    render(<App />);
+
+    await screen.findByRole('link', { name: 'Passport' });
+    expect(screen.queryByRole('link', { name: 'Manage quests' })).not.toBeInTheDocument();
   });
 });

@@ -251,6 +251,40 @@
 - Passport includes Home Community label only when `ShowCommunityOnPassport` is enabled.
 - Community Participation uses `CommunityRegionIdAtAward` snapshot — no current-HomeCommunity filtering.
 
+**Implemented subset (Slice 5B, 2026-07-26):** only
+`GET /api/v1/users/me/passport/completions` is implemented, with a narrower
+record set than the long-term contract above. The other two Passport routes
+(`/users/me/passport`, `/users/me/passport/community-participation`) remain
+unimplemented future direction.
+
+- **Record set:** the authenticated caller's `QuestCompletion` rows with
+  `Status == Verified` and `Method == CompletionCode` only (the only status
+  and method currently implemented). The accepted one-record-per-Quest
+  precedence above (Verified > Pending EvidenceClaim > SelfReported > latest
+  Rejected) remains the unimplemented long-term direction; a future
+  completion-method Slice must broaden the backend filter, DTO/validators,
+  and UI labels together.
+- **Query:** `page` (1-based, default 1, values < 1 normalize to 1) and
+  `pageSize` (default 12, < 1 normalizes to 12, clamped to 50). Ordered by
+  `VerifiedAtUtc DESC` with explicit nulls-last semantics, tie-break `Id
+  ASC`.
+- **Response 200:** the standard `PagedResponse<T>` envelope whose items
+  have exactly these keys: `completionId`, `questId`, `questTitle`,
+  `questCategory`, `questStatus`, `status`, `method`, `completedAtUtc`,
+  `verifiedAtUtc`, `xpAmount`. `questTitle`/`questCategory`/`questStatus`
+  reflect the Quest's current mutable row (no completion-time snapshot).
+  `xpAmount` is the joined `XpTransaction.XpAmount`, or `null` for an
+  ordinary (non-null-timestamp) reward-pending completion. `verifiedAtUtc`
+  is non-null for every returned row by construction (see 503 below).
+- **Errors:** `401` anonymous or unparseable identity; `404` an
+  authenticated principal without a `UserProfile` row (an explicit
+  profile-existence check precedes any page composition); `503`
+  `progression-not-ready` when the caller owns a Verified completion with a
+  null `VerifiedAtUtc` (the unprocessable invariant failure — no page is
+  composed for that caller). Responses contain no email, user ID, Home
+  Community, region/community labels, evidence, code material, claims,
+  review notes, participation IDs, or location data.
+
 ### 2.12 Achievements
 
 | Method | Route                           | Auth    | Purpose                          |

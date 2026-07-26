@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchCurrentSession, login, logout, register } from '../lib/api/auth.ts';
+import { authQueryKey, clearPrivateServerState } from '../lib/api/privateCache.ts';
 
-export const authQueryKey = ['auth', 'me'] as const;
+// Re-exported so existing consumers can keep importing it from this module;
+// the definition lives in `lib/api/privateCache.ts` so the API layer does
+// not depend upward on this hook module.
+export { authQueryKey };
 
 export function useAuthQuery() {
   return useQuery({
@@ -16,7 +20,12 @@ export function useLoginMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: login,
-    onSuccess: (session) => queryClient.setQueryData(authQueryKey, session),
+    // B1: the previous principal's private queries are cancelled and removed
+    // before the new session is installed — never the other way around.
+    onSuccess: async (session) => {
+      await clearPrivateServerState(queryClient);
+      queryClient.setQueryData(authQueryKey, session);
+    },
   });
 }
 
@@ -28,6 +37,10 @@ export function useLogoutMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: logout,
-    onSuccess: () => queryClient.setQueryData(authQueryKey, null),
+    // B1: private cleanup completes before the auth entry becomes null.
+    onSuccess: async () => {
+      await clearPrivateServerState(queryClient);
+      queryClient.setQueryData(authQueryKey, null);
+    },
   });
 }

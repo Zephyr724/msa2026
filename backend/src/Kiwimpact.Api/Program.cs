@@ -201,6 +201,7 @@ builder.Services.AddScoped<IQuestManagementService, QuestManagementService>();
 builder.Services.AddScoped<IQuestParticipationService, QuestParticipationService>();
 builder.Services.AddScoped<IQuestCompletionService, QuestCompletionService>();
 builder.Services.AddScoped<IProgressionService, ProgressionService>();
+builder.Services.AddScoped<IPassportService, PassportService>();
 
 var app = builder.Build();
 

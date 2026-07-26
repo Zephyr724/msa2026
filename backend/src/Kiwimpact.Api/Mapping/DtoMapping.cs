@@ -203,6 +203,21 @@ internal static class DtoMapping
             state.RankTitle);
     }
 
+    public static PassportCompletionItemDto ToDto(this PassportCompletionItem item)
+    {
+        return new PassportCompletionItemDto(
+            item.CompletionId,
+            item.QuestId,
+            item.QuestTitle,
+            item.QuestCategory.ToString(),
+            item.QuestStatus.ToString(),
+            item.Status.ToString(),
+            item.Method.ToString(),
+            item.CompletedAtUtc.ToString("O"),
+            item.VerifiedAtUtc.ToString("O"),
+            item.XpAmount);
+    }
+
     public static CreateQuestCommand ToCommand(this CreateQuestRequest request) => new(
         request.Title,
         request.Description,
