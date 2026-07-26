@@ -292,6 +292,32 @@ unimplemented future direction.
 | `GET`  | `/api/v1/achievements`          | None    | List all achievements (catalog). |
 | `GET`  | `/api/v1/users/me/achievements` | Member+ | List own earned achievements.    |
 
+`GET /api/v1/achievements` is anonymous and returns a bare array of active
+catalog rows ordered by `code ASC`. Each item has exactly six keys:
+`id`, `code`, `name`, `description`, `iconUrl`, `category`. `id` is a UUID;
+`iconUrl` is nullable; `category` is the plain string `Milestone` for the
+Slice 6A catalog. There is no pagination, filtering, request body, or
+authentication error contract.
+
+`GET /api/v1/users/me/achievements` is self-only for Member, Organizer, and
+Admin. Identity comes only from the authenticated `NameIdentifier`; no
+route/query/body user selector is accepted. A `200` response is a bare array
+ordered by `awardedAt ASC`, then `code ASC`. Each active earned item has
+exactly seven keys: `achievementId`, `code`, `name`, `description`,
+`iconUrl`, `category`, `awardedAt`. Display fields come from the current
+active catalog row; `awardedAt` is the persisted award-effective timestamp
+formatted with the round-trip (`O`) convention. Inactive earned rows persist
+but are excluded.
+
+Errors for the self route: `401` for anonymous or unparseable identity;
+`404` for an authenticated principal without a `UserProfile` (checked
+first); `503` `progression-not-ready` when the caller has either a Verified
+completion without its `XpTransaction` or enough committed XP transactions
+for an active known milestone without the matching `UserAchievement`.
+Readiness is caller-scoped and evaluated on every request. Responses expose
+no user ID, email, community/region data, completion evidence, code material,
+claim data, `SourceCompletionId`, or `XpTransactionId`.
+
 ### 2.13 Community Challenges
 
 | Method  | Route                                            | Auth    | Role                                                                                                                                                                                                                                                                                                               | Purpose                                         |

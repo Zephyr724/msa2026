@@ -2,8 +2,8 @@
 
 Last reviewed: 2026-07-26
 
-Current `main` baseline: `2706e0c` (`Merge pull request #13 from
-Zephyr724/05b-passport-lite`)
+Current `main` baseline: `a35ee86` (`Merge pull request #14 from
+Zephyr724/feat/slice-6a-simple-achievements-backend`)
 
 ## Current Implementation Status
 
@@ -23,6 +23,7 @@ in the linked completion and review evidence.
 | 4B-2 | Completion Code Organizer and Member frontend flows | PR #11 | `specs/implementation/reports/04b2-completion-code-frontend-completion.md` |
 | 5A | Server-authoritative XP ledger, reconciliation, levels and rank progression | PR #12 | `specs/implementation/reports/05a-xp-ledger-and-progression-core-completion.md` |
 | 5B | Responsive Passport-lite summary, level progress and verified completion history | PR #13 | `specs/implementation/reports/05b-passport-lite-completion.md` |
+| 6A-1 | Persisted achievement catalog, atomic milestone awards and historical backfill | PR #14 | `specs/implementation/reports/06a1-achievement-award-core-completion.md` |
 
 The R1 production deployment baseline is also merged through PR #9. It is an
 accepted deployment plan only; it does not prove that production deployment
@@ -32,16 +33,17 @@ has occurred.
 
 ### Slice 6A — Simple Achievements Backend
 
-- **Branch:** `feat/slice-6a-simple-achievements-backend`
-- **Branch baseline:** `2706e0c`, identical to current `main` when the branch
-  was inspected on 2026-07-26
-- **Status:** Corrected design approved on 2026-07-26 after Review 40.
-  Slice 6A-1 Achievement Award Core is implemented and locally verified
-  (build 0 warnings/errors, unit 216/216, integration 247/247). Review 41's
-  single Major was corrected and independently closed by Kimi K3 in Review
-  42 with verdict `APPROVE`. The human approved the Slice 6A-1 Git commit on
-  2026-07-26. Slice 6A-2 Achievement Read API is the next task and remains
-  unimplemented.
+- **Branch:** `feat/slice-6a2-achievement-read-api`
+- **Branch baseline:** `a35ee86`, identical to current `main` when created on
+  2026-07-26
+- **Status:** Slice 6A-1 is merged through PR #14. Slice 6A-2 Achievement
+  Read API is implemented and locally verified (build 0 warnings/errors,
+  unit 218/218, integration 257/257). Review 43 independently approved it
+  with 0 Blockers, 0 Majors, and 1 non-blocking Minor test-evidence
+  suggestion. A subsequent CI precision failure was corrected test-only and
+  the same change also closed that Minor by distinguishing `awardedAt` primary
+  ordering from the `code` tie-break; the exact CI command now passes
+  locally. The correction remains uncommitted and awaits human Git approval.
 - **Intended P0 outcome:** at least three simple persisted achievements,
   server-authoritative and idempotent award behaviour, and the accepted
   achievement read APIs.
@@ -52,10 +54,9 @@ has occurred.
 
 ### Remaining P0 delivery gaps
 
-- Achievement catalog/earned read APIs (Slice 6A-2) and Member-facing
-  achievement UI; the three persisted milestones and award core are
-  implemented on the active Slice 6A branch but are not yet merged to
-  `main`.
+- Member-facing achievement UI. The three persisted milestones and award
+  core are merged to `main`; the catalog/earned read APIs are implemented on
+  the active Slice 6A-2 branch and await independent review and merge.
 - One simple persisted leaderboard and responsive frontend.
 - Complete, persisted light/dark/system theme switching using Zustand for
   genuine cross-component UI state.

@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IQuestCompletionRepository, QuestCompletionRepository>();
         services.AddScoped<IXpLedgerRepository, XpLedgerRepository>();
         services.AddScoped<IPassportRepository, PassportRepository>();
+        services.AddScoped<IAchievementRepository, AchievementRepository>();
         services.AddScoped<AchievementAwardService>();
         services.AddSingleton<XpReconciliationRunner>();
         services.AddSingleton<AchievementBackfillRunner>();
