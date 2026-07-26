@@ -348,6 +348,19 @@ claim data, `SourceCompletionId`, or `XpTransactionId`.
 | `GET`  | `/api/v1/leaderboards/people`    | None    | People leaderboard. Supports `scope` (myCommunity, auckland, nz), `period` (weekly, monthly, allTime), `page`, `pageSize`. |
 | `GET`  | `/api/v1/leaderboards/people/me` | Member+ | Current Member's position, XP, and context rows for the given scope/period.                                                |
 
+**Staged P0 implementation (Slice 7A):** only the anonymous
+`GET /api/v1/leaderboards/people` route is currently implemented, with
+`scope=nz` and `period=allTime` (both optional and defaulted), a fixed Top 10,
+and no pagination or `/me` endpoint. Any empty or unsupported scope/period,
+or any supplied `page`/`pageSize`, returns 400. Rows use ordinal ranks after
+ordering by total XP descending, verified completion count descending,
+case-folded display name ascending, then internal UserId ascending; UserId is
+never serialized. The exact response is
+`{ scope, period, rows[{ rank, displayName, totalXp, verifiedCompletionCount }] }`.
+While any Verified completion lacks its XP transaction, the route returns
+503 `leaderboard-not-ready`. All other capabilities in this section remain
+accepted future direction.
+
 **Important error conditions:**
 
 - `myCommunity` scope requires authentication. 401 if unauthenticated.
