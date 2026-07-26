@@ -230,7 +230,7 @@ internal static class DtoMapping
             item.Status.ToString(),
             item.Method.ToString(),
             item.CompletedAtUtc.ToString("O"),
-            item.VerifiedAtUtc.ToString("O"),
+            item.VerifiedAtUtc?.ToString("O"),
             item.XpAmount);
     }
 

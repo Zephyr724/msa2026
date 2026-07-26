@@ -25,6 +25,7 @@ public sealed class QuestCompletion
     public Quest? Quest { get; internal set; }
     public QuestParticipation? Participation { get; internal set; }
     public Region? CommunityRegionAtCompletion { get; internal set; }
+    public EvidenceClaimDetail? EvidenceClaimDetail { get; internal set; }
 
     public static QuestCompletion CreateVerifiedWithCode(
         Guid userId,
@@ -65,5 +66,96 @@ public sealed class QuestCompletion
             CreatedAt = timestamp,
             UpdatedAt = timestamp,
         };
+    }
+
+    public static QuestCompletion CreateEvidenceClaim(
+        Guid userId,
+        Quest quest,
+        Guid? participationId,
+        Guid? communityRegionIdAtCompletion,
+        DateTimeOffset completedAt,
+        DateTimeOffset now)
+    {
+        EnsureClaimIdentity(userId, quest);
+        var timestamp = now.ToUniversalTime();
+        return new QuestCompletion
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            QuestId = quest.Id,
+            ParticipationId = participationId,
+            Method = CompletionMethod.EvidenceClaim,
+            Status = QuestCompletionStatus.Pending,
+            CompletedAt = completedAt.ToUniversalTime(),
+            RewardDifficultySnapshot = quest.Difficulty,
+            CommunityRegionIdAtCompletion = communityRegionIdAtCompletion,
+            CreatedAt = timestamp,
+            UpdatedAt = timestamp,
+        };
+    }
+
+    public static QuestCompletion CreateSelfReported(
+        Guid userId,
+        Quest quest,
+        Guid? participationId,
+        DateTimeOffset completedAt,
+        DateTimeOffset now)
+    {
+        EnsureClaimIdentity(userId, quest);
+        var timestamp = now.ToUniversalTime();
+        return new QuestCompletion
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            QuestId = quest.Id,
+            ParticipationId = participationId,
+            Method = CompletionMethod.SelfReported,
+            Status = QuestCompletionStatus.SelfReported,
+            CompletedAt = completedAt.ToUniversalTime(),
+            RewardDifficultySnapshot = quest.Difficulty,
+            CreatedAt = timestamp,
+            UpdatedAt = timestamp,
+        };
+    }
+
+    public void UpdatePendingClaim(DateTimeOffset completedAt, DateTimeOffset now)
+    {
+        EnsurePendingClaim();
+        CompletedAt = completedAt.ToUniversalTime();
+        UpdatedAt = now.ToUniversalTime();
+    }
+
+    public void ApproveEvidenceClaim(DateTimeOffset now)
+    {
+        EnsurePendingClaim();
+        var timestamp = now.ToUniversalTime();
+        Status = QuestCompletionStatus.Verified;
+        VerifiedAtUtc = timestamp;
+        UpdatedAt = timestamp;
+    }
+
+    public void RejectEvidenceClaim(DateTimeOffset now)
+    {
+        EnsurePendingClaim();
+        Status = QuestCompletionStatus.Rejected;
+        UpdatedAt = now.ToUniversalTime();
+    }
+
+    private void EnsurePendingClaim()
+    {
+        if (Method != CompletionMethod.EvidenceClaim ||
+            Status != QuestCompletionStatus.Pending)
+        {
+            throw new InvalidOperationException("Only a pending evidence claim can be changed.");
+        }
+    }
+
+    private static void EnsureClaimIdentity(Guid userId, Quest quest)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("Authenticated user is required.", nameof(userId));
+        ArgumentNullException.ThrowIfNull(quest);
+        if (quest.Id == Guid.Empty)
+            throw new ArgumentException("Quest is required.", nameof(quest));
     }
 }

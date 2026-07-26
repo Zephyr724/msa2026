@@ -14,6 +14,10 @@ public enum QuestCompletionError
     NoActiveParticipation,
     AlreadyCompleted,
     InvalidCompletionCode,
+    PendingClaimExists,
+    SelfReportExists,
+    ClaimAlreadyReviewed,
+    InvalidEvidence,
     EmptyValidityWindow,
     Concurrency,
 }
@@ -43,7 +47,10 @@ public sealed record CompletionCodeStatus(
 public enum MyQuestCompletionStatus
 {
     None,
+    Pending,
     Verified,
+    Rejected,
+    SelfReported,
 }
 
 public sealed record MyQuestCompletionState(
@@ -58,13 +65,53 @@ public sealed record MyQuestCompletionState(
     public static MyQuestCompletionState FromCompletion(QuestCompletion completion)
     {
         ArgumentNullException.ThrowIfNull(completion);
+        var status = completion.Status switch
+        {
+            QuestCompletionStatus.Pending => MyQuestCompletionStatus.Pending,
+            QuestCompletionStatus.Verified => MyQuestCompletionStatus.Verified,
+            QuestCompletionStatus.Rejected => MyQuestCompletionStatus.Rejected,
+            QuestCompletionStatus.SelfReported => MyQuestCompletionStatus.SelfReported,
+            _ => throw new ArgumentOutOfRangeException(nameof(completion)),
+        };
         return new MyQuestCompletionState(
-            MyQuestCompletionStatus.Verified,
+            status,
             completion.Method,
             completion.CompletedAt,
             completion.VerifiedAtUtc);
     }
 }
+
+public sealed record EvidenceClaimInput(
+    string? Description,
+    string? EvidenceUrl,
+    bool UserDeclaration,
+    DateTimeOffset CompletedAtUtc);
+
+public sealed record EvidenceClaimRecord(
+    Guid ClaimId,
+    Guid UserId,
+    Guid QuestId,
+    string QuestTitle,
+    QuestCompletionStatus Status,
+    DateTimeOffset CompletedAtUtc,
+    DateTimeOffset CreatedAtUtc,
+    string? Description,
+    string? EvidenceUrl,
+    bool UserDeclaration,
+    string? ReviewNote,
+    Guid? ReviewedByUserId,
+    DateTimeOffset? ReviewedAtUtc,
+    DateTimeOffset? EvidencePurgedAtUtc);
+
+public sealed record EvidenceClaimSummary(
+    Guid ClaimId,
+    Guid UserId,
+    Guid QuestId,
+    string QuestTitle,
+    QuestCompletionStatus Status,
+    DateTimeOffset CompletedAtUtc,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? ReviewedAtUtc);
 
 public sealed record CompletionCodeValidity(
     DateTimeOffset ValidFromUtc,

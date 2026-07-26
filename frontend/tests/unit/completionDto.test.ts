@@ -117,6 +117,21 @@ describe('current-user completion state DTO validation', () => {
     expect(validateMyQuestCompletion(verifiedCompletion)).toEqual(verifiedCompletion);
   });
 
+  it('accepts pending evidence and self-reported variants without verification time', () => {
+    expect(validateMyQuestCompletion({
+      status: 'Pending',
+      method: 'EvidenceClaim',
+      completedAtUtc: '2026-07-27T00:00:00Z',
+      verifiedAtUtc: null,
+    }).status).toBe('Pending');
+    expect(validateMyQuestCompletion({
+      status: 'SelfReported',
+      method: 'SelfReported',
+      completedAtUtc: '2026-07-27T00:00:00Z',
+      verifiedAtUtc: null,
+    }).status).toBe('SelfReported');
+  });
+
   it('rejects identity, quest, reward, and plaintext fields', () => {
     expect(() => validateMyQuestCompletion({ ...verifiedCompletion, completionId: 'id' }))
       .toThrow();
@@ -131,9 +146,9 @@ describe('current-user completion state DTO validation', () => {
   });
 
   it('rejects unknown enum values and malformed fields', () => {
-    expect(() => validateMyQuestCompletion({ ...noneCompletion, status: 'Pending' }))
+    expect(() => validateMyQuestCompletion({ ...noneCompletion, status: 'Unknown' }))
       .toThrow();
-    expect(() => validateMyQuestCompletion({ ...verifiedCompletion, method: 'EvidenceClaim' }))
+    expect(() => validateMyQuestCompletion({ ...verifiedCompletion, method: 'Unknown' }))
       .toThrow();
     expect(() => validateMyQuestCompletion({ ...verifiedCompletion, completedAtUtc: 'yesterday' }))
       .toThrow();

@@ -15,6 +15,7 @@ public sealed class KiwimpactDbContext
     public DbSet<QuestImage> QuestImages => Set<QuestImage>();
     public DbSet<QuestParticipation> QuestParticipations => Set<QuestParticipation>();
     public DbSet<QuestCompletion> QuestCompletions => Set<QuestCompletion>();
+    public DbSet<EvidenceClaimDetail> EvidenceClaimDetails => Set<EvidenceClaimDetail>();
     public DbSet<CompletionCode> CompletionCodes => Set<CompletionCode>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<XpTransaction> XpTransactions => Set<XpTransaction>();

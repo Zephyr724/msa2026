@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useAuthQuery } from './useAuth';
 import { participationKeys } from './useParticipation';
 import { progressionKeys } from './useProgression.ts';
@@ -11,9 +11,15 @@ import {
   fetchMyQuestCompletion,
   generateOrRotateCompletionCode,
   redeemCompletionCode,
+  submitEvidenceClaim,
+  selfReportCompletion,
+  fetchMyClaims,
+  fetchPendingClaims,
+  fetchAdminClaim,
+  reviewEvidenceClaim,
 } from '../lib/api/completion';
 import { ApiError } from '../lib/api/apiFetch';
-import type { GeneratedCompletionCodeDto } from '../types/completion';
+import type { EvidenceClaimInput, GeneratedCompletionCodeDto } from '../types/completion';
 
 export const completionCodeKeys = {
   status: (questId: string) =>
@@ -22,6 +28,9 @@ export const completionCodeKeys = {
 
 export const completionKeys = {
   detail: (questId: string) => ['quest', questId, 'my-completion'] as const,
+  claims: ['claims', 'me'] as const,
+  adminClaims: ['claims', 'admin'] as const,
+  adminClaim: (claimId: string) => ['claims', 'admin', claimId] as const,
 };
 
 export function useCompletionCodeStatusQuery(questId: string) {
@@ -40,6 +49,63 @@ export function useMyQuestCompletionQuery(questId: string) {
     queryFn: () => fetchMyQuestCompletion(questId),
     enabled: Boolean(questId && auth.data),
     retry: false,
+  });
+}
+
+export function useSubmitEvidenceClaim(questId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: EvidenceClaimInput) => submitEvidenceClaim(questId, input),
+    onSuccess: () => syncAuthoritativeCompletion(queryClient, questId),
+  });
+}
+
+export function useSelfReportCompletion(questId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (completedAtUtc: string) => selfReportCompletion(questId, completedAtUtc),
+    onSuccess: () => syncAuthoritativeCompletion(queryClient, questId),
+  });
+}
+
+export function useMyClaims() {
+  return useQuery({
+    queryKey: completionKeys.claims,
+    queryFn: fetchMyClaims,
+    retry: false,
+  });
+}
+
+export function usePendingClaims(enabled = true) {
+  return useQuery({
+    queryKey: completionKeys.adminClaims,
+    queryFn: fetchPendingClaims,
+    enabled,
+    retry: false,
+  });
+}
+
+export function useAdminClaim(claimId: string) {
+  return useQuery({
+    queryKey: completionKeys.adminClaim(claimId),
+    queryFn: () => fetchAdminClaim(claimId),
+    enabled: Boolean(claimId),
+    retry: false,
+  });
+}
+
+export function useReviewEvidenceClaim(claimId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ approve, reviewNote }: { approve: boolean; reviewNote: string }) =>
+      reviewEvidenceClaim(claimId, approve, reviewNote),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: completionKeys.adminClaims }),
+        queryClient.invalidateQueries({ queryKey: completionKeys.adminClaim(claimId) }),
+        queryClient.invalidateQueries({ queryKey: leaderboardKeys.all }),
+      ]);
+    },
   });
 }
 
@@ -133,6 +199,9 @@ function syncAuthoritativeCompletion(
     }),
     queryClient.invalidateQueries({
       queryKey: leaderboardKeys.all,
+    }),
+    queryClient.invalidateQueries({
+      queryKey: completionKeys.claims,
     }),
   ]).then(() => undefined);
 }

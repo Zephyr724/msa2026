@@ -39,16 +39,9 @@ public sealed class PassportRepository : IPassportRepository
             int pageSize,
             CancellationToken ct = default)
     {
-        var baseQuery = _db.QuestCompletions
+        var rows = await _db.QuestCompletions
             .AsNoTracking()
-            .Where(completion =>
-                completion.UserId == userId &&
-                completion.Status == QuestCompletionStatus.Verified &&
-                completion.Method == CompletionMethod.CompletionCode);
-
-        var totalCount = await baseQuery.CountAsync(ct);
-
-        var rows = await baseQuery
+            .Where(completion => completion.UserId == userId)
             .Join(
                 _db.Quests,
                 completion => completion.QuestId,
@@ -62,17 +55,24 @@ public sealed class PassportRepository : IPassportRepository
             .SelectMany(
                 row => row.transactions.DefaultIfEmpty(),
                 (row, transaction) => new { row.completion, row.quest, transaction })
-            // Explicit nulls-last on the descending timestamp: PostgreSQL
-            // ORDER BY ... DESC defaults to NULLS FIRST, so the leading
-            // non-null marker key keeps timestamped rows first.
-            .OrderByDescending(row => row.completion.VerifiedAtUtc != null)
-            .ThenByDescending(row => row.completion.VerifiedAtUtc)
-            .ThenBy(row => row.completion.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .ToListAsync(ct);
 
-        var items = rows
+        var primary = rows
+            .GroupBy(row => row.completion.QuestId)
+            .Select(group => group
+                .OrderBy(row => Precedence(row.completion.Status))
+                .ThenByDescending(row => row.completion.CreatedAt)
+                .ThenBy(row => row.completion.Id)
+                .First())
+            .OrderByDescending(row =>
+                row.completion.VerifiedAtUtc ?? row.completion.CreatedAt)
+            .ThenBy(row => row.completion.Id)
+            .ToList();
+        var totalCount = primary.Count;
+
+        var items = primary
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(row => new PassportCompletionItem(
                 row.completion.Id,
                 row.quest.Id,
@@ -82,13 +82,19 @@ public sealed class PassportRepository : IPassportRepository
                 row.completion.Status,
                 row.completion.Method,
                 row.completion.CompletedAt,
-                // Non-null by construction: the service answers the bounded
-                // 503 before composing a page for any caller with a
-                // null-timestamp Verified completion.
-                row.completion.VerifiedAtUtc!.Value,
+                row.completion.VerifiedAtUtc,
                 row.transaction == null ? null : row.transaction.XpAmount))
             .ToList();
 
         return (items, totalCount);
     }
+
+    private static int Precedence(QuestCompletionStatus status) => status switch
+    {
+        QuestCompletionStatus.Verified => 0,
+        QuestCompletionStatus.Pending => 1,
+        QuestCompletionStatus.SelfReported => 2,
+        QuestCompletionStatus.Rejected => 3,
+        _ => 4,
+    };
 }

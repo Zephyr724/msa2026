@@ -75,6 +75,9 @@ export default function LoginPage() {
         >
           {login.isPending ? 'Signing in…' : 'Sign in'}
         </button>
+        <Link className="link link-primary block text-right text-sm font-bold" to="/forgot-password">
+          Forgot password?
+        </Link>
       </form>
       <p className="text-center text-sm">
         New to Kiwimpact?{' '}

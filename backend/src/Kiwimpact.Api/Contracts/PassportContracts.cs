@@ -9,5 +9,5 @@ public sealed record PassportCompletionItemDto(
     string Status,
     string Method,
     string CompletedAtUtc,
-    string VerifiedAtUtc,
+    string? VerifiedAtUtc,
     int? XpAmount);

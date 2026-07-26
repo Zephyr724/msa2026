@@ -21,10 +21,10 @@ export interface PassportCompletionItem {
   questTitle: string;
   questCategory: QuestCategory;
   questStatus: PassportQuestStatus;
-  status: 'Verified';
-  method: 'CompletionCode';
+  status: 'Pending' | 'Verified' | 'Rejected' | 'SelfReported';
+  method: 'CompletionCode' | 'EvidenceClaim' | 'SelfReported';
   completedAtUtc: string;
-  verifiedAtUtc: string;
+  verifiedAtUtc: string | null;
   /** Null for an ordinary reward-pending row; never estimated client-side. */
   xpAmount: number | null;
 }

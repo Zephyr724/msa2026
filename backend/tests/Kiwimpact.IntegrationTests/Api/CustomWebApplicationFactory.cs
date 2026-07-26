@@ -67,6 +67,9 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 ["XpReconciliation:Enabled"] = "false",
                 // Same for the achievement backfill hosted service.
                 ["AchievementBackfill:Enabled"] = "false",
+                ["EvidencePurge:Enabled"] = "false",
+                ["Email:Enabled"] = "false",
+                ["Auth:RequireConfirmedEmail"] = "false",
             });
         });
 

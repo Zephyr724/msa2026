@@ -81,6 +81,7 @@ builder.Services.AddOptions<AchievementBackfillOptions>()
         "AchievementBackfill:MaxConsecutiveRowFailures must be positive.")
     .ValidateOnStart();
 builder.Services.AddHostedService<AchievementBackfillHostedService>();
+builder.Services.AddHostedService<EvidencePurgeHostedService>();
 
 builder.Services.AddOptions<CompletionCodeOptions>()
     .Bind(builder.Configuration.GetSection("CompletionCodes"))
@@ -100,7 +101,8 @@ builder.Services
     .AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
         options.User.RequireUniqueEmail = true;
-        options.SignIn.RequireConfirmedEmail = false;
+        options.SignIn.RequireConfirmedEmail =
+            builder.Configuration.GetValue("Auth:RequireConfirmedEmail", true);
         options.Password.RequiredLength = 12;
         options.Password.RequiredUniqueChars = 4;
         options.Password.RequireDigit = true;
@@ -112,7 +114,16 @@ builder.Services
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     })
     .AddEntityFrameworkStores<KiwimpactDbContext>()
+    .AddTokenProvider<PasswordResetTokenProvider>("KiwimpactReset")
     .AddDefaultTokenProviders();
+
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+    options.TokenLifespan = TimeSpan.FromHours(24));
+builder.Services.Configure<PasswordResetTokenProviderOptions>(options =>
+    options.TokenLifespan = TimeSpan.FromMinutes(45));
+builder.Services.Configure<IdentityOptions>(options =>
+    options.Tokens.PasswordResetTokenProvider = "KiwimpactReset");
+builder.Services.AddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {

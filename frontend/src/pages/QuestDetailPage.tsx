@@ -14,6 +14,7 @@ import {
 import { Link, useParams } from 'react-router-dom';
 import QuestCompletionPanel from '../components/quest/QuestCompletionPanel.tsx';
 import QuestParticipationPanel from '../components/quest/QuestParticipationPanel.tsx';
+import TrustedCompletionPanel from '../components/quest/TrustedCompletionPanel.tsx';
 import {
   CATEGORY_PRESENTATION,
   DIFFICULTY_LABELS,
@@ -254,6 +255,7 @@ export default function QuestDetailPage() {
             registrationMode={quest.registrationMode}
             xpAward={quest.xpAward}
           />
+          <TrustedCompletionPanel questId={quest.id} />
         </aside>
       </main>
     </div>

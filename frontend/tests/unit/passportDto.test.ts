@@ -67,11 +67,11 @@ describe('validatePassportCompletionsPage (F1)', () => {
       }))).toThrow();
     expect(() =>
       validatePassportCompletionsPage(validPage({
-        items: [validItem({ status: 'Pending' })],
+        items: [validItem({ status: 'Unknown' })],
       }))).toThrow();
     expect(() =>
       validatePassportCompletionsPage(validPage({
-        items: [validItem({ method: 'EvidenceClaim' })],
+        items: [validItem({ method: 'Unknown' })],
       }))).toThrow();
   });
 
@@ -92,6 +92,18 @@ describe('validatePassportCompletionsPage (F1)', () => {
       validatePassportCompletionsPage(validPage({
         items: [validItem({ verifiedAtUtc: null })],
       }))).toThrow();
+  });
+
+  it('accepts a non-rewarding self-reported Passport record', () => {
+    const result = validatePassportCompletionsPage(validPage({
+      items: [validItem({
+        status: 'SelfReported',
+        method: 'SelfReported',
+        verifiedAtUtc: null,
+        xpAmount: null,
+      })],
+    }));
+    expect(result.items[0]?.status).toBe('SelfReported');
   });
 
   it('rejects fractional, unsafe, and non-positive XP amounts', () => {

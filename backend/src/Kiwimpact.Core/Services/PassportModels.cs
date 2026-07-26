@@ -34,5 +34,5 @@ public sealed record PassportCompletionItem(
     QuestCompletionStatus Status,
     CompletionMethod Method,
     DateTimeOffset CompletedAtUtc,
-    DateTimeOffset VerifiedAtUtc,
+    DateTimeOffset? VerifiedAtUtc,
     int? XpAmount);

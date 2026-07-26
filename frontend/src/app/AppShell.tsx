@@ -41,6 +41,7 @@ export default function AppShell() {
   const canManageQuests = auth.data?.roles.some(
     (role) => role === 'Organizer' || role === 'Admin',
   );
+  const isAdmin = auth.data?.roles.includes('Admin');
   const navigation = auth.data ? memberNavigation : publicNavigation;
 
   async function handleLogout() {
@@ -109,6 +110,11 @@ export default function AppShell() {
                   >
                     <ClipboardList aria-hidden="true" className="size-4" />
                     <span className="hidden xl:inline">Manage</span>
+                  </NavLink>
+                )}
+                {isAdmin && (
+                  <NavLink className="btn btn-ghost btn-sm" to="/admin/reviews">
+                    Review
                   </NavLink>
                 )}
                 <span

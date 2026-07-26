@@ -190,9 +190,8 @@ function renderAuthPage(initialPath: '/login' | '/register') {
     {
       element: <Outlet />,
       children: [
-        { path: '/login', element: initialPath === '/register'
-          ? <p>Registration destination</p>
-          : <LoginPage /> },
+        { path: '/login', element: <LoginPage /> },
+        { path: '/check-email', element: <p>Registration destination</p> },
         { path: '/register', element: <RegisterPage /> },
         { path: '/', element: <p>Signed in destination</p> },
       ],

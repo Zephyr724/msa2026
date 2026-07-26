@@ -192,7 +192,7 @@ public sealed class QuestCompletionPersistenceTests
     }
 
     [Fact]
-    public async Task CompletionHasOnlyApprovedIndexes()
+    public async Task CompletionHasTrustedImpactIndexes()
     {
         using var scope = await _fixture.CreateSeededScopeAsync();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
@@ -209,10 +209,9 @@ public sealed class QuestCompletionPersistenceTests
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Contains("IX_QuestCompletions_ParticipationId", completionIndexes);
         Assert.Contains("UX_QuestCompletions_UserId_QuestId_Verified", completionIndexes);
-        Assert.DoesNotContain(
-            completionIndexes,
-            name => name.Contains("Evidence", StringComparison.OrdinalIgnoreCase) ||
-                name.Contains("SelfReported", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("UX_QuestCompletions_UserId_QuestId_PendingClaim", completionIndexes);
+        Assert.Contains("UX_QuestCompletions_UserId_QuestId_SelfReported", completionIndexes);
+        Assert.Contains("IX_QuestCompletions_Method_Status_CreatedAt", completionIndexes);
     }
 
     private static async Task<string> IndexDefinitionAsync(

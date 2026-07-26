@@ -41,7 +41,7 @@ export default function RegisterPage() {
         password,
         passwordConfirmation,
       });
-      navigate('/login?registered=1');
+      navigate(`/check-email?email=${encodeURIComponent(email.trim())}`);
     } catch {
       // The mutation error is rendered below.
     }

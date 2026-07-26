@@ -73,5 +73,6 @@ public sealed class QuestCompletionConfiguration
 
         builder.HasIndex(completion => completion.QuestId);
         builder.HasIndex(completion => completion.CommunityRegionIdAtCompletion);
+        builder.HasIndex(completion => new { completion.Method, completion.Status, completion.CreatedAt });
     }
 }

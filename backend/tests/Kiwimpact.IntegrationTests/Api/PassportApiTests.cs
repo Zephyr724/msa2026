@@ -380,12 +380,11 @@ public sealed class PassportApiTests
     }
 
     [Fact]
-    public async Task NonCompletionCodeMethodIsExcludedFromItemsAndTotalCount()
+    public async Task EvidenceClaimMethodIsIncludedInPassportHistory()
     {
         var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
         var completion = await SeedCompletionAsync(actor.UserId, QuestDifficulty.Easy);
-        // Simulates a future completion method on an otherwise Verified row.
-        var futureMethodId = await SeedRawSqlCompletionAsync(
+        var evidenceClaimId = await SeedRawSqlCompletionAsync(
             actor.UserId,
             method: "EvidenceClaim",
             verified: true);
@@ -396,13 +395,13 @@ public sealed class PassportApiTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await ReadJsonAsync(response);
-        Assert.Equal(1, json.GetProperty("totalCount").GetInt32());
-        var item = Assert.Single(json.GetProperty("items").EnumerateArray());
-        Assert.Equal(completion.Id, item.GetProperty("completionId").GetGuid());
-        Assert.DoesNotContain(
-            futureMethodId.ToString("D"),
-            json.GetRawText(),
-            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(2, json.GetProperty("totalCount").GetInt32());
+        var items = json.GetProperty("items").EnumerateArray().ToArray();
+        Assert.Contains(items, item =>
+            item.GetProperty("completionId").GetGuid() == completion.Id);
+        Assert.Contains(items, item =>
+            item.GetProperty("completionId").GetGuid() == evidenceClaimId &&
+            item.GetProperty("method").GetString() == "EvidenceClaim");
     }
 
     [Fact]

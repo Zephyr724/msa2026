@@ -12,6 +12,7 @@ import PassportSummaryCard from '../components/passport/PassportSummaryCard.tsx'
 import AchievementsSection from '../components/passport/AchievementsSection.tsx';
 import CompletionHistoryList from '../components/passport/CompletionHistoryList.tsx';
 import PassportPagination from '../components/passport/PassportPagination.tsx';
+import { useMyClaims } from '../hooks/useCompletion.ts';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
@@ -78,6 +79,7 @@ export default function PassportPage() {
   const [page, setPage] = useState(1);
   const history = usePassportCompletions(page, PASSPORT_HISTORY_PAGE_SIZE);
   const queryClient = useQueryClient();
+  const claims = useMyClaims();
 
   // Redemption resync invalidates ['passport']; the history view returns to
   // page 1 so a new Verified completion is visible (m3).
@@ -112,7 +114,7 @@ export default function PassportPage() {
           <p className="kiwi-stat-label">Personal Impact Passport</p>
           <h1 className="mt-2 text-4xl sm:text-5xl">{displayName} — Passport</h1>
           <p className="mt-3 max-w-2xl text-lg text-base-content/62">
-            Your verified participation, progression, and achievements in one place.
+            Your verified, reviewed, and self-reported participation in one place.
           </p>
         </header>
         <div className="mt-8">
@@ -140,9 +142,31 @@ export default function PassportPage() {
           </div>
         </section>
         <AchievementsSection />
+        <section className="kiwi-panel mt-6 p-5" aria-labelledby="claim-history-heading">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="kiwi-stat-label">Evidence-reviewed impact</p>
+              <h3 className="mt-1 text-2xl" id="claim-history-heading">My claims</h3>
+            </div>
+            <Link className="btn btn-ghost btn-sm" to="/settings/password">Account safety</Link>
+          </div>
+          {claims.isPending && <p className="mt-4">Loading claims…</p>}
+          {claims.data?.length === 0 && <p className="mt-4 text-sm text-base-content/60">No evidence claims yet.</p>}
+          <ul className="mt-4 grid gap-3">
+            {claims.data?.map((claim) => (
+              <li className="flex items-center justify-between gap-4 rounded-2xl bg-base-200 p-4" key={claim.claimId}>
+                <div><p className="font-bold">{claim.questTitle}</p>
+                  <p className="text-xs text-base-content/55">{new Date(claim.createdAtUtc).toLocaleDateString()}</p></div>
+                <span className={`badge ${claim.status === 'Verified' ? 'badge-success' : claim.status === 'Rejected' ? 'badge-error' : 'badge-warning'}`}>
+                  {claim.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
         <section aria-labelledby="passport-history-heading" className="mt-6">
           <div className="mb-4">
-            <p className="kiwi-stat-label">Verified record</p>
+            <p className="kiwi-stat-label">Impact record</p>
             <h2 className="mt-1 text-2xl" id="passport-history-heading">
             Completion history
             </h2>

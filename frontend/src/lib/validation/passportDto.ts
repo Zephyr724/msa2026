@@ -59,11 +59,16 @@ function isValidItem(value: unknown): value is PassportCompletionItem {
     && categories.has(value.questCategory)
     && isString(value.questStatus)
     && questStatuses.has(value.questStatus)
-    && value.status === 'Verified'
-    && value.method === 'CompletionCode'
+    && typeof value.status === 'string'
+    && ['Pending', 'Verified', 'Rejected', 'SelfReported'].includes(value.status)
+    && typeof value.method === 'string'
+    && ['CompletionCode', 'EvidenceClaim', 'SelfReported'].includes(value.method)
     && isUtcTimestamp(value.completedAtUtc)
-    && isUtcTimestamp(value.verifiedAtUtc)
-    && isXpAmount(value.xpAmount);
+    && (value.verifiedAtUtc === null || isUtcTimestamp(value.verifiedAtUtc))
+    && isXpAmount(value.xpAmount)
+    && (value.status === 'Verified'
+      ? value.verifiedAtUtc !== null
+      : value.verifiedAtUtc === null && value.xpAmount === null);
 }
 
 /**

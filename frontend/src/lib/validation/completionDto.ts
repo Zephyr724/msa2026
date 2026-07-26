@@ -92,15 +92,17 @@ export function validateMyQuestCompletion(payload: unknown): MyQuestCompletionDt
   return payload as unknown as MyQuestCompletionDto;
 }
 
-/** "None" carries no metadata; "Verified" requires method and both timestamps. */
+/** "None" carries no metadata; only Verified requires a verification timestamp. */
 function isCompletionVariantConsistent(payload: Record<string, unknown>): boolean {
   if (payload.status === 'None') {
     return payload.method === null
       && payload.completedAtUtc === null
       && payload.verifiedAtUtc === null;
   }
-  return typeof payload.method === 'string'
+  const common = typeof payload.method === 'string'
     && methods.has(payload.method)
-    && isUtcTimestamp(payload.completedAtUtc)
-    && isUtcTimestamp(payload.verifiedAtUtc);
+    && isUtcTimestamp(payload.completedAtUtc);
+  return common && (payload.status === 'Verified'
+    ? isUtcTimestamp(payload.verifiedAtUtc)
+    : payload.verifiedAtUtc === null);
 }

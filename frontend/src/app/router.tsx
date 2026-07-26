@@ -14,6 +14,11 @@ import PassportPage from '../pages/PassportPage.tsx';
 import MyQuestsPage from '../pages/MyQuestsPage.tsx';
 import LeaderboardPage from '../pages/LeaderboardPage.tsx';
 import AppShell from './AppShell.tsx';
+import {
+  ChangePasswordPage, CheckEmailPage, ConfirmEmailPage,
+  ForgotPasswordPage, ResetPasswordPage,
+} from '../pages/AccountLifecyclePages.tsx';
+import AdminReviewPage from '../pages/AdminReviewPage.tsx';
 
 export const router = createBrowserRouter([
   {
@@ -24,10 +29,18 @@ export const router = createBrowserRouter([
       { path: '/quests/:questId', element: <QuestDetailPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/check-email', element: <CheckEmailPage /> },
+      { path: '/confirm-email', element: <ConfirmEmailPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/leaderboard', element: <LeaderboardPage /> },
       {
         element: <RequireAuth />,
-        children: [{ path: '/passport', element: <PassportPage /> }],
+        children: [
+          { path: '/passport', element: <PassportPage /> },
+          { path: '/settings/password', element: <ChangePasswordPage /> },
+          { path: '/admin/reviews', element: <AdminReviewPage /> },
+        ],
       },
       {
         element: <RequireAuth />,
