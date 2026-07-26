@@ -42,21 +42,23 @@ describe('theme helpers and UI store persistence', () => {
   it.each(['light', 'dark', 'system'] as const)(
     'round-trips the %s preference as a bare storage value',
     (preference) => {
-      writeStoredThemePreference(localStorage, preference);
+      const getStorage = () => localStorage;
+      writeStoredThemePreference(preference, getStorage);
 
       expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe(preference);
-      expect(readStoredThemePreference(localStorage)).toBe(preference);
+      expect(readStoredThemePreference(getStorage)).toBe(preference);
     },
   );
 
   it('falls back to system for missing and invalid stored values', () => {
-    expect(readStoredThemePreference(localStorage)).toBe('system');
+    const getStorage = () => localStorage;
+    expect(readStoredThemePreference(getStorage)).toBe('system');
 
     localStorage.setItem(THEME_STORAGE_KEY, 'sepia');
-    expect(readStoredThemePreference(localStorage)).toBe('system');
+    expect(readStoredThemePreference(getStorage)).toBe('system');
 
     localStorage.setItem(THEME_STORAGE_KEY, '');
-    expect(readStoredThemePreference(localStorage)).toBe('system');
+    expect(readStoredThemePreference(getStorage)).toBe('system');
   });
 
   it('contains storage read and write failures', () => {
@@ -71,9 +73,36 @@ describe('theme helpers and UI store persistence', () => {
       }),
     };
 
-    expect(readStoredThemePreference(unavailableReader)).toBe('system');
-    expect(() => writeStoredThemePreference(unavailableWriter, 'dark'))
+    expect(readStoredThemePreference(() => unavailableReader)).toBe('system');
+    expect(() => writeStoredThemePreference('dark', () => unavailableWriter))
       .not.toThrow();
+  });
+
+  it('contains failures while acquiring browser storage', () => {
+    const storageDescriptor = Object.getOwnPropertyDescriptor(
+      window,
+      'localStorage',
+    );
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new DOMException(
+          'Storage unavailable',
+          'SecurityError',
+        );
+      },
+    });
+
+    try {
+      expect(readStoredThemePreference()).toBe('system');
+      expect(() => writeStoredThemePreference('dark')).not.toThrow();
+    } finally {
+      if (storageDescriptor) {
+        Object.defineProperty(window, 'localStorage', storageDescriptor);
+      } else {
+        Reflect.deleteProperty(window, 'localStorage');
+      }
+    }
   });
 
   it('persists theme changes without persisting mobile navigation state', () => {

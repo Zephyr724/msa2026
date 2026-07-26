@@ -10,6 +10,18 @@ records every runtime screen not inspected, closing that Minor without changing
 production code or verification results. No Git publication or deployment
 action has been performed.
 
+### Post-merge correction notice
+
+After PR #19 merged, a fresh Codex review found that the original guarded
+storage claim did not cover an exception thrown while evaluating the
+`window.localStorage` property itself. The original helpers contained
+`getItem`/`setItem` exceptions, but the Zustand store supplied
+`window.localStorage` before entering those helpers. The targeted correction is
+tracked separately in
+`specs/implementation/reports/08a-theme-storage-access-correction-completion.md`.
+This notice preserves the original report as implementation-time evidence
+without leaving the superseded storage-availability claim unqualified.
+
 ## Implemented scope
 
 - Added named `ThemePreference` (`light | dark | system`) and `ResolvedTheme`

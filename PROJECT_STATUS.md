@@ -2,8 +2,8 @@
 
 Last reviewed: 2026-07-26
 
-Current `main` baseline: `81cfe94` (`Merge pull request #18 from
-Zephyr724/feat/slice-7b-simple-leaderboard-frontend`)
+Current `main` baseline: `a3e7309` (`Merge pull request #19 from
+Zephyr724/feat/slice-8-theme-switching`)
 
 ## Current Implementation Status
 
@@ -28,6 +28,7 @@ in the linked completion and review evidence.
 | 6B | Responsive Passport achievement catalog with authoritative locked/unlocked state and redemption resync | PR #16 | `specs/implementation/reports/06b-passport-achievements-ui-completion.md` |
 | 7A | Anonymous ledger-authoritative NZ/all-time Top-10 people leaderboard backend | PR #17 | `specs/implementation/reports/07a-simple-leaderboard-backend-completion.md` |
 | 7B | Responsive public NZ/all-time leaderboard frontend with strict validation and TanStack Query ownership | PR #18 | `specs/implementation/reports/07b-simple-leaderboard-frontend-completion.md` |
+| 8 | Persisted Light/Dark/System theme switching with system-theme synchronization and a responsive cross-route switcher | PR #19 | `specs/implementation/reports/08-theme-switching-completion.md` |
 
 The R1 production deployment baseline is also merged through PR #9. It is an
 accepted deployment plan only; it does not prove that production deployment
@@ -35,31 +36,28 @@ has occurred.
 
 ## Current Work
 
-### Slice 8 — Theme Switching
+### Slice 8A — Storage Availability Correction
 
-- **Branch:** `feat/slice-8-theme-switching`
-- **Main baseline:** `81cfe94` (PR #18 merge of Slice 7B)
-- **Status:** implemented locally by Codex within the corrected 10-primary-file
-  frontend boundary. Targeted theme/Shell tests passed 25/25; the final full
-  frontend gates passed with clean lint and type-check, 308/308 tests across 34
-  files, and a successful production build (1,906 modules). Runtime browser
-  verification observed persisted Light/Dark selections across reload,
-  system-dark initial resolution, accessible selection states, readable public
-  Home/Login/Quests/Leaderboard surfaces, and no horizontal overflow at 375px
-  or the corrected 320px layout. Independent Kimi K3 Review 52 approved the
-  implementation with 0 Blockers, 0 Majors, and 1 non-blocking evidence Minor.
-  The completion report now explicitly records the omitted runtime screen
-  checks, closing the evidence-only Minor; the Slice is ready for human Git
-  approval.
-- **Delivered locally:** Zustand-owned Light/Dark/System preference, guarded
-  bare-literal Web Storage persistence, pre-paint document-root daisyUI theme
-  application, live system-theme synchronization with listener cleanup, and a
-  compact cross-route accessible theme disclosure.
+- **Branch:** `fix/slice-8-storage-access`
+- **Main baseline:** `a3e7309` (PR #19 merge of Slice 8)
+- **Status:** targeted post-merge correction implemented locally. A fresh Codex
+  review found that `window.localStorage` was evaluated before the theme
+  helper's exception boundary, so a throwing storage property getter could
+  still fail application initialization. Storage acquisition now occurs inside
+  the guarded helper and a `SecurityError` getter regression test passes.
+  Targeted tests passed 15/15; final frontend gates passed with clean lint and
+  type-check, 309/309 tests across 34 files, and a successful production build
+  of 1,906 modules. Independent targeted closure remains pending.
+- **Review boundary:** the implementation session will run the applicable
+  frontend gates and prepare evidence, then a different session must perform
+  the targeted closure check for the original Major finding.
 - **Boundary:** no backend, API, schema, migration, dependency, authentication,
   Docker, deployment, accepted-spec, or server-state ownership change.
 
 ### Remaining P0 delivery gaps
 
+- Dockerization and deployment work is paused by explicit human instruction
+  while product-experience direction is reconsidered.
 - Full frontend/backend/PostgreSQL Dockerization with one documented startup
   path.
 - Same-origin production deployment and observed deployed behaviour.

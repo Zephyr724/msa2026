@@ -12,9 +12,7 @@ interface UiState {
   setThemePreference: (theme: ThemePreference) => void;
 }
 
-const initialThemePreference = typeof window === 'undefined'
-  ? 'system'
-  : readStoredThemePreference(window.localStorage);
+const initialThemePreference = readStoredThemePreference();
 
 export const useUiStore = create<UiState>((set) => ({
   mobileNavOpen: false,
@@ -23,8 +21,6 @@ export const useUiStore = create<UiState>((set) => ({
     set((state) => ({ mobileNavOpen: !state.mobileNavOpen })),
   setThemePreference: (theme) => {
     set({ themePreference: theme });
-    if (typeof window !== 'undefined') {
-      writeStoredThemePreference(window.localStorage, theme);
-    }
+    writeStoredThemePreference(theme);
   },
 }));
