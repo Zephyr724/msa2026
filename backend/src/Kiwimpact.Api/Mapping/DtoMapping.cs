@@ -218,6 +218,29 @@ internal static class DtoMapping
             item.XpAmount);
     }
 
+    public static AchievementCatalogItemDto ToDto(this AchievementCatalogItem item)
+    {
+        return new AchievementCatalogItemDto(
+            item.Id,
+            item.Code,
+            item.Name,
+            item.Description,
+            item.IconUrl,
+            item.Category);
+    }
+
+    public static EarnedAchievementItemDto ToDto(this EarnedAchievementItem item)
+    {
+        return new EarnedAchievementItemDto(
+            item.AchievementId,
+            item.Code,
+            item.Name,
+            item.Description,
+            item.IconUrl,
+            item.Category,
+            item.AwardedAt.ToString("O"));
+    }
+
     public static CreateQuestCommand ToCommand(this CreateQuestRequest request) => new(
         request.Title,
         request.Description,

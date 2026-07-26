@@ -219,6 +219,7 @@ builder.Services.AddScoped<IQuestParticipationService, QuestParticipationService
 builder.Services.AddScoped<IQuestCompletionService, QuestCompletionService>();
 builder.Services.AddScoped<IProgressionService, ProgressionService>();
 builder.Services.AddScoped<IPassportService, PassportService>();
+builder.Services.AddScoped<IAchievementService, AchievementService>();
 
 var app = builder.Build();
 
