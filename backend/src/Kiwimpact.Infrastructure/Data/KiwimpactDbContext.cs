@@ -18,6 +18,8 @@ public sealed class KiwimpactDbContext
     public DbSet<CompletionCode> CompletionCodes => Set<CompletionCode>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<XpTransaction> XpTransactions => Set<XpTransaction>();
+    public DbSet<Achievement> Achievements => Set<Achievement>();
+    public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
 
     public KiwimpactDbContext(DbContextOptions<KiwimpactDbContext> options)
         : base(options)

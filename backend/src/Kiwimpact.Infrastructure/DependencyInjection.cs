@@ -1,4 +1,5 @@
 using Kiwimpact.Core.Repositories;
+using Kiwimpact.Infrastructure.Achievements;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Reconciliation;
 using Kiwimpact.Infrastructure.Repositories;
@@ -25,7 +26,9 @@ public static class DependencyInjection
         services.AddScoped<IQuestCompletionRepository, QuestCompletionRepository>();
         services.AddScoped<IXpLedgerRepository, XpLedgerRepository>();
         services.AddScoped<IPassportRepository, PassportRepository>();
+        services.AddScoped<AchievementAwardService>();
         services.AddSingleton<XpReconciliationRunner>();
+        services.AddSingleton<AchievementBackfillRunner>();
 
         return services;
     }

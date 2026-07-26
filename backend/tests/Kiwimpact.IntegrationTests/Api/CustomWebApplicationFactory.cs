@@ -65,6 +65,8 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 // Hosted reconciliation must never race seeded API fixtures;
                 // tests invoke reconciliation passes directly instead.
                 ["XpReconciliation:Enabled"] = "false",
+                // Same for the achievement backfill hosted service.
+                ["AchievementBackfill:Enabled"] = "false",
             });
         });
 
