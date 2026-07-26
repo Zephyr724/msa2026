@@ -9,6 +9,8 @@ import OrganizerQuestListPage from '../pages/OrganizerQuestListPage.tsx';
 import OrganizerQuestCreatePage from '../pages/OrganizerQuestCreatePage.tsx';
 import OrganizerQuestEditPage from '../pages/OrganizerQuestEditPage.tsx';
 import RequireManagementAccess from '../components/organizer/RequireManagementAccess.tsx';
+import RequireAuth from '../components/RequireAuth.tsx';
+import PassportPage from '../pages/PassportPage.tsx';
 import AppShell from './AppShell.tsx';
 
 export const router = createBrowserRouter([
@@ -20,6 +22,10 @@ export const router = createBrowserRouter([
       { path: '/quests/:questId', element: <QuestDetailPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      {
+        element: <RequireAuth />,
+        children: [{ path: '/passport', element: <PassportPage /> }],
+      },
       {
         element: <RequireManagementAccess />,
         children: [

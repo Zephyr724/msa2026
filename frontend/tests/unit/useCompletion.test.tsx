@@ -12,6 +12,8 @@ import {
   useRedeemCompletionCode,
 } from '../../src/hooks/useCompletion';
 import { participationKeys } from '../../src/hooks/useParticipation';
+import { progressionKeys } from '../../src/hooks/useProgression.ts';
+import { passportKeys } from '../../src/hooks/usePassportCompletions.ts';
 import {
   fetchCompletionCodeStatus,
   fetchMyQuestCompletion,
@@ -132,6 +134,33 @@ describe('completion Query hooks', () => {
     });
     // The submitted code must not persist as MutationCache variables.
     expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+  });
+
+  it('also invalidates the Passport progression and history keys on success (F17)', async () => {
+    mockRedeem.mockResolvedValue({
+      status: 'Verified',
+      method: 'CompletionCode',
+      completedAtUtc: '2026-07-25T09:00:00Z',
+      verifiedAtUtc: '2026-07-25T09:00:00Z',
+    });
+    const queryClient = createQueryClient();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(
+      () => useRedeemCompletionCode(questId),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    await act(async () => {
+      await result.current('ABCDE23456');
+    });
+
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: progressionKeys.me,
+      exact: true,
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: passportKeys.all,
+    });
   });
 
   it('resyncs authoritative state on a redeem 409 and rethrows without retrying', async () => {

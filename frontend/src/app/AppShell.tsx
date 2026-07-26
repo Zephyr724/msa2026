@@ -1,4 +1,4 @@
-import { Leaf, LogOut } from 'lucide-react';
+import { ClipboardList, IdCard, Leaf, LogOut } from 'lucide-react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthQuery, useLogoutMutation } from '../hooks/useAuth.ts';
 
@@ -39,8 +39,13 @@ export default function AppShell() {
               Quests
             </Link>
             {canManageQuests && (
-              <Link className="btn btn-ghost btn-sm" to="/organizer/quests">
-                Manage quests
+              <Link
+                aria-label="Manage quests"
+                className="btn btn-ghost btn-sm"
+                to="/organizer/quests"
+              >
+                <ClipboardList aria-hidden="true" className="size-4" />
+                <span className="hidden sm:inline">Manage quests</span>
               </Link>
             )}
             {auth.isPending ? (
@@ -49,17 +54,28 @@ export default function AppShell() {
               </span>
             ) : auth.data ? (
               <>
+                <Link
+                  aria-label="Passport"
+                  className="btn btn-ghost btn-sm"
+                  to="/passport"
+                >
+                  <IdCard aria-hidden="true" className="size-4" />
+                  <span className="hidden sm:inline">Passport</span>
+                </Link>
                 <span className="hidden text-sm sm:inline">
                   {auth.data.displayName}
                 </span>
                 <button
+                  aria-label="Sign out"
                   className="btn btn-ghost btn-sm"
                   disabled={logout.isPending}
                   onClick={handleLogout}
                   type="button"
                 >
                   <LogOut aria-hidden="true" className="size-4" />
-                  {logout.isPending ? 'Signing out…' : 'Sign out'}
+                  <span className="hidden sm:inline">
+                    {logout.isPending ? 'Signing out…' : 'Sign out'}
+                  </span>
                 </button>
               </>
             ) : (

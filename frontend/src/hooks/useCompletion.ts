@@ -2,6 +2,8 @@ import { useCallback } from 'react';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useAuthQuery } from './useAuth';
 import { participationKeys } from './useParticipation';
+import { progressionKeys } from './useProgression.ts';
+import { passportKeys } from './usePassportCompletions.ts';
 import {
   fetchCompletionCodeStatus,
   fetchMyQuestCompletion,
@@ -97,7 +99,10 @@ export function useRedeemCompletionCode(questId: string) {
 function syncAuthoritativeCompletion(
   queryClient: QueryClient,
   questId: string,
-): Promise<[void, void, void]> {
+): Promise<void> {
+  // The Passport reads (progression totals and Verified history) are
+  // resynced alongside the quest-scoped state (G7); the ['passport']
+  // prefix invalidation covers every history page.
   return Promise.all([
     queryClient.invalidateQueries({
       queryKey: completionKeys.detail(questId),
@@ -111,5 +116,12 @@ function syncAuthoritativeCompletion(
       queryKey: ['quest', questId],
       exact: true,
     }),
-  ]);
+    queryClient.invalidateQueries({
+      queryKey: progressionKeys.me,
+      exact: true,
+    }),
+    queryClient.invalidateQueries({
+      queryKey: passportKeys.all,
+    }),
+  ]).then(() => undefined);
 }
