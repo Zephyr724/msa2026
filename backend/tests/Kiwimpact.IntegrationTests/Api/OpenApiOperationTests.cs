@@ -33,4 +33,27 @@ public sealed class OpenApiOperationTests
         foreach (var status in new[] { "200", "401", "404", "503" })
             Assert.True(responses.TryGetProperty(status, out _), $"Missing {status}.");
     }
+
+    [Fact]
+    public async Task PeopleLeaderboardOperationAndResponsesAreDocumented()
+    {
+        var text = await _factory.CreateClient().GetStringAsync(
+            "/openapi/v1.json",
+            TestContext.Current.CancellationToken);
+        using var document = JsonDocument.Parse(text);
+        var operation = document.RootElement
+            .GetProperty("paths")
+            .GetProperty("/api/v1/leaderboards/people")
+            .GetProperty("get");
+
+        var responses = operation.GetProperty("responses");
+        foreach (var status in new[] { "200", "400", "503" })
+            Assert.True(responses.TryGetProperty(status, out _), $"Missing {status}.");
+
+        var parameters = operation.GetProperty("parameters")
+            .EnumerateArray()
+            .Select(parameter => parameter.GetProperty("name").GetString()!)
+            .ToArray();
+        Assert.Equal(["scope", "period", "page", "pageSize"], parameters);
+    }
 }

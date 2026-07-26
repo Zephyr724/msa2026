@@ -220,6 +220,7 @@ builder.Services.AddScoped<IQuestCompletionService, QuestCompletionService>();
 builder.Services.AddScoped<IProgressionService, ProgressionService>();
 builder.Services.AddScoped<IPassportService, PassportService>();
 builder.Services.AddScoped<IAchievementService, AchievementService>();
+builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 
 var app = builder.Build();
 

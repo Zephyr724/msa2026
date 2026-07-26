@@ -69,4 +69,15 @@ internal static class ProblemDetailsHelper
             Detail = "Progression state is not ready yet."
         };
     }
+
+    public static ProblemDetails LeaderboardNotReady()
+    {
+        return new ProblemDetails
+        {
+            Type = "https://kiwimpact.app/problems/leaderboard-not-ready",
+            Title = "Leaderboard Not Ready",
+            Status = StatusCodes.Status503ServiceUnavailable,
+            Detail = "Leaderboard state is not ready yet."
+        };
+    }
 }
