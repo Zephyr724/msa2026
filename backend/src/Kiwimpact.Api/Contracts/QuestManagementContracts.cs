@@ -19,7 +19,9 @@ public sealed record CreateQuestRequest(
     Guid? LocationRegionId,
     string? LocationDescription,
     string? ExternalSourceUrl,
-    CoverImageRequest? CoverImage);
+    CoverImageRequest? CoverImage,
+    decimal? Latitude = null,
+    decimal? Longitude = null);
 
 public sealed record UpdateQuestRequest(
     string? Title,
@@ -34,7 +36,9 @@ public sealed record UpdateQuestRequest(
     string? LocationDescription,
     string? ExternalSourceUrl,
     CoverImageRequest? CoverImage,
-    uint Version);
+    uint Version,
+    decimal? Latitude = null,
+    decimal? Longitude = null);
 
 public sealed record QuestVersionRequest(uint Version);
 
@@ -75,7 +79,9 @@ public sealed record QuestManagementDetailDto(
     QuestManagementCoverImageDto CoverImage,
     string CreatedAtUtc,
     string UpdatedAtUtc,
-    uint Version);
+    uint Version,
+    decimal? Latitude = null,
+    decimal? Longitude = null);
 
 public sealed record QuestManagementCoverImageDto(
     Guid Id,

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Kiwimpact.Api.Contracts;
+using Kiwimpact.Api.Hubs;
 using Kiwimpact.Api.Mapping;
 using Kiwimpact.Api.Security;
 using Kiwimpact.Core.Authorization;
@@ -7,6 +8,7 @@ using Kiwimpact.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Kiwimpact.Api.Controllers;
 
@@ -16,10 +18,14 @@ namespace Kiwimpact.Api.Controllers;
 public sealed class QuestCompletionController : ControllerBase
 {
     private readonly IQuestCompletionService _service;
+    private readonly IHubContext<LeaderboardHub> _hub;
 
-    public QuestCompletionController(IQuestCompletionService service)
+    public QuestCompletionController(
+        IQuestCompletionService service,
+        IHubContext<LeaderboardHub> hub)
     {
         _service = service;
+        _hub = hub;
     }
 
     /// <summary>Redeem a Completion Code as the authenticated active participant.</summary>
@@ -43,6 +49,9 @@ public sealed class QuestCompletionController : ControllerBase
         try
         {
             var state = await _service.RedeemAsync(questId, actorId, request?.Code, ct);
+            await _hub.Clients.All.SendAsync(
+                LeaderboardHub.ImpactChangedEvent,
+                ct);
             return Created(
                 $"/api/v1/quests/{questId}/completion",
                 state.ToDto());

@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using Kiwimpact.Api.Contracts;
+using Kiwimpact.Api.Hubs;
 using Kiwimpact.Core.Authorization;
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Kiwimpact.Api.Controllers;
 
@@ -109,8 +111,15 @@ public sealed class EvidenceClaimsController : ControllerBase
 public sealed class AdminEvidenceClaimsController : ControllerBase
 {
     private readonly IQuestCompletionService _service;
+    private readonly IHubContext<LeaderboardHub> _hub;
 
-    public AdminEvidenceClaimsController(IQuestCompletionService service) => _service = service;
+    public AdminEvidenceClaimsController(
+        IQuestCompletionService service,
+        IHubContext<LeaderboardHub> hub)
+    {
+        _service = service;
+        _hub = hub;
+    }
 
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct) =>
@@ -141,9 +150,15 @@ public sealed class AdminEvidenceClaimsController : ControllerBase
             return Unauthorized();
         try
         {
-            return Ok(QuestCompletionController.ToDto(
-                await _service.ReviewClaimAsync(
-                    claimId, actorId, request.Approve, request.ReviewNote, ct)));
+            var result = await _service.ReviewClaimAsync(
+                claimId, actorId, request.Approve, request.ReviewNote, ct);
+            if (request.Approve)
+            {
+                await _hub.Clients.All.SendAsync(
+                    LeaderboardHub.ImpactChangedEvent,
+                    ct);
+            }
+            return Ok(QuestCompletionController.ToDto(result));
         }
         catch (QuestCompletionException exception)
         {

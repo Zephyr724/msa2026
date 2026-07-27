@@ -72,4 +72,32 @@ public sealed class UserProfile
         Level = ProgressionRules.ComputeLevel(newTotal);
         UpdatedAt = now.ToUniversalTime();
     }
+
+    public void UpdateCommunity(
+        Guid? homeCommunityRegionId,
+        bool showCommunityOnPassport,
+        DateTimeOffset now,
+        TimeSpan changeCooldown)
+    {
+        var timestamp = now.ToUniversalTime();
+        var selectionChanged = HomeCommunityRegionId != homeCommunityRegionId;
+        if (selectionChanged &&
+            HomeCommunityRegionId.HasValue &&
+            LastCommunityChangeAt.HasValue &&
+            timestamp < LastCommunityChangeAt.Value + changeCooldown)
+        {
+            throw new InvalidOperationException(
+                "Home Community can be changed once every 30 days.");
+        }
+
+        if (selectionChanged)
+        {
+            HomeCommunityRegionId = homeCommunityRegionId;
+            LastCommunityChangeAt = timestamp;
+        }
+
+        ShowCommunityOnPassport =
+            homeCommunityRegionId.HasValue && showCommunityOnPassport;
+        UpdatedAt = timestamp;
+    }
 }

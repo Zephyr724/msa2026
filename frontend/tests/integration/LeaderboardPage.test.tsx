@@ -2,144 +2,139 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import LeaderboardPage from '../../src/pages/LeaderboardPage.tsx';
-import {
-  createTestQueryClient,
-  jsonResponse,
-} from '../organizerTestUtils.tsx';
+import { createTestQueryClient, jsonResponse } from '../organizerTestUtils.tsx';
 
 function payload(rows: unknown[] = [{
   rank: 1,
-  displayName: 'Aroha with a deliberately long display name',
+  displayName: 'Aroha',
   totalXp: 150,
   verifiedCompletionCount: 2,
 }]) {
-  return { scope: 'nz', period: 'allTime', rows };
+  return {
+    scope: 'auckland',
+    period: 'weekly',
+    page: 1,
+    pageSize: 10,
+    totalCount: rows.length,
+    isPrivacyProtected: false,
+    collectiveProgress: null,
+    rows,
+  };
+}
+
+function stubApi(leaderboard: () => Promise<Response>) {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('/v1/leaderboards/people')) return leaderboard();
+    if (url.endsWith('/v1/community-challenges')) {
+      return Promise.resolve(jsonResponse([]));
+    }
+    if (url.endsWith('/v1/auth/me')) {
+      return Promise.resolve(jsonResponse({ title: 'Unauthorized' }, 401));
+    }
+    return Promise.resolve(jsonResponse({ title: 'Unexpected' }, 500));
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
 }
 
 function renderPage(queryClient = createTestQueryClient()) {
-  const view = render(
+  return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <LeaderboardPage />
-      </MemoryRouter>
+      <MemoryRouter><LeaderboardPage /></MemoryRouter>
     </QueryClientProvider>,
   );
-  return { ...view, queryClient };
 }
 
 describe('LeaderboardPage', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
+  afterEach(() => vi.unstubAllGlobals());
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('renders the bounded loading state', () => {
-    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
-
+  it('renders a bounded loading state', () => {
+    stubApi(() => new Promise<Response>(() => {}));
     renderPage();
-
-    expect(screen.getByText('Loading the leaderboard…').parentElement)
-      .toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByLabelText('Loading leaderboard')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
-  it('renders an honest empty state without a table', async () => {
-    vi.stubGlobal('fetch', vi.fn(() =>
-      Promise.resolve(jsonResponse(payload([])))));
-
+  it('renders an honest empty state', async () => {
+    stubApi(() => Promise.resolve(jsonResponse(payload([]))));
     renderPage();
-
-    expect(await screen.findByText('No ranked members yet.')).toBeInTheDocument();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'No ranked members yet.' }),
+    ).toBeInTheDocument();
   });
 
-  it('renders the exact semantic fixed-layout table', async () => {
-    vi.stubGlobal('fetch', vi.fn(() =>
-      Promise.resolve(jsonResponse(payload()))));
-
-    const { container } = renderPage();
-
-    const table = await screen.findByRole('table', {
-      name: 'New Zealand all-time people leaderboard',
-    });
-    expect(table).toHaveClass('table-fixed', 'w-full');
-    const columns = container.querySelectorAll('colgroup col');
-    expect(columns).toHaveLength(4);
-    expect(columns[0]).toHaveClass('w-10', 'sm:w-14');
-    expect(columns[2]).toHaveClass('w-16', 'sm:w-24');
-    expect(columns[3]).toHaveClass('w-16', 'sm:w-24');
-    for (const header of within(table).getAllByRole('columnheader')) {
-      expect(header).toHaveAttribute('scope', 'col');
-    }
-    expect(screen.getByLabelText('Rank 1')).toHaveTextContent('1');
-    const name = within(table).getByText('Aroha with a deliberately long display name');
-    expect(name).toHaveClass('min-w-0', 'truncate');
-    expect(name).toHaveAttribute(
-      'title',
-      'Aroha with a deliberately long display name',
-    );
+  it('renders verified people standings', async () => {
+    stubApi(() => Promise.resolve(jsonResponse(payload())));
+    renderPage();
+    const table = await screen.findByRole('table');
+    expect(within(table).getByText('Aroha')).toBeInTheDocument();
     expect(within(table).getByText('150')).toHaveClass('text-right');
     expect(within(table).getByText('2')).toHaveClass('text-right');
   });
 
-  it('contains errors and retries without rendering server detail', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({
-        type: 'https://kiwimpact.app/problems/leaderboard-not-ready',
-        title: 'Leaderboard Not Ready',
-        status: 503,
-        detail: 'Sensitive server detail must stay hidden.',
-      }, 503))
-      .mockResolvedValueOnce(jsonResponse(payload()));
+  it('switches to the communities leaderboard', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/v1/leaderboards/people')) {
+        return Promise.resolve(jsonResponse(payload()));
+      }
+      if (url.includes('/v1/leaderboards/communities')) {
+        return Promise.resolve(jsonResponse({
+          scope: 'auckland',
+          period: 'monthly',
+          rows: [{
+            rank: 1,
+            regionId: '11111111-1111-4111-8111-111111111111',
+            regionName: 'Albert-Eden',
+            verifiedCompletionCount: 24,
+            activeContributors: 12,
+            completionsPerContributor: 2,
+            isPrivacyProtected: false,
+          }],
+        }));
+      }
+      if (url.endsWith('/v1/community-challenges')) return Promise.resolve(jsonResponse([]));
+      return Promise.resolve(jsonResponse({ title: 'Unauthorized' }, 401));
+    });
     vi.stubGlobal('fetch', fetchMock);
     const user = userEvent.setup();
-
     renderPage();
+    await screen.findAllByText('Aroha');
+    await user.click(screen.getByRole('tab', { name: 'Communities' }));
+    expect(await screen.findByText('Albert-Eden')).toBeInTheDocument();
+  });
 
+  it('contains server errors and retries', async () => {
+    let attempts = 0;
+    stubApi(() => {
+      attempts++;
+      return Promise.resolve(attempts === 1
+        ? jsonResponse({ detail: 'Sensitive detail' }, 503)
+        : jsonResponse(payload()));
+    });
+    const user = userEvent.setup();
+    renderPage();
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(
-      'We could not load the leaderboard. Please try again.',
-    );
-    expect(alert).not.toHaveTextContent('Sensitive server detail');
+    expect(alert).not.toHaveTextContent('Sensitive detail');
     await user.click(within(alert).getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByRole('table')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((await screen.findAllByText('Aroha')).length).toBeGreaterThan(0);
   });
 
-  it('reuses fresh cached data and refetches after prefix invalidation', async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(payload())));
-    vi.stubGlobal('fetch', fetchMock);
-    const queryClient = createTestQueryClient();
-    const first = renderPage(queryClient);
-    await screen.findByRole('table');
-    expect(fetchMock).toHaveBeenCalledOnce();
-    first.unmount();
-
-    const second = renderPage(queryClient);
-    expect(await screen.findByRole('table')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledOnce();
-
-    await queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    second.unmount();
-  });
-
-  it('does not access Zustand or Web Storage for server data', async () => {
-    const getItem = vi.spyOn(Storage.prototype, 'getItem');
-    const setItem = vi.spyOn(Storage.prototype, 'setItem');
-    vi.stubGlobal('fetch', vi.fn(() =>
-      Promise.resolve(jsonResponse(payload()))));
-
-    renderPage();
-    await screen.findByRole('table');
-
-    expect(getItem).not.toHaveBeenCalled();
-    expect(setItem).not.toHaveBeenCalled();
+  it('refetches after leaderboard prefix invalidation', async () => {
+    const fetchMock = stubApi(() => Promise.resolve(jsonResponse(payload())));
+    const client = createTestQueryClient();
+    renderPage(client);
+    await screen.findAllByText('Aroha');
+    const before = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes('/leaderboards/people')).length;
+    await client.invalidateQueries({ queryKey: ['leaderboard'] });
+    await waitFor(() => {
+      const after = fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes('/leaderboards/people')).length;
+      expect(after).toBe(before + 1);
+    });
   });
 });

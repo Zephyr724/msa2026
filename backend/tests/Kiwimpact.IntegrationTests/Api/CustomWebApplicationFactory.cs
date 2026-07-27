@@ -68,6 +68,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 // Same for the achievement backfill hosted service.
                 ["AchievementBackfill:Enabled"] = "false",
                 ["EvidencePurge:Enabled"] = "false",
+                ["CommunityChallenges:FinalizerEnabled"] = "false",
                 ["Email:Enabled"] = "false",
                 ["Auth:RequireConfirmedEmail"] = "false",
             });

@@ -37,6 +37,17 @@ internal static class ProblemDetailsHelper
         };
     }
 
+    public static ProblemDetails Unauthorized(string detail)
+    {
+        return new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+            Title = "Unauthorized",
+            Status = StatusCodes.Status401Unauthorized,
+            Detail = detail
+        };
+    }
+
     public static ProblemDetails Conflict(string detail)
     {
         return new ProblemDetails

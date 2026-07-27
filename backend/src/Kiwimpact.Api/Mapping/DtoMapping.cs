@@ -66,7 +66,9 @@ internal static class DtoMapping
                 ? quest.LocationRegion.ToQuestLocation()
                 : null,
             quest.LocationDescription,
-            coverImage?.ToCoverDto());
+            coverImage?.ToCoverDto(),
+            quest.Latitude,
+            quest.Longitude);
     }
 
     public static QuestDetailDto ToDetail(this Quest quest)
@@ -92,7 +94,9 @@ internal static class DtoMapping
             quest.LocationDescription,
             coverImage?.ToCoverDto(),
             quest.ExternalSourceUrl,
-            quest.SourceCheckedAt?.ToString("O"));
+            quest.SourceCheckedAt?.ToString("O"),
+            quest.Latitude,
+            quest.Longitude);
     }
 
     public static QuestManagementListItemDto ToManagementListItem(this Quest quest)
@@ -148,7 +152,9 @@ internal static class DtoMapping
                 cover.LicenceNote),
             quest.CreatedAt.ToString("O"),
             quest.UpdatedAt.ToString("O"),
-            quest.Version);
+            quest.Version,
+            quest.Latitude,
+            quest.Longitude);
     }
 
     public static QuestParticipationDto ToDto(this QuestParticipation participation)
@@ -269,7 +275,9 @@ internal static class DtoMapping
         request.LocationRegionId,
         request.LocationDescription,
         request.ExternalSourceUrl,
-        request.CoverImage?.ToCommand());
+        request.CoverImage?.ToCommand(),
+        request.Latitude,
+        request.Longitude);
 
     public static UpdateQuestCommand ToCommand(this UpdateQuestRequest request) => new(
         request.Title,
@@ -284,7 +292,9 @@ internal static class DtoMapping
         request.LocationDescription,
         request.ExternalSourceUrl,
         request.CoverImage?.ToCommand(),
-        request.Version);
+        request.Version,
+        request.Latitude,
+        request.Longitude);
 
     private static QuestCoverImageCommand ToCommand(this CoverImageRequest request) => new(
         request.ImageUrl,

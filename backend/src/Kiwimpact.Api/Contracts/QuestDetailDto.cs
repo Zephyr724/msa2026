@@ -16,4 +16,6 @@ public sealed record QuestDetailDto(
     string? LocationDescription,
     QuestCoverImageDto? CoverImage,
     string? ExternalSourceUrl,
-    string? SourceCheckedAt);
+    string? SourceCheckedAt,
+    decimal? Latitude = null,
+    decimal? Longitude = null);

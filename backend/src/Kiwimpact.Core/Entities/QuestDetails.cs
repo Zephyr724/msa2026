@@ -13,7 +13,9 @@ public sealed record QuestDetails(
     DateTimeOffset? EndAtUtc,
     Guid? LocationRegionId,
     string? LocationDescription,
-    string? ExternalSourceUrl);
+    string? ExternalSourceUrl,
+    decimal? Latitude = null,
+    decimal? Longitude = null);
 
 public sealed record QuestCoverImageDetails(
     string ImageUrl,

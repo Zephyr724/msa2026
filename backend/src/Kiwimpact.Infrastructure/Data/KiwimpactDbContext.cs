@@ -21,6 +21,7 @@ public sealed class KiwimpactDbContext
     public DbSet<XpTransaction> XpTransactions => Set<XpTransaction>();
     public DbSet<Achievement> Achievements => Set<Achievement>();
     public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
+    public DbSet<CommunityChallenge> CommunityChallenges => Set<CommunityChallenge>();
 
     public KiwimpactDbContext(DbContextOptions<KiwimpactDbContext> options)
         : base(options)

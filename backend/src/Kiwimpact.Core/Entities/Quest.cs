@@ -29,6 +29,8 @@ public sealed class Quest
     public DateTimeOffset? EndAtUtc { get; internal set; }
     public Guid? LocationRegionId { get; internal set; }
     public string? LocationDescription { get; internal set; }
+    public decimal? Latitude { get; internal set; }
+    public decimal? Longitude { get; internal set; }
     public string? ExternalSourceUrl { get; internal set; }
     public ExternalSourceStatus? ExternalSourceStatus { get; internal set; }
     public DateTimeOffset? SourceCheckedAt { get; internal set; }
@@ -72,6 +74,8 @@ public sealed class Quest
             EndAtUtc = normalized.EndAtUtc,
             LocationRegionId = normalized.LocationRegionId,
             LocationDescription = normalized.LocationDescription,
+            Latitude = normalized.Latitude,
+            Longitude = normalized.Longitude,
             ExternalSourceUrl = normalized.ExternalSourceUrl,
             CreatedByUserId = createdByUserId,
             CreatedAt = timestamp,
@@ -100,6 +104,8 @@ public sealed class Quest
         EndAtUtc = normalized.EndAtUtc;
         LocationRegionId = normalized.LocationRegionId;
         LocationDescription = normalized.LocationDescription;
+        Latitude = normalized.Latitude;
+        Longitude = normalized.Longitude;
         ExternalSourceUrl = normalized.ExternalSourceUrl;
 
         if (coverImage is not null)
@@ -177,6 +183,12 @@ public sealed class Quest
             details.ExternalSourceUrl, MaxExternalSourceUrlLength, "External source URL");
         if (externalUrl is not null && !IsHttpsUrl(externalUrl))
             throw new ArgumentException("External source URL must be an absolute HTTPS URL.");
+        if (details.Latitude.HasValue != details.Longitude.HasValue)
+            throw new ArgumentException("Latitude and longitude must be supplied together.");
+        if (details.Latitude is < -90 or > 90)
+            throw new ArgumentException("Latitude must be between -90 and 90.");
+        if (details.Longitude is < -180 or > 180)
+            throw new ArgumentException("Longitude must be between -180 and 180.");
 
         return details with
         {

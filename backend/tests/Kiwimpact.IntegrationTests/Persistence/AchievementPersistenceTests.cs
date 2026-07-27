@@ -265,7 +265,7 @@ public sealed class AchievementPersistenceTests : IClassFixture<TestDatabaseFixt
                 """, TestContext.Current.CancellationToken));
         Assert.Equal(PostgresErrorCodes.UniqueViolation, exception.SqlState);
         Assert.Equal(
-            "UX_UserAchievements_UserId_AchievementId",
+            "UX_UserAchievements_Milestone",
             exception.ConstraintName);
     }
 
@@ -321,7 +321,7 @@ public sealed class AchievementPersistenceTests : IClassFixture<TestDatabaseFixt
                 WHERE schemaname = 'public' AND tablename = 'UserAchievements'
                 """)
             .ToListAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(4, awardIndexes.Count);
+        Assert.Equal(6, awardIndexes.Count);
         var achievementIndexes = await db.Database.SqlQuery<string>($"""
                 SELECT indexname AS "Value"
                 FROM pg_indexes
@@ -330,8 +330,8 @@ public sealed class AchievementPersistenceTests : IClassFixture<TestDatabaseFixt
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, achievementIndexes.Count);
 
-        // All three FK relationships use Restrict.
-        Assert.Equal(3, awardEntity.GetForeignKeys().Count());
+        // All four FK relationships use Restrict.
+        Assert.Equal(4, awardEntity.GetForeignKeys().Count());
         Assert.All(
             awardEntity.GetForeignKeys(),
             fk => Assert.Equal(DeleteBehavior.Restrict, fk.DeleteBehavior));

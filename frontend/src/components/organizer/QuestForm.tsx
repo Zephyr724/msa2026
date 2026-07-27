@@ -14,6 +14,7 @@ import type {
   QuestManagementDetailDto,
 } from '../../types/questManagement';
 import type { QuestFormValues } from './questFormModel';
+import { CoordinatePicker } from '../maps/CoordinatePicker';
 
 type FieldErrors = Partial<Record<keyof QuestFormValues, string>>;
 
@@ -72,6 +73,18 @@ function validate(fields: QuestFormValues): FieldErrors {
   if (fields.locationDescription.trim().length > 500) {
     errors.locationDescription = 'Use 500 characters or fewer.';
   }
+  if ((fields.latitude.trim() === '') !== (fields.longitude.trim() === '')) {
+    errors.latitude = 'Enter both latitude and longitude, or leave both blank.';
+  } else if (fields.latitude.trim() && fields.longitude.trim()) {
+    const latitude = Number(fields.latitude);
+    const longitude = Number(fields.longitude);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      errors.latitude = 'Latitude must be between -90 and 90.';
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      errors.longitude = 'Longitude must be between -180 and 180.';
+    }
+  }
   if (fields.externalSourceUrl.trim().length > 2_000) {
     errors.externalSourceUrl = 'Use 2,000 characters or fewer.';
   } else if (fields.externalSourceUrl.trim() && !isHttpsUrl(fields.externalSourceUrl.trim())) {
@@ -115,6 +128,8 @@ function toCreateInput(fields: QuestFormValues): CreateQuestInput {
     endAtUtc: fields.endAtUtc ? new Date(fields.endAtUtc).toISOString() : null,
     locationRegionId: fields.locationRegionId || null,
     locationDescription: optionalText(fields.locationDescription),
+    latitude: fields.latitude.trim() ? Number(fields.latitude) : null,
+    longitude: fields.longitude.trim() ? Number(fields.longitude) : null,
     externalSourceUrl: optionalText(fields.externalSourceUrl),
     coverImage: {
       imageUrl: fields.coverImageUrl.trim(),
@@ -429,6 +444,21 @@ export default function QuestForm({
                 onChange={(event) => updateField('locationDescription', event.target.value)}
                 type="text"
                 value={fields.locationDescription}
+              />
+            </FormControl>
+            <FormControl
+              label="Map coordinates"
+              error={errors.latitude ?? errors.longitude}
+              field="latitude"
+            >
+              <CoordinatePicker
+                disabled={readOnly}
+                latitude={fields.latitude}
+                longitude={fields.longitude}
+                onChange={(latitude, longitude) => {
+                  updateField('latitude', latitude);
+                  updateField('longitude', longitude);
+                }}
               />
             </FormControl>
             <FormControl

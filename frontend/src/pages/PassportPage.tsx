@@ -13,6 +13,9 @@ import AchievementsSection from '../components/passport/AchievementsSection.tsx'
 import CompletionHistoryList from '../components/passport/CompletionHistoryList.tsx';
 import PassportPagination from '../components/passport/PassportPagination.tsx';
 import { useMyClaims } from '../hooks/useCompletion.ts';
+import CommunityProfileCard from '../components/community/CommunityProfileCard.tsx';
+import WeeklyStreakCard from '../components/community/WeeklyStreakCard.tsx';
+import ShareCard from '../components/passport/ShareCard.tsx';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
@@ -141,6 +144,19 @@ export default function PassportPage() {
             )}
           </div>
         </section>
+        <CommunityProfileCard />
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <WeeklyStreakCard />
+          {progression.isSuccess && (
+            <ShareCard
+              completion={history.data?.items.find(
+                (item) => item.status === 'Verified',
+              )}
+              displayName={displayName}
+              progression={progression.data}
+            />
+          )}
+        </div>
         <AchievementsSection />
         <section className="kiwi-panel mt-6 p-5" aria-labelledby="claim-history-heading">
           <div className="flex items-center justify-between gap-3">

@@ -2,6 +2,7 @@ import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import QuestCard from '../components/quest/QuestCard.tsx';
+import { QuestMap } from '../components/maps/QuestMap.tsx';
 import { CATEGORY_PRESENTATION } from '../lib/questPresentation.ts';
 import { useQuestList } from '../hooks/useQuests.ts';
 import { useRegions } from '../hooks/useRegions.ts';
@@ -294,6 +295,14 @@ export default function QuestListPage() {
 
         {data && data.items.length > 0 && (
           <>
+            <section className="mt-5" aria-labelledby="quest-map-heading">
+              <div className="mb-3">
+                <p className="kiwi-stat-label">Explore nearby</p>
+                <h2 className="mt-1 text-2xl" id="quest-map-heading">Quest map</h2>
+              </div>
+              <QuestMap quests={data.items} />
+            </section>
+            <h2 className="mt-9 text-2xl">Complete Quest list</h2>
             <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {data.items.map((quest) => (
                 <QuestCard key={quest.id} quest={quest} />

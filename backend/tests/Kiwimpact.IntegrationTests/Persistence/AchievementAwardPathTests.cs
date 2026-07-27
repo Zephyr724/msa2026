@@ -141,7 +141,7 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
             var postgres = Assert.IsType<PostgresException>(exception.InnerException);
             Assert.Equal(PostgresErrorCodes.UniqueViolation, postgres.SqlState);
             Assert.Equal(
-                "UX_UserAchievements_UserId_AchievementId",
+                "UX_UserAchievements_Milestone",
                 postgres.ConstraintName);
 
             // The aborted transaction committed nothing: no completion, no

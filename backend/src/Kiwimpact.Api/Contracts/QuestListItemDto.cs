@@ -14,4 +14,6 @@ public sealed record QuestListItemDto(
     string? EndAtUtc,
     QuestLocationRegionDto? LocationRegion,
     string? LocationDescription,
-    QuestCoverImageDto? CoverImage);
+    QuestCoverImageDto? CoverImage,
+    decimal? Latitude = null,
+    decimal? Longitude = null);

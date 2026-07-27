@@ -51,6 +51,12 @@ public sealed class QuestConfiguration : IEntityTypeConfiguration<Quest>
         builder.Property(q => q.LocationDescription)
             .HasMaxLength(500);
 
+        builder.Property(q => q.Latitude)
+            .HasPrecision(9, 6);
+
+        builder.Property(q => q.Longitude)
+            .HasPrecision(9, 6);
+
         builder.Property(q => q.ExternalSourceUrl)
             .HasMaxLength(2000);
 
@@ -63,6 +69,16 @@ public sealed class QuestConfiguration : IEntityTypeConfiguration<Quest>
             "CK_Quests_XpAward_NonNegative", "\"XpAward\" >= 0"));
         builder.ToTable(t => t.HasCheckConstraint(
             "CK_Quests_Capacity_NonNegative", "\"Capacity\" IS NULL OR \"Capacity\" >= 0"));
+        builder.ToTable(t => t.HasCheckConstraint(
+            "CK_Quests_Coordinates_Paired",
+            "(\"Latitude\" IS NULL AND \"Longitude\" IS NULL) OR " +
+            "(\"Latitude\" IS NOT NULL AND \"Longitude\" IS NOT NULL)"));
+        builder.ToTable(t => t.HasCheckConstraint(
+            "CK_Quests_Latitude_Range",
+            "\"Latitude\" IS NULL OR \"Latitude\" BETWEEN -90 AND 90"));
+        builder.ToTable(t => t.HasCheckConstraint(
+            "CK_Quests_Longitude_Range",
+            "\"Longitude\" IS NULL OR \"Longitude\" BETWEEN -180 AND 180"));
 
         // Region FK with Restrict
         builder.HasOne(q => q.LocationRegion)

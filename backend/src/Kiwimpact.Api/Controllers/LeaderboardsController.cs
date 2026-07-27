@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Kiwimpact.Api.Contracts;
 using Kiwimpact.Api.Mapping;
 using Kiwimpact.Core.Services;
@@ -19,8 +20,7 @@ public sealed class LeaderboardsController : ControllerBase
     }
 
     /// <summary>
-    /// Read the staged public New Zealand all-time people leaderboard.
-    /// Supports only scope=nz and period=allTime with a fixed Top 10.
+    /// Read the people leaderboard across community, Auckland, or New Zealand.
     /// Returns 503 while any Verified completion still lacks its XP row.
     /// </summary>
     [HttpGet("people")]
@@ -52,10 +52,51 @@ public sealed class LeaderboardsController : ControllerBase
                 ? pageSize ?? string.Empty
                 : null;
             var leaderboard = await _service.GetPeopleLeaderboardAsync(
+                Guid.TryParse(
+                    User.FindFirstValue(ClaimTypes.NameIdentifier),
+                    out var actorId)
+                    ? actorId
+                    : null,
                 boundScope,
                 boundPeriod,
                 boundPage,
                 boundPageSize,
+                ct);
+            return Ok(leaderboard.ToDto());
+        }
+        catch (LeaderboardException exception)
+        {
+            var problem = exception.Error switch
+            {
+                LeaderboardError.InvalidParameters =>
+                    ProblemDetailsHelper.Validation(exception.Message),
+                LeaderboardError.Unauthorized =>
+                    ProblemDetailsHelper.Unauthorized(exception.Message),
+                LeaderboardError.NotReady =>
+                    ProblemDetailsHelper.LeaderboardNotReady(),
+                _ => throw new InvalidOperationException(
+                    "Unsupported leaderboard error.", exception),
+            };
+            return StatusCode(
+                problem.Status ?? StatusCodes.Status500InternalServerError,
+                problem);
+        }
+    }
+
+    [HttpGet("communities")]
+    [ProducesResponseType(typeof(CommunitiesLeaderboardDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> GetCommunities(
+        [FromQuery] string? scope,
+        [FromQuery] string? period,
+        CancellationToken ct)
+    {
+        try
+        {
+            var leaderboard = await _service.GetCommunitiesLeaderboardAsync(
+                Request.Query.ContainsKey("scope") ? scope ?? string.Empty : null,
+                Request.Query.ContainsKey("period") ? period ?? string.Empty : null,
                 ct);
             return Ok(leaderboard.ToDto());
         }
@@ -70,9 +111,7 @@ public sealed class LeaderboardsController : ControllerBase
                 _ => throw new InvalidOperationException(
                     "Unsupported leaderboard error.", exception),
             };
-            return StatusCode(
-                problem.Status ?? StatusCodes.Status500InternalServerError,
-                problem);
+            return StatusCode(problem.Status!.Value, problem);
         }
     }
 }

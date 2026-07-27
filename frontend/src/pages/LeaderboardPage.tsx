@@ -1,9 +1,41 @@
 import { Medal, ShieldCheck, Trophy, Users, Zap } from 'lucide-react';
-import { usePeopleLeaderboard } from '../hooks/useLeaderboard.ts';
-import type { LeaderboardRow } from '../types/leaderboard.ts';
+import { useState } from 'react';
+import { useAuthQuery } from '../hooks/useAuth.ts';
+import {
+  useCommunitiesLeaderboard,
+  usePeopleLeaderboard,
+} from '../hooks/useLeaderboard.ts';
+import type {
+  CommunitiesLeaderboardPeriod,
+  CommunitiesLeaderboardScope,
+  CommunityLeaderboardRow,
+  LeaderboardRow,
+  PeopleLeaderboardPeriod,
+  PeopleLeaderboardScope,
+} from '../types/leaderboard.ts';
+import CommunityChallengesSection from '../components/community/CommunityChallengesSection.tsx';
 
 export default function LeaderboardPage() {
-  const leaderboard = usePeopleLeaderboard();
+  const auth = useAuthQuery();
+  const [mode, setMode] = useState<'people' | 'communities'>('people');
+  const [peopleScope, setPeopleScope] =
+    useState<PeopleLeaderboardScope>('auckland');
+  const [peoplePeriod, setPeoplePeriod] =
+    useState<PeopleLeaderboardPeriod>('weekly');
+  const [communityScope, setCommunityScope] =
+    useState<CommunitiesLeaderboardScope>('auckland');
+  const [communityPeriod, setCommunityPeriod] =
+    useState<CommunitiesLeaderboardPeriod>('monthly');
+  const people = usePeopleLeaderboard(
+    peopleScope,
+    peoplePeriod,
+    mode === 'people',
+  );
+  const communities = useCommunitiesLeaderboard(
+    communityScope,
+    communityPeriod,
+    mode === 'communities',
+  );
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-10 sm:py-14">
@@ -12,127 +44,172 @@ export default function LeaderboardPage() {
           <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-accent/15 text-warning">
             <Trophy aria-hidden="true" className="size-7" />
           </span>
-          <p className="kiwi-stat-label mt-5">Verified participation</p>
+          <p className="kiwi-stat-label mt-5">Verified community momentum</p>
           <h1 className="mt-2 text-4xl sm:text-5xl">Leaderboard</h1>
-          <p className="mx-auto mt-3 max-w-xl text-lg text-base-content/62">
-            New Zealand members ranked by server-authoritative, verified all-time XP.
+          <p className="mx-auto mt-3 max-w-2xl text-lg text-base-content/62">
+            Celebrate verified action locally, across Auckland, and throughout
+            Aotearoa New Zealand.
           </p>
-          <div className="mt-5 flex justify-center gap-2">
-            <span className="badge badge-primary badge-outline">People</span>
-            <span className="badge badge-outline">New Zealand</span>
-            <span className="badge badge-outline">All time</span>
-          </div>
         </header>
 
-        <section aria-labelledby="people-leaderboard-heading" className="mt-10">
-          <h2 className="sr-only" id="people-leaderboard-heading">
-            People — New Zealand, all time
-          </h2>
+        <section className="kiwi-panel mt-8 p-4 sm:p-5" aria-label="Leaderboard view">
+          <div className="tabs tabs-box mx-auto w-fit" role="tablist">
+            <button
+              className={`tab ${mode === 'people' ? 'tab-active' : ''}`}
+              onClick={() => setMode('people')}
+              role="tab"
+              type="button"
+            >
+              People
+            </button>
+            <button
+              className={`tab ${mode === 'communities' ? 'tab-active' : ''}`}
+              onClick={() => setMode('communities')}
+              role="tab"
+              type="button"
+            >
+              Communities
+            </button>
+          </div>
 
-          {leaderboard.isPending ? (
-            <div aria-live="polite">
-              <p className="text-center text-base-content/65">Loading the leaderboard…</p>
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <div className="skeleton h-48 rounded-3xl" key={index} />
-                ))}
-              </div>
-            </div>
-          ) : leaderboard.isError ? (
-            <div className="kiwi-panel mx-auto max-w-xl p-7 text-center" role="alert">
-              <h2 className="text-2xl">The leaderboard is unavailable</h2>
-              <p className="mt-2 text-base-content/62">
-                We could not load the leaderboard. Please try again.
-              </p>
-              <button
-                className="btn btn-primary btn-sm mt-5"
-                onClick={() => void leaderboard.refetch()}
-                type="button"
+          {mode === 'people' ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <FilterSelect
+                label="Scope"
+                onChange={(value) => setPeopleScope(value as PeopleLeaderboardScope)}
+                value={peopleScope}
               >
-                Retry
-              </button>
-            </div>
-          ) : leaderboard.data.rows.length === 0 ? (
-            <div className="kiwi-panel py-14 text-center">
-              <Users aria-hidden="true" className="mx-auto size-9 text-primary" />
-              <h2 className="mt-4 text-2xl">No ranked members yet.</h2>
-              <p className="mt-2 text-base-content/60">
-                The first verified completion will start the standings.
-              </p>
+                {auth.data && <option value="myCommunity">My Community</option>}
+                <option value="auckland">Auckland</option>
+                <option value="nz">New Zealand</option>
+              </FilterSelect>
+              <FilterSelect
+                label="Period"
+                onChange={(value) => setPeoplePeriod(value as PeopleLeaderboardPeriod)}
+                value={peoplePeriod}
+              >
+                <option value="weekly">This week</option>
+                <option value="monthly">This month</option>
+                <option value="allTime">All time</option>
+              </FilterSelect>
             </div>
           ) : (
-            <>
-              <Podium rows={leaderboard.data.rows.slice(0, 3)} />
-              <div className="kiwi-panel mt-8 overflow-hidden">
-                <div className="flex items-center justify-between border-b border-base-300 px-5 py-4">
-                  <div>
-                    <p className="kiwi-stat-label">Full standings</p>
-                    <h2 className="mt-1 text-xl">Top members</h2>
-                  </div>
-                  <ShieldCheck aria-hidden="true" className="size-5 text-primary" />
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="table table-fixed w-full">
-                    <caption className="sr-only">
-                      New Zealand all-time people leaderboard
-                    </caption>
-                    <colgroup>
-                      <col className="w-10 sm:w-14" />
-                      <col />
-                      <col className="w-16 sm:w-24" />
-                      <col className="w-16 sm:w-24" />
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        <th className="px-1 sm:px-3" scope="col">Rank</th>
-                        <th className="px-1 sm:px-3" scope="col">Member</th>
-                        <th className="px-1 text-right sm:px-3" scope="col">XP</th>
-                        <th className="px-1 text-right sm:px-3" scope="col">Quests</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leaderboard.data.rows.map((row) => (
-                        <tr className="hover:bg-secondary/45" key={row.rank}>
-                          <td className="px-1 py-4 font-semibold sm:px-3">
-                            <RankMarker rank={row.rank} />
-                          </td>
-                          <td className="px-1 py-4 sm:px-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-extrabold text-primary">
-                                {initials(row.displayName)}
-                              </span>
-                              <span
-                                className="min-w-0 truncate font-medium"
-                                title={row.displayName}
-                              >
-                                {row.displayName}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-1 py-4 text-right font-bold tabular-nums sm:px-3">
-                            {row.totalXp}
-                          </td>
-                          <td className="px-1 py-4 text-right tabular-nums sm:px-3">
-                            {row.verifiedCompletionCount}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <FilterSelect
+                label="Scope"
+                onChange={(value) => setCommunityScope(value as CommunitiesLeaderboardScope)}
+                value={communityScope}
+              >
+                <option value="auckland">Auckland</option>
+                <option value="nz">New Zealand</option>
+              </FilterSelect>
+              <FilterSelect
+                label="Period"
+                onChange={(value) => setCommunityPeriod(value as CommunitiesLeaderboardPeriod)}
+                value={communityPeriod}
+              >
+                <option value="monthly">This month</option>
+                <option value="allTime">All time</option>
+              </FilterSelect>
+            </div>
           )}
         </section>
+
+        <section className="mt-8" aria-live="polite">
+          {mode === 'people' ? (
+            <PeopleStandings query={people} />
+          ) : (
+            <CommunityStandings query={communities} />
+          )}
+        </section>
+
+        <CommunityChallengesSection />
 
         <aside className="mt-8 flex items-start gap-3 rounded-2xl border border-base-300 bg-secondary/55 p-4 text-sm text-base-content/65">
           <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
           <p>
-            Only verified XP contributes to these standings. The current Slice
-            intentionally keeps one People scope: New Zealand, all time.
+            Only verified XP contributes. Communities with fewer than 10
+            active contributors use a privacy-protected view.
           </p>
         </aside>
       </main>
+    </div>
+  );
+}
+
+function PeopleStandings({
+  query,
+}: {
+  query: ReturnType<typeof usePeopleLeaderboard>;
+}) {
+  if (query.isPending) return <LoadingState />;
+  if (query.isError) return <ErrorState onRetry={() => void query.refetch()} />;
+  if (query.data.isPrivacyProtected) {
+    return (
+      <div className="kiwi-panel p-8 text-center">
+        <ShieldCheck className="mx-auto size-9 text-primary" aria-hidden="true" />
+        <h2 className="mt-4 text-2xl">Community progress is protected</h2>
+        <p className="mt-2 text-base-content/60">
+          This community is still growing, so member names, ranks, counts, and
+          exact progress stay private.
+        </p>
+      </div>
+    );
+  }
+  if (query.data.rows.length === 0) return <EmptyState label="members" />;
+  return (
+    <>
+      <Podium rows={query.data.rows.slice(0, 3)} />
+      <div className="kiwi-panel mt-6 overflow-x-auto">
+        <table className="table">
+          <thead><tr><th>Rank</th><th>Member</th><th className="text-right">XP</th><th className="text-right">Quests</th></tr></thead>
+          <tbody>
+            {query.data.rows.map((row) => (
+              <tr key={row.rank}>
+                <td><RankMarker rank={row.rank} /></td>
+                <td className="font-semibold">{row.displayName}</td>
+                <td className="text-right font-bold tabular-nums">{row.totalXp}</td>
+                <td className="text-right tabular-nums">{row.verifiedCompletionCount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function CommunityStandings({
+  query,
+}: {
+  query: ReturnType<typeof useCommunitiesLeaderboard>;
+}) {
+  if (query.isPending) return <LoadingState />;
+  if (query.isError) return <ErrorState onRetry={() => void query.refetch()} />;
+  if (query.data.rows.length === 0) return <EmptyState label="communities" />;
+  return (
+    <div className="grid gap-4">
+      {query.data.rows.map((row: CommunityLeaderboardRow) => (
+        <article className="kiwi-panel flex items-center gap-4 p-5" key={row.regionId}>
+          <RankMarker rank={row.rank} />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-xl">{row.regionName}</h2>
+            <p className="mt-1 text-sm text-base-content/60">
+              {row.verifiedCompletionCount} verified completions
+            </p>
+          </div>
+          <div className="text-right text-sm">
+            {row.isPrivacyProtected ? (
+              <span className="badge badge-outline">Privacy protected</span>
+            ) : (
+              <>
+                <p className="font-bold">{row.completionsPerContributor} / contributor</p>
+                <p className="text-base-content/55">{row.activeContributors} contributors</p>
+              </>
+            )}
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
@@ -141,27 +218,14 @@ function Podium({ rows }: { rows: LeaderboardRow[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       {rows.map((row, index) => (
-        <article
-          aria-label={`Top position ${row.rank}: ${row.displayName}`}
-          className={`kiwi-panel relative overflow-hidden p-5 text-center ${
-            index === 0 ? 'sm:-translate-y-2 sm:border-accent/50' : ''
-          }`}
-          key={row.rank}
-        >
-          <span className={`mx-auto grid size-12 place-items-center rounded-2xl ${
-            index === 0 ? 'bg-accent/18 text-warning' : 'bg-primary/10 text-primary'
-          }`}>
-            {index === 0
-              ? <Trophy aria-hidden="true" className="size-6" />
-              : <Medal aria-hidden="true" className="size-6" />}
+        <article className="kiwi-panel p-5 text-center" key={row.rank}>
+          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+            {index === 0 ? <Trophy className="size-6" /> : <Medal className="size-6" />}
           </span>
-          <p className="kiwi-display mt-4 truncate text-xl" title={row.displayName}>
-            {row.displayName}
-          </p>
+          <p className="mt-4 truncate text-xl font-bold">{row.displayName}</p>
           <p className="mt-1 text-sm text-base-content/55">Rank {row.rank}</p>
           <p className="mt-4 inline-flex items-center gap-1.5 font-extrabold">
-            <Zap aria-hidden="true" className="size-4 text-warning" />
-            {row.totalXp} XP
+            <Zap className="size-4 text-warning" /> {row.totalXp} XP
           </p>
         </article>
       ))}
@@ -171,26 +235,51 @@ function Podium({ rows }: { rows: LeaderboardRow[] }) {
 
 function RankMarker({ rank }: { rank: number }) {
   return (
-    <span
-      aria-label={`Rank ${rank}`}
-      className={`grid size-7 place-items-center rounded-full text-xs font-extrabold ${
-        rank === 1
-          ? 'bg-accent/20 text-warning'
-          : rank <= 3
-            ? 'bg-primary/10 text-primary'
-            : 'bg-secondary text-base-content/60'
-      }`}
-    >
+    <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-sm font-extrabold text-primary">
       {rank}
     </span>
   );
 }
 
-function initials(displayName: string): string {
-  return displayName
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
+function FilterSelect(props: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label>
+      <span className="kiwi-stat-label mb-2 block">{props.label}</span>
+      <select
+        className="select select-bordered w-full"
+        onChange={(event) => props.onChange(event.target.value)}
+        value={props.value}
+      >
+        {props.children}
+      </select>
+    </label>
+  );
+}
+
+function LoadingState() {
+  return <div className="skeleton h-64 rounded-3xl" aria-label="Loading leaderboard" />;
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="kiwi-panel p-8 text-center" role="alert">
+      <h2 className="text-2xl">Leaderboard unavailable</h2>
+      <button className="btn btn-primary btn-sm mt-4" onClick={onRetry} type="button">Retry</button>
+    </div>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="kiwi-panel py-14 text-center">
+      <Users className="mx-auto size-9 text-primary" aria-hidden="true" />
+      <h2 className="mt-4 text-2xl">{`No ranked ${label} yet.`}</h2>
+      <p className="mt-2 text-base-content/60">Verified impact will start these standings.</p>
+    </div>
+  );
 }

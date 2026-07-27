@@ -36,21 +36,34 @@ has occurred.
 
 ## Current Work
 
-### Slice 9 — MVP UI Convergence
+### Slices 9–11 — MVP Product Convergence
 
-- **Branch:** `codex/feat/slice-9-mvp-ui-convergence`
-- **Main baseline:** `73e79fa` (PR #20 merge of Slice 8A)
-- **Status:** 9A/9B/9C production implementation and local verification are
-  complete. The frontend visual system and production routes now follow the
-  local Figma Make reference; authenticated My Quests and the successful
-  Completion Reward Overlay are implemented. Final gates passed with clean
-  frontend lint/type-check, 314/314 frontend tests, a successful frontend
-  build, a clean backend build, 235/235 backend unit tests, and 278/278 backend
-  integration tests. Independent Kimi K3 Review 55 approved the implementation
-  with 0 Blockers and 0 Majors; the bounded correction pass closed the evidence
-  and service-test Minors before commit.
-- **Boundary:** no schema, migration, dependency, authentication-model,
-  deployment, or production-data change.
+- **Slice 9:** committed and pushed as `7cd3b1a` on
+  `codex/feat/slice-9-mvp-ui-convergence`. The production UI now follows the
+  local Figma Make reference; My Quests and the Completion Reward Overlay are
+  included. Kimi K3 Review 55 approved it with 0 Blockers and 0 Majors.
+- **Slice 10:** committed and pushed as `94a129c` on
+  `codex/feat/slice-10-trusted-impact`. Evidence-reviewed and self-reported
+  completion, Admin Review, evidence purge, broader Passport history, and the
+  email/password account lifecycle are included. Kimi K3 Review 56 approved it
+  with 0 Blockers and 0 Majors.
+- **Slice 11 branch:** `codex/feat/slice-11-community-discovery`
+- **Slice 11 baseline:** `94a129c`
+- **Slice 11 status:** production implementation, full local gates and the
+  independent review are complete. Implemented behaviour includes
+  Google Maps Quest discovery with list/input fallback, Home Community,
+  people/community leaderboards with privacy thresholds, verified weekly
+  streak, a privacy-safe PNG Share Card, Community Challenges with idempotent
+  reward finalization, and SignalR query invalidation backed by REST.
+- **Observed Slice 11 gates:** clean frontend lint/type-check; 35 frontend test
+  files with 308/308 tests passing; successful frontend production build; clean
+  backend build apart from five pre-existing test-helper EF1002 warnings;
+  247/247 backend unit tests and 284/284 PostgreSQL integration tests passing.
+- **Slice 11 review:** Kimi K3 Review 57 approved the bounded correction with
+  no remaining Blocker or Major finding.
+- **Known boundary:** Google OAuth/account linking, production email-provider
+  setup, Google Maps production-key restrictions, Docker/deployment, and the
+  final submission workflow remain outside Slices 9–11.
 
 ### Remaining P0 delivery gaps
 
@@ -62,12 +75,11 @@ has occurred.
 - Final full-product verification, README evidence, advanced-requirement
   selection, and a public submission video no longer than six minutes.
 
-Slice 10 and Slice 11 planning will assess the remaining approved product
-scope after Slice 9 is reviewed and pushed. Slice 2B account lifecycle, richer
-achievements, streaks, Cypress and SignalR remain P1 work under the existing
-baseline. Google Maps, external-event claims, Community Challenge, multi-layer
-community leaderboards and Share Card remain Deferred until their Slice 10/11
-contracts explicitly accept them.
+The previously deferred Google Maps, external-event claims, Community
+Challenge, multi-layer community leaderboards, weekly streak, Share Card, and
+SignalR invalidation are implemented on the sequential Slice 10/11 branches.
+They are not represented as merged into `main` until the human performs the
+separate integration workflow.
 
 ## Environment Prerequisites
 

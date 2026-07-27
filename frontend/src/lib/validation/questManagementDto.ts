@@ -27,7 +27,11 @@ const DETAIL_KEYS = [
   'endAtUtc', 'locationRegion', 'locationDescription', 'externalSourceUrl',
   'externalSourceStatus', 'sourceCheckedAtUtc', 'nextCheckDueAtUtc',
   'coverImage', 'createdAtUtc', 'updatedAtUtc', 'version',
+  'latitude', 'longitude',
 ] as const;
+const LEGACY_DETAIL_KEYS = DETAIL_KEYS.filter(
+  (key) => key !== 'latitude' && key !== 'longitude',
+);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -71,6 +75,15 @@ function isVersion(value: unknown): value is number {
     && Number.isInteger(value)
     && value >= 0
     && value <= UINT32_MAX;
+}
+
+function isNullableCoordinate(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+): value is number | null {
+  return value === null
+    || (typeof value === 'number' && value >= minimum && value <= maximum);
 }
 
 function isIsoUtcTimestamp(value: unknown): value is string {
@@ -138,7 +151,7 @@ function isListItem(value: unknown): value is QuestManagementListItemDto {
 
 function isDetail(value: unknown): value is QuestManagementDetailDto {
   return isRecord(value)
-    && hasExactKeys(value, DETAIL_KEYS)
+    && (hasExactKeys(value, DETAIL_KEYS) || hasExactKeys(value, LEGACY_DETAIL_KEYS))
     && isUuid(value.id)
     && isString(value.title)
     && isString(value.description)
@@ -160,7 +173,10 @@ function isDetail(value: unknown): value is QuestManagementDetailDto {
     && isCoverImage(value.coverImage)
     && isIsoUtcTimestamp(value.createdAtUtc)
     && isIsoUtcTimestamp(value.updatedAtUtc)
-    && isVersion(value.version);
+    && isVersion(value.version)
+    && isNullableCoordinate(value.latitude ?? null, -90, 90)
+    && isNullableCoordinate(value.longitude ?? null, -180, 180)
+    && (((value.latitude ?? null) === null) === ((value.longitude ?? null) === null));
 }
 
 export function validateQuestManagementList(
@@ -183,5 +199,9 @@ export function validateQuestManagementDetail(
   if (!isDetail(payload)) {
     throw new Error('Quest management detail response is not valid.');
   }
-  return payload;
+  return {
+    ...payload,
+    latitude: payload.latitude ?? null,
+    longitude: payload.longitude ?? null,
+  };
 }

@@ -15,6 +15,8 @@ public sealed class LeaderboardsApiTests
     : IClassFixture<CustomWebApplicationFactory>
 {
     private const string LeaderboardPath = "/api/v1/leaderboards/people";
+    private const string NzAllTimePath =
+        LeaderboardPath + "?scope=nz&period=allTime";
     private readonly CustomWebApplicationFactory _factory;
 
     public LeaderboardsApiTests(CustomWebApplicationFactory factory)
@@ -34,12 +36,21 @@ public sealed class LeaderboardsApiTests
             QuestDifficulty.Medium);
 
         var response = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await ReadJsonAsync(response);
-        AssertExactKeys(json, "period", "rows", "scope");
+        AssertExactKeys(
+            json,
+            "collectiveProgress",
+            "isPrivacyProtected",
+            "page",
+            "pageSize",
+            "period",
+            "rows",
+            "scope",
+            "totalCount");
         Assert.Equal("nz", json.GetProperty("scope").GetString());
         Assert.Equal("allTime", json.GetProperty("period").GetString());
         var rows = json.GetProperty("rows");
@@ -76,7 +87,7 @@ public sealed class LeaderboardsApiTests
         await SeedProfileOnlyAsync("Still no XP");
 
         var response = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -164,7 +175,7 @@ public sealed class LeaderboardsApiTests
         }
 
         var response = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -180,17 +191,17 @@ public sealed class LeaderboardsApiTests
     }
 
     [Theory]
-    [InlineData("?scope=auckland")]
+    [InlineData("?scope=somewhere")]
     [InlineData("?scope=")]
-    [InlineData("?period=weekly")]
+    [InlineData("?period=daily")]
     [InlineData("?period=")]
-    [InlineData("?page=1")]
     [InlineData("?page=")]
+    [InlineData("?page=0")]
     [InlineData("?page=nope")]
-    [InlineData("?pageSize=10")]
     [InlineData("?pageSize=")]
+    [InlineData("?pageSize=51")]
     [InlineData("?pageSize=nope")]
-    public async Task UnsupportedStagedParametersReturnBoundedBadRequest(string query)
+    public async Task InvalidParametersReturnBoundedBadRequest(string query)
     {
         await ResetLeaderboardDataAsync();
 
@@ -212,7 +223,7 @@ public sealed class LeaderboardsApiTests
         await SeedRankedUserAsync("Known", null, QuestDifficulty.Easy);
 
         var response = await _factory.CreateClient().GetAsync(
-            $"{LeaderboardPath}?future=value",
+            $"{NzAllTimePath}&future=value",
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -234,7 +245,7 @@ public sealed class LeaderboardsApiTests
         }
 
         var pending = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
         await AssertNotReadyAsync(pending);
 
@@ -245,7 +256,7 @@ public sealed class LeaderboardsApiTests
         Assert.True(pass.PassComplete);
 
         var ready = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
         var row = (await ReadJsonAsync(ready)).GetProperty("rows")[0];
@@ -274,7 +285,7 @@ public sealed class LeaderboardsApiTests
         }
 
         var response = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

@@ -511,7 +511,7 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
             "id", "title", "description", "category", "sourceType",
             "registrationMode", "difficulty", "xpAward", "capacity",
             "startAtUtc", "endAtUtc", "locationRegion", "locationDescription",
-            "coverImage"
+            "latitude", "longitude", "coverImage"
         };
 
         var actualProperties = new HashSet<string>(StringComparer.Ordinal);
@@ -533,6 +533,8 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
         Assert.True(firstQuest.GetProperty("startAtUtc").ValueKind is JsonValueKind.Null or JsonValueKind.String);
         Assert.True(firstQuest.GetProperty("endAtUtc").ValueKind is JsonValueKind.Null or JsonValueKind.String);
         Assert.True(firstQuest.GetProperty("locationDescription").ValueKind is JsonValueKind.Null or JsonValueKind.String);
+        Assert.Equal(JsonValueKind.Number, firstQuest.GetProperty("latitude").ValueKind);
+        Assert.Equal(JsonValueKind.Number, firstQuest.GetProperty("longitude").ValueKind);
 
         // ── Nested locationRegion shape ──────────────────────────────
         var locRegion = firstQuest.GetProperty("locationRegion");
@@ -584,7 +586,8 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
             "id", "title", "description", "category", "sourceType",
             "registrationMode", "difficulty", "xpAward", "capacity",
             "startAtUtc", "endAtUtc", "locationRegion", "locationDescription",
-            "coverImage", "externalSourceUrl", "sourceCheckedAt"
+            "latitude", "longitude", "coverImage", "externalSourceUrl",
+            "sourceCheckedAt"
         };
 
         var actualProperties = new HashSet<string>(StringComparer.Ordinal);
@@ -600,6 +603,8 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
         // Detail-specific nullable fields
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("externalSourceUrl").ValueKind);
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("sourceCheckedAt").ValueKind);
+        Assert.Equal(JsonValueKind.Number, detail.GetProperty("latitude").ValueKind);
+        Assert.Equal(JsonValueKind.Number, detail.GetProperty("longitude").ValueKind);
     }
 
     [Fact]

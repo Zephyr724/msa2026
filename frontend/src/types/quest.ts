@@ -72,6 +72,8 @@ export interface QuestListItemDto {
   locationRegion: QuestLocationRegionDto | null;
   locationDescription: string | null;
   coverImage: QuestCoverImageDto | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface QuestDetailDto extends QuestListItemDto {

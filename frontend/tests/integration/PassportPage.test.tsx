@@ -109,6 +109,20 @@ function stubPassportApi({
     if (url.endsWith('/v1/users/me/achievements')) {
       return achievements?.() ?? Promise.resolve(jsonResponse([]));
     }
+    if (url.endsWith('/v1/users/me/profile')) {
+      return Promise.resolve(jsonResponse({
+        displayName: 'Aroha',
+        homeCommunity: null,
+        showCommunityOnPassport: false,
+        communityChangeAvailableAtUtc: null,
+      }));
+    }
+    if (url.endsWith('/v1/users/me/streak')) {
+      return Promise.resolve(jsonResponse({
+        currentWeeks: 2,
+        hasVerifiedImpactThisWeek: true,
+      }));
+    }
     return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -407,7 +421,7 @@ describe('PassportPage', () => {
     expect(sessionStorage.length).toBe(0);
   });
 
-  it('F20: includes achievements but no deferred Passport domains', async () => {
+  it('F20: includes the accepted streak and privacy-safe Share Card domains', async () => {
     stubPassportApi({
       completions: () =>
         Promise.resolve(jsonResponse(historyPage([completionItem()]))),
@@ -416,8 +430,8 @@ describe('PassportPage', () => {
     await screen.findByText('Harbour restoration day');
 
     expect(container.textContent).toMatch(/achievement/i);
-    expect(container.textContent)
-      .not.toMatch(/streak|leaderboard|share.?card|carbon/i);
+    expect(container.textContent).toMatch(/streak|share.?card/i);
+    expect(container.textContent).not.toMatch(/carbon/i);
   });
 
   it('F21: meets the accessibility contract', async () => {
@@ -491,6 +505,8 @@ describe('PassportPage', () => {
       .map((heading) => heading.textContent);
     expect(headings).toEqual([
       'Progress',
+      'Home Community',
+      'Share Card',
       'Achievements',
       'Completion history',
     ]);

@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Kiwimpact.Api.Reconciliation;
+using Kiwimpact.Api.Hubs;
 using Kiwimpact.Api.Security;
 using Kiwimpact.Core.Services;
 using Kiwimpact.Core.Security;
@@ -24,6 +25,7 @@ builder.Services.AddControllers(options =>
 
 // Problem Details for consistent error responses
 builder.Services.AddProblemDetails();
+builder.Services.AddSignalR();
 
 // OpenAPI generation
 builder.Services.AddOpenApi();
@@ -82,6 +84,8 @@ builder.Services.AddOptions<AchievementBackfillOptions>()
     .ValidateOnStart();
 builder.Services.AddHostedService<AchievementBackfillHostedService>();
 builder.Services.AddHostedService<EvidencePurgeHostedService>();
+builder.Services.AddSingleton<CommunityChallengeFinalizer>();
+builder.Services.AddHostedService<CommunityChallengeFinalizerHostedService>();
 
 builder.Services.AddOptions<CompletionCodeOptions>()
     .Bind(builder.Configuration.GetSection("CompletionCodes"))
@@ -384,5 +388,6 @@ app.MapScalarApiReference();
 
 // Map controllers
 app.MapControllers();
+app.MapHub<LeaderboardHub>("/hubs/leaderboard");
 
 app.Run();

@@ -1,60 +1,75 @@
 import type {
-  LeaderboardRow,
+  CommunitiesLeaderboard,
   PeopleLeaderboard,
 } from '../../types/leaderboard.ts';
-
-const LEADERBOARD_KEYS = ['scope', 'period', 'rows'] as const;
-const ROW_KEYS = [
-  'rank',
-  'displayName',
-  'totalXp',
-  'verifiedCompletionCount',
-] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function hasExactKeys(
-  value: Record<string, unknown>,
-  keys: readonly string[],
-): boolean {
-  const actualKeys = Object.keys(value);
-  return actualKeys.length === keys.length
-    && actualKeys.every((key) => keys.includes(key));
+function isSafeNonNegative(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
-function isLeaderboardRow(
-  value: unknown,
-  expectedRank: number,
-): value is LeaderboardRow {
-  return isRecord(value)
-    && hasExactKeys(value, ROW_KEYS)
-    && value.rank === expectedRank
-    && Number.isInteger(value.rank)
-    && typeof value.displayName === 'string'
-    && value.displayName.length > 0
-    && value.displayName.length <= 100
-    && typeof value.totalXp === 'number'
-    && Number.isSafeInteger(value.totalXp)
-    && value.totalXp >= 0
-    && typeof value.verifiedCompletionCount === 'number'
-    && Number.isSafeInteger(value.verifiedCompletionCount)
-    && value.verifiedCompletionCount > 0;
-}
-
-export function validatePeopleLeaderboard(
-  payload: unknown,
-): PeopleLeaderboard {
+export function validatePeopleLeaderboard(payload: unknown): PeopleLeaderboard {
+  if (isRecord(payload)
+    && payload.scope === 'nz'
+    && payload.period === 'allTime'
+    && Array.isArray(payload.rows)
+    && payload.rows.every((row) => isRecord(row)
+      && isSafeNonNegative(row.rank)
+      && typeof row.displayName === 'string'
+      && isSafeNonNegative(row.totalXp)
+      && isSafeNonNegative(row.verifiedCompletionCount))) {
+    return {
+      scope: 'nz',
+      period: 'allTime',
+      page: 1,
+      pageSize: 10,
+      totalCount: payload.rows.length,
+      isPrivacyProtected: false,
+      collectiveProgress: null,
+      rows: payload.rows as PeopleLeaderboard['rows'],
+    };
+  }
   if (!isRecord(payload)
-    || !hasExactKeys(payload, LEADERBOARD_KEYS)
-    || payload.scope !== 'nz'
-    || payload.period !== 'allTime'
+    || !['myCommunity', 'auckland', 'nz'].includes(String(payload.scope))
+    || !['weekly', 'monthly', 'allTime'].includes(String(payload.period))
+    || !isSafeNonNegative(payload.totalCount)
+    || typeof payload.isPrivacyProtected !== 'boolean'
+    || payload.collectiveProgress !== null
     || !Array.isArray(payload.rows)
-    || payload.rows.length > 10
-    || !payload.rows.every((row, index) => isLeaderboardRow(row, index + 1))) {
+    || !payload.rows.every((row) => isRecord(row)
+      && isSafeNonNegative(row.rank)
+      && typeof row.displayName === 'string'
+      && isSafeNonNegative(row.totalXp)
+      && isSafeNonNegative(row.verifiedCompletionCount))) {
     throw new Error('People leaderboard response is not valid.');
   }
-
+  if (payload.isPrivacyProtected
+    && (payload.totalCount !== 0 || payload.rows.length !== 0)) {
+    throw new Error('Privacy-protected leaderboard response is not valid.');
+  }
   return payload as unknown as PeopleLeaderboard;
+}
+
+export function validateCommunitiesLeaderboard(
+  payload: unknown,
+): CommunitiesLeaderboard {
+  if (!isRecord(payload)
+    || !['auckland', 'nz'].includes(String(payload.scope))
+    || !['monthly', 'allTime'].includes(String(payload.period))
+    || !Array.isArray(payload.rows)
+    || !payload.rows.every((row) => isRecord(row)
+      && isSafeNonNegative(row.rank)
+      && typeof row.regionId === 'string'
+      && typeof row.regionName === 'string'
+      && isSafeNonNegative(row.verifiedCompletionCount)
+      && typeof row.isPrivacyProtected === 'boolean'
+      && (row.activeContributors === null || isSafeNonNegative(row.activeContributors))
+      && (row.completionsPerContributor === null
+        || typeof row.completionsPerContributor === 'number'))) {
+    throw new Error('Communities leaderboard response is not valid.');
+  }
+  return payload as unknown as CommunitiesLeaderboard;
 }

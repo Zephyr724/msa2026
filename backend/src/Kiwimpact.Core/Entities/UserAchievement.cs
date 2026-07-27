@@ -4,11 +4,9 @@ namespace Kiwimpact.Core.Entities;
 
 /// <summary>
 /// Immutable record that a user earned one achievement. Rows are insert-only
-/// and are never updated or deleted by application code. For Slice 6A the
-/// staged schema deliberately omits the accepted long-term
-/// <c>SourceCommunityChallengeId</c> (Community Challenge is Deferred); every
-/// 6A award is a milestone award whose <see cref="XpTransactionId"/> is the
-/// resolved triggering ledger row.
+/// and are never updated or deleted by application code. Milestone awards
+/// reference their triggering XP transaction; community challenge rewards
+/// reference the challenge that produced the award.
 /// </summary>
 public sealed class UserAchievement
 {
@@ -21,6 +19,7 @@ public sealed class UserAchievement
     public Guid AchievementId { get; internal set; }
     public DateTimeOffset AwardedAt { get; internal set; }
     public Guid? XpTransactionId { get; internal set; }
+    public Guid? SourceCommunityChallengeId { get; internal set; }
 
     /// <summary>
     /// Creates one milestone award whose trigger was resolved from the locked
@@ -52,6 +51,25 @@ public sealed class UserAchievement
             AchievementId = award.AchievementId,
             AwardedAt = award.AwardedAt.ToUniversalTime(),
             XpTransactionId = award.XpTransactionId,
+        };
+    }
+
+    public static UserAchievement CreateFromCommunityChallenge(
+        Guid userId,
+        Guid achievementId,
+        Guid challengeId,
+        DateTimeOffset awardedAt)
+    {
+        if (userId == Guid.Empty || achievementId == Guid.Empty || challengeId == Guid.Empty)
+            throw new ArgumentException(
+                "User, achievement, and challenge are required.");
+        return new UserAchievement
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            AchievementId = achievementId,
+            SourceCommunityChallengeId = challengeId,
+            AwardedAt = awardedAt.ToUniversalTime(),
         };
     }
 }

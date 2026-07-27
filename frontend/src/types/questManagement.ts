@@ -43,6 +43,8 @@ export interface CreateQuestInput {
   locationRegionId: string | null;
   locationDescription: string | null;
   externalSourceUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
   coverImage: CoverImageInput;
 }
 
@@ -97,4 +99,6 @@ export interface QuestManagementDetailDto {
   createdAtUtc: string;
   updatedAtUtc: string;
   version: number;
+  latitude: number | null;
+  longitude: number | null;
 }

@@ -253,6 +253,7 @@ public static class DemoQuestSeed
 
     private static async Task Seed(KiwimpactDbContext db, QuestParams p)
     {
+        var coordinates = CoordinatesFor(p.RegionId);
         var existing = await db.Quests.FirstOrDefaultAsync(q => q.Id == p.Id);
         if (existing is not null)
         {
@@ -269,6 +270,8 @@ public static class DemoQuestSeed
             existing.EndAtUtc = p.EndAt;
             existing.LocationRegionId = p.RegionId;
             existing.LocationDescription = p.LocationDescription;
+            existing.Latitude = coordinates?.Latitude;
+            existing.Longitude = coordinates?.Longitude;
             existing.ExternalSourceUrl = p.ExtUrl;
             existing.ExternalSourceStatus = p.ExtStatus;
             existing.SourceCheckedAt = p.CheckedAt;
@@ -293,6 +296,8 @@ public static class DemoQuestSeed
             EndAtUtc = p.EndAt,
             LocationRegionId = p.RegionId,
             LocationDescription = p.LocationDescription,
+            Latitude = coordinates?.Latitude,
+            Longitude = coordinates?.Longitude,
             ExternalSourceUrl = p.ExtUrl,
             ExternalSourceStatus = p.ExtStatus,
             SourceCheckedAt = p.CheckedAt,
@@ -320,6 +325,24 @@ public static class DemoQuestSeed
             });
         }
     }
+
+    private static (decimal Latitude, decimal Longitude)? CoordinatesFor(Guid? regionId) =>
+        regionId switch
+        {
+            var id when id == RegionSeed.HendersonMasseyId => (-36.874700m, 174.628500m),
+            var id when id == RegionSeed.DevonportTakapunaId => (-36.787000m, 174.773000m),
+            var id when id == RegionSeed.AlbertEdenId => (-36.884000m, 174.720000m),
+            var id when id == RegionSeed.FranklinId => (-37.069000m, 175.100000m),
+            var id when id == RegionSeed.HowickId => (-36.894000m, 174.932000m),
+            var id when id == RegionSeed.KaipatikiId => (-36.781000m, 174.722000m),
+            var id when id == RegionSeed.GreatBarrierId => (-36.257000m, 175.489000m),
+            var id when id == RegionSeed.MangereOtahuhuId => (-36.968000m, 174.798000m),
+            var id when id == RegionSeed.ManurewaId => (-37.020000m, 174.895000m),
+            var id when id == RegionSeed.MaungakiekieTamakiId => (-36.889000m, 174.836000m),
+            var id when id == RegionSeed.OtaraPapatoetoeId => (-36.962000m, 174.874000m),
+            var id when id == RegionSeed.PapakuraId => (-37.065000m, 174.943000m),
+            _ => null,
+        };
 
     private sealed record QuestParams(
         Guid Id, string Title, string Description,

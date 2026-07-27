@@ -113,7 +113,7 @@ describe('App shell', () => {
       if (url.endsWith('/v1/auth/me')) {
         return Promise.resolve(new Response(null, { status: 401 }));
       }
-      if (url.endsWith('/v1/leaderboards/people')) {
+      if (url.includes('/v1/leaderboards/people?')) {
         return Promise.resolve(jsonResponse({
           scope: 'nz',
           period: 'allTime',
@@ -129,7 +129,9 @@ describe('App shell', () => {
 
     expect(await screen.findByRole('heading', { name: 'Leaderboard' }))
       .toBeInTheDocument();
-    expect(screen.getByText('No ranked members yet.')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'No ranked members yet.' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
   });
 });
