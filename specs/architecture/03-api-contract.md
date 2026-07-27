@@ -251,19 +251,28 @@
 - Passport includes Home Community label only when `ShowCommunityOnPassport` is enabled.
 - Community Participation uses `CommunityRegionIdAtAward` snapshot — no current-HomeCommunity filtering.
 
-**Implemented subset (Slice 5B, 2026-07-26):** only
-`GET /api/v1/users/me/passport/completions` is implemented, with a narrower
-record set than the long-term contract above. The other two Passport routes
-(`/users/me/passport`, `/users/me/passport/community-participation`) remain
-unimplemented future direction.
+**Implementation status (Slice 12, 2026-07-27):** all three Passport routes
+above are implemented. Slice 12 completed the summary and historical Community
+Participation reads without adding a persistence model.
 
-- **Record set:** the authenticated caller's `QuestCompletion` rows with
-  `Status == Verified` and `Method == CompletionCode` only (the only status
-  and method currently implemented). The accepted one-record-per-Quest
-  precedence above (Verified > Pending EvidenceClaim > SelfReported > latest
-  Rejected) remains the unimplemented long-term direction; a future
-  completion-method Slice must broaden the backend filter, DTO/validators,
-  and UI labels together.
+- `GET /api/v1/users/me/passport` returns the caller's display name,
+  authoritative XP/level/rank, optional Home Community under the existing
+  `ShowCommunityOnPassport` preference, Verified/SelfReported/Pending counts,
+  and Verified XP-producing impact grouped by Quest category. Category values
+  are aggregates, not goals or environmental outcome claims.
+- `GET /api/v1/users/me/passport/community-participation` groups the caller's
+  immutable XP ledger rows by `CommunityRegionIdAtAward`. Each item returns the
+  Region summary, whether it is the current Home Community, Verified completion
+  count, Verified XP, challenges actually contributed to during their
+  half-open period, challenge-sourced achievements earned, and latest
+  contribution timestamp. Null-attributed XP is excluded.
+- Both routes derive identity only from the authenticated session. They accept
+  no user selector and never return email, user id, evidence, claim text, or
+  review notes.
+
+- **Completion-history record set:** the authenticated caller's primary
+  display record per Quest using the accepted precedence above (Verified >
+  Pending EvidenceClaim > SelfReported > latest Rejected).
 - **Query:** `page` (1-based, default 1, values < 1 normalize to 1) and
   `pageSize` (default 12, < 1 normalizes to 12, clamped to 50). Ordered by
   `VerifiedAtUtc DESC` with explicit nulls-last semantics, tie-break `Id

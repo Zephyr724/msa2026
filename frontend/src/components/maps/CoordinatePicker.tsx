@@ -1,4 +1,6 @@
-import { APIProvider, Map } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, APIProvider, Map } from '@vis.gl/react-google-maps';
+import { useState } from 'react';
+import { googleMapsConfig } from '../../lib/googleMapsConfig';
 
 const AUCKLAND_CENTER = { lat: -36.8509, lng: 174.7645 };
 
@@ -15,21 +17,26 @@ export function CoordinatePicker({
   disabled = false,
   onChange,
 }: CoordinatePickerProps) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  const position = latitude && longitude
-    ? { lat: Number(latitude), lng: Number(longitude) }
-    : AUCKLAND_CENTER;
+  const { apiKey, isConfigured, mapId } = googleMapsConfig;
+  const [loadFailed, setLoadFailed] = useState(false);
+  const selectedPosition = parsePosition(latitude, longitude);
+  const position = selectedPosition ?? AUCKLAND_CENTER;
 
   return (
     <div className="space-y-3">
-      {apiKey && !disabled ? (
-        <APIProvider apiKey={apiKey}>
+      {isConfigured && apiKey && mapId && !disabled && !loadFailed ? (
+        <APIProvider
+          apiKey={apiKey}
+          language="en"
+          onError={() => setLoadFailed(true)}
+          region="NZ"
+        >
           <div className="h-64 overflow-hidden rounded-2xl border border-base-300">
             <Map
               center={position}
               defaultZoom={12}
               gestureHandling="greedy"
-              mapId="DEMO_MAP_ID"
+              mapId={mapId}
               onClick={(event) => {
                 const point = event.detail.latLng;
                 if (point) {
@@ -40,7 +47,14 @@ export function CoordinatePicker({
                 }
               }}
               reuseMaps
-            />
+            >
+              {selectedPosition && (
+                <AdvancedMarker
+                  position={selectedPosition}
+                  title="Selected Quest location"
+                />
+              )}
+            </Map>
           </div>
           <p className="text-sm text-base-content/60">
             Click the map to choose a location, then fine-tune it with the
@@ -84,4 +98,13 @@ export function CoordinatePicker({
       </div>
     </div>
   );
+}
+
+function parsePosition(latitude: string, longitude: string) {
+  if (!latitude.trim() || !longitude.trim()) return null;
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
 }

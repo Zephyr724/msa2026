@@ -5,28 +5,33 @@ import {
   Map,
   useMap,
 } from '@vis.gl/react-google-maps';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { googleMapsConfig } from '../../lib/googleMapsConfig';
 import type { QuestListItemDto } from '../../types/quest';
 
 const AUCKLAND_CENTER = { lat: -36.8509, lng: 174.7645 };
 
 export function QuestMap({ quests }: { quests: QuestListItemDto[] }) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  const mapped = quests.filter(
-    (quest) => quest.latitude !== null && quest.longitude !== null,
+  const { apiKey, isConfigured, mapId } = googleMapsConfig;
+  const mapped = useMemo(
+    () => quests.filter(
+      (quest) => typeof quest.latitude === 'number'
+        && typeof quest.longitude === 'number',
+    ),
+    [quests],
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const selected = mapped.find((quest) => quest.id === selectedId);
 
-  if (!apiKey) {
+  if (!isConfigured || !apiKey || !mapId || loadFailed) {
     return (
       <div className="grid min-h-64 place-items-center rounded-3xl border border-dashed border-base-300 bg-base-100 p-8 text-center">
         <div>
-          <p className="font-bold">Map preview is unavailable</p>
+          <p className="font-bold">Quest map is temporarily unavailable</p>
           <p className="mt-2 max-w-md text-sm text-base-content/60">
-            The complete Quest list remains available below. Add a restricted
-            VITE_GOOGLE_MAPS_API_KEY locally to enable the map.
+            Use the complete Quest list below to discover and open every Quest.
           </p>
         </div>
       </div>
@@ -34,13 +39,18 @@ export function QuestMap({ quests }: { quests: QuestListItemDto[] }) {
   }
 
   return (
-    <APIProvider apiKey={apiKey}>
+    <APIProvider
+      apiKey={apiKey}
+      language="en"
+      onError={() => setLoadFailed(true)}
+      region="NZ"
+    >
       <div className="h-[24rem] overflow-hidden rounded-3xl border border-base-300">
         <Map
           defaultCenter={AUCKLAND_CENTER}
           defaultZoom={10}
           gestureHandling="greedy"
-          mapId="DEMO_MAP_ID"
+          mapId={mapId}
           reuseMaps
         >
           <FitMappedQuests quests={mapped} />
@@ -81,6 +91,11 @@ function FitMappedQuests({ quests }: { quests: QuestListItemDto[] }) {
   const map = useMap();
   useEffect(() => {
     if (!map || quests.length === 0) return;
+    if (quests.length === 1) {
+      map.setCenter({ lat: quests[0].latitude!, lng: quests[0].longitude! });
+      map.setZoom(13);
+      return;
+    }
     const latitudes = quests.map((quest) => quest.latitude!);
     const longitudes = quests.map((quest) => quest.longitude!);
     map.fitBounds({

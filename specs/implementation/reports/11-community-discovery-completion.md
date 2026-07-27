@@ -123,11 +123,11 @@
 
 ## Known limitations
 
-- No Google Maps browser key was available in this workspace, so the
-  no-key/list/numeric-input fallback is implemented and tested but a live
-  Google-rendered map was not visually observed. A restricted local key belongs
-  in `frontend/.env.local`; production referrer restrictions need separate
-  deployment review.
+- Follow-up Slice 11A replaced the hard-coded demo map ID with explicit browser
+  key plus JavaScript map-ID configuration and added load-failure handling.
+  No real credentials were available, so a live Google-rendered map and Cloud
+  restrictions were not observed. Restricted local values belong in ignored
+  `frontend/.env.local`; production origins remain part of deployment review.
 - Production email delivery and Google OAuth/account linking remain outside
   this Slice.
 - SignalR is best-effort invalidation only; clients always recover through

@@ -1,9 +1,13 @@
 import {
   PASSPORT_QUEST_STATUSES,
+  type PassportCommunityParticipation,
   type PassportCompletionsPage,
   type PassportCompletionItem,
+  type PassportSummary,
 } from '../../types/passport.ts';
 import { QUEST_CATEGORIES } from '../../types/quest.ts';
+import { isValidRegionSummaryDto } from './regionDto.ts';
+import { validateMyProgression } from './progressionDto.ts';
 
 const MAX_PAGE_SIZE = 50;
 
@@ -123,4 +127,85 @@ export function validatePassportCompletionsPage(
     hasNextPage: payload.hasNextPage,
     hasPreviousPage: payload.hasPreviousPage,
   };
+}
+
+export function validatePassportSummary(payload: unknown): PassportSummary {
+  if (
+    !isRecord(payload)
+    || !hasExactKeys(payload, [
+      'displayName', 'totalXp', 'level', 'rankTitle', 'homeCommunity',
+      'verifiedCompletionCount', 'selfReportedCompletionCount',
+      'pendingCompletionCount', 'categoryImpact',
+    ])
+    || typeof payload.displayName !== 'string'
+    || payload.displayName.length === 0
+    || (payload.homeCommunity !== null
+      && !isValidRegionSummaryDto(payload.homeCommunity))
+    || !isNonNegativeSafeInteger(payload.verifiedCompletionCount)
+    || !isNonNegativeSafeInteger(payload.selfReportedCompletionCount)
+    || !isNonNegativeSafeInteger(payload.pendingCompletionCount)
+    || !Array.isArray(payload.categoryImpact)
+  ) {
+    throw new Error('Passport summary response is not valid.');
+  }
+  validateMyProgression({
+    totalXp: payload.totalXp,
+    level: payload.level,
+    rankTitle: payload.rankTitle,
+  });
+  const seen = new Set<string>();
+  for (const item of payload.categoryImpact) {
+    if (
+      !isRecord(item)
+      || !hasExactKeys(item, [
+        'category', 'verifiedCompletionCount', 'verifiedXp',
+      ])
+      || typeof item.category !== 'string'
+      || !categories.has(item.category)
+      || seen.has(item.category)
+      || !isNonNegativeSafeInteger(item.verifiedCompletionCount)
+      || !isNonNegativeSafeInteger(item.verifiedXp)
+    ) {
+      throw new Error('Passport category impact response is not valid.');
+    }
+    seen.add(item.category);
+  }
+  return payload as unknown as PassportSummary;
+}
+
+export function validatePassportCommunityParticipation(
+  payload: unknown,
+): PassportCommunityParticipation[] {
+  if (!Array.isArray(payload)) {
+    throw new Error('Passport community participation response is not valid.');
+  }
+  const result: PassportCommunityParticipation[] = [];
+  const seen = new Set<string>();
+  for (const item of payload) {
+    if (
+      !isRecord(item)
+      || !hasExactKeys(item, [
+        'community', 'isCurrentCommunity', 'verifiedCompletionCount',
+        'verifiedXp', 'challengesContributedTo', 'challengeAchievementsEarned',
+        'latestContributionAtUtc',
+      ])
+      || !isValidRegionSummaryDto(item.community)
+      || seen.has(item.community.id)
+      || typeof item.isCurrentCommunity !== 'boolean'
+      || !isNonNegativeSafeInteger(item.verifiedCompletionCount)
+      || !isNonNegativeSafeInteger(item.verifiedXp)
+      || !isNonNegativeSafeInteger(item.challengesContributedTo)
+      || !isNonNegativeSafeInteger(item.challengeAchievementsEarned)
+      || !isUtcTimestamp(item.latestContributionAtUtc)
+    ) {
+      throw new Error('Passport community participation item is not valid.');
+    }
+    seen.add(item.community.id);
+    result.push(item as unknown as PassportCommunityParticipation);
+  }
+  return result;
+}
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return isSafeInteger(value) && value >= 0;
 }

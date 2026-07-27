@@ -11,6 +11,17 @@ public sealed class PassportService : IPassportService
         _repository = repository;
     }
 
+    public async Task<PassportSummary> GetMySummaryAsync(
+        Guid actorId,
+        CancellationToken ct = default)
+    {
+        EnsureActor(actorId);
+        return await _repository.GetSummaryAsync(actorId, ct)
+            ?? throw new PassportException(
+                PassportError.NotFound,
+                "Profile not found.");
+    }
+
     public async Task<(IReadOnlyList<PassportCompletionItem> Items, int TotalCount)>
         GetMyCompletionsAsync(
             Guid actorId,
@@ -18,10 +29,7 @@ public sealed class PassportService : IPassportService
             int pageSize,
             CancellationToken ct = default)
     {
-        if (actorId == Guid.Empty)
-            throw new PassportException(
-                PassportError.NotFound,
-                "Profile not found.");
+        EnsureActor(actorId);
 
         page = page < 1 ? 1 : page;
         pageSize = pageSize < 1 ? 12 : Math.Min(pageSize, 50);
@@ -42,5 +50,26 @@ public sealed class PassportService : IPassportService
                 "Progression state is not ready yet.");
 
         return await _repository.GetCompletionPageAsync(actorId, page, pageSize, ct);
+    }
+
+    public async Task<IReadOnlyList<PassportCommunityParticipation>>
+        GetMyCommunityParticipationAsync(
+            Guid actorId,
+            CancellationToken ct = default)
+    {
+        EnsureActor(actorId);
+        if (!await _repository.ProfileExistsAsync(actorId, ct))
+            throw new PassportException(
+                PassportError.NotFound,
+                "Profile not found.");
+        return await _repository.GetCommunityParticipationAsync(actorId, ct);
+    }
+
+    private static void EnsureActor(Guid actorId)
+    {
+        if (actorId == Guid.Empty)
+            throw new PassportException(
+                PassportError.NotFound,
+                "Profile not found.");
     }
 }

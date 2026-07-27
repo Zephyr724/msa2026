@@ -36,7 +36,7 @@ has occurred.
 
 ## Current Work
 
-### Slices 9–11 — MVP Product Convergence
+### Slices 9–12 — MVP Product Convergence
 
 - **Slice 9:** committed and pushed as `7cd3b1a` on
   `codex/feat/slice-9-mvp-ui-convergence`. The production UI now follows the
@@ -55,15 +55,32 @@ has occurred.
   people/community leaderboards with privacy thresholds, verified weekly
   streak, a privacy-safe PNG Share Card, Community Challenges with idempotent
   reward finalization, and SignalR query invalidation backed by REST.
-- **Observed Slice 11 gates:** clean frontend lint/type-check; 35 frontend test
-  files with 308/308 tests passing; successful frontend production build; clean
+- **Observed Slice 11 gates:** clean frontend lint/type-check; after the Maps
+  runtime correction, 37 frontend test files with 314/314 tests passing;
+  successful frontend production build; clean
   backend build apart from five pre-existing test-helper EF1002 warnings;
   247/247 backend unit tests and 284/284 PostgreSQL integration tests passing.
 - **Slice 11 review:** Kimi K3 Review 57 approved the bounded correction with
   no remaining Blocker or Major finding.
+- **Google Maps runtime correction:** real browser-key and JavaScript map-ID
+  configuration now replace the demo map ID, with load-failure/list/input
+  fallbacks. K3 Review 58 approved the referrer-policy correction with no
+  remaining Blocker or Major. A restricted key and map ID have since been
+  supplied locally and live Google map rendering was observed.
+- **Slice 12 status:** production implementation, full local gates, and
+  independent Kimi K3 Review 59 are complete with no remaining Blocker or
+  Major. The remaining Figma Make
+  experience gap is closed with a dedicated Share Card Builder, the accepted
+  Passport summary/community-participation APIs and full real-data Passport
+  hierarchy, a member-momentum Home, and authoritative Mission Board states.
+  The prototype's fictional category targets and eight-badge catalog were not
+  copied.
+- **Observed Slice 12 gates:** frontend lint/type-check/build passed with
+  326/326 tests; backend build passed apart from five pre-existing test-helper
+  EF1002 warnings, with 247/247 unit and 286/286 PostgreSQL integration tests.
 - **Known boundary:** Google OAuth/account linking, production email-provider
-  setup, Google Maps production-key restrictions, Docker/deployment, and the
-  final submission workflow remain outside Slices 9–11.
+  setup, production Google Maps credentials/restrictions, Docker/deployment,
+  and the final submission workflow remain outside Slices 9–12.
 
 ### Remaining P0 delivery gaps
 
@@ -77,9 +94,10 @@ has occurred.
 
 The previously deferred Google Maps, external-event claims, Community
 Challenge, multi-layer community leaderboards, weekly streak, Share Card, and
-SignalR invalidation are implemented on the sequential Slice 10/11 branches.
-They are not represented as merged into `main` until the human performs the
-separate integration workflow.
+SignalR invalidation are implemented on the sequential Slice 10/11 work.
+Slice 12 completes their member-facing composition. They are not represented
+as merged into `main` until the human performs the separate integration
+workflow.
 
 ## Environment Prerequisites
 

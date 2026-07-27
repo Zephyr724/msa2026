@@ -1,5 +1,7 @@
 import type { MyProgression } from '../../types/progression.ts';
-import { CheckCircle2, Shield, Zap } from 'lucide-react';
+import type { PassportSummary } from '../../types/passport.ts';
+import { CheckCircle2, Flame, Home, Shield, Trophy, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import LevelProgress from './LevelProgress.tsx';
 
 /**
@@ -8,10 +10,14 @@ import LevelProgress from './LevelProgress.tsx';
  */
 export default function PassportSummaryCard({
   displayName,
+  passport,
   progression,
+  streakWeeks,
 }: {
   displayName?: string;
+  passport?: PassportSummary;
   progression: MyProgression;
+  streakWeeks?: number;
 }) {
   return (
     <div className="kiwi-topography overflow-hidden rounded-[1.75rem] bg-primary p-6 text-primary-content shadow-xl sm:p-8">
@@ -25,6 +31,12 @@ export default function PassportSummaryCard({
             <span className="font-bold">Level {progression.level}</span>
             <span aria-hidden="true" className="opacity-45">·</span>
             <span>{progression.rankTitle}</span>
+            {passport?.homeCommunity && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/12 px-2.5 py-1 text-xs font-bold">
+                <Home aria-hidden="true" className="size-3" />
+                {passport.homeCommunity.name} Contributor
+              </span>
+            )}
           </div>
           <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold text-primary-content/80">
             <span className="inline-flex items-center gap-2">
@@ -33,8 +45,18 @@ export default function PassportSummaryCard({
             </span>
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 aria-hidden="true" className="size-4" />
-              Verified progress
+              {passport
+                ? `${passport.verifiedCompletionCount} verified ${
+                  passport.verifiedCompletionCount === 1 ? 'Quest' : 'Quests'
+                }`
+                : 'Verified progress'}
             </span>
+            {streakWeeks !== undefined && (
+              <span className="inline-flex items-center gap-2">
+                <Flame aria-hidden="true" className="size-4 text-accent" />
+                {streakWeeks}-week streak
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -44,6 +66,15 @@ export default function PassportSummaryCard({
           <LevelProgress progression={progression} />
         </div>
       </div>
+      {passport?.homeCommunity && (
+        <Link
+          className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-bold transition-colors hover:bg-white/15"
+          to="/leaderboard?scope=myCommunity&period=weekly"
+        >
+          <Trophy aria-hidden="true" className="size-4 text-accent" />
+          View {passport.homeCommunity.name} leaderboard
+        </Link>
+      )}
     </div>
   );
 }

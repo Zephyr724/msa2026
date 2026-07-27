@@ -55,7 +55,10 @@ function renderPage(initialEntry = '/my-quests') {
   return { ...view, queryClient, router };
 }
 
-function stubApi(participations: unknown[] = [activeQuest]) {
+function stubApi(
+  participations: unknown[] = [activeQuest],
+  claims: unknown[] = [],
+) {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
     if (url.endsWith('/v1/users/me/progression')) {
@@ -67,6 +70,20 @@ function stubApi(participations: unknown[] = [activeQuest]) {
     }
     if (url.includes('/v1/users/me/participations')) {
       return Promise.resolve(jsonResponse(participations));
+    }
+    if (url.endsWith('/v1/users/me/claims')) {
+      return Promise.resolve(jsonResponse(claims));
+    }
+    if (url.includes('/v1/users/me/passport/completions')) {
+      return Promise.resolve(jsonResponse({
+        items: [],
+        page: 1,
+        pageSize: 50,
+        totalCount: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      }));
     }
     return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
   });
@@ -86,27 +103,182 @@ describe('MyQuestsPage', () => {
     expect(await screen.findByRole('heading', { name: 'Mission Board' }))
       .toBeInTheDocument();
     expect(await screen.findByText('Dated Stream Cleanup')).toBeInTheDocument();
-    expect(screen.getByText('Active mission')).toBeInTheDocument();
+    expect(screen.getByText(/Active · starts/)).toBeInTheDocument();
     expect(screen.getByText('Level 3 · Novice')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) =>
-      String(url).endsWith('/v1/users/me/participations?status=active'))).toBe(true);
+      String(url).endsWith('/v1/users/me/participations?status=all'))).toBe(true);
   });
 
-  it('keeps the selected status in the URL and refetches that server filter', async () => {
+  it('keeps the composed view in the URL without refetching another user scope', async () => {
     const user = userEvent.setup();
     const fetchMock = stubApi([]);
     const { router } = renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Cancelled' }));
+    await user.click(screen.getByRole('button', { name: /Cancelled/ }));
 
     await waitFor(() => {
-      expect(router.state.location.search).toBe('?status=cancelled');
+      expect(router.state.location.search).toBe('?view=cancelled');
       expect(fetchMock.mock.calls.some(([url]) =>
-        String(url).endsWith('/v1/users/me/participations?status=cancelled'))).toBe(true);
+        String(url).endsWith('/v1/users/me/participations?status=all'))).toBe(true);
     });
-    expect(await screen.findByText('No cancelled quests')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Discover quests/ }))
+    expect(await screen.findByText('No cancelled Quests')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Discover Quests/ }))
       .toHaveAttribute('href', '/quests');
+  });
+
+  it('uses the latest claim when a rejected attempt is resubmitted for review', async () => {
+    const user = userEvent.setup();
+    const readyQuest = {
+      ...activeQuest,
+      quest: {
+        ...activeQuest.quest,
+        startAtUtc: '2020-01-01T00:00:00Z',
+      },
+    };
+    const latestPending = {
+      claimId: '11111111-1111-4111-8111-111111111111',
+      userId: session.userId,
+      questId: activeQuest.quest.id,
+      questTitle: activeQuest.quest.title,
+      status: 'Pending',
+      completedAtUtc: '2026-07-26T10:00:00Z',
+      createdAtUtc: '2026-07-26T10:00:00Z',
+      reviewedAtUtc: null,
+    };
+    const olderRejected = {
+      ...latestPending,
+      claimId: '22222222-2222-4222-8222-222222222222',
+      status: 'Rejected',
+      createdAtUtc: '2026-07-25T10:00:00Z',
+      reviewedAtUtc: '2026-07-25T12:00:00Z',
+    };
+    stubApi([readyQuest], [latestPending, olderRejected]);
+    renderPage('/my-quests?view=ready');
+
+    expect(await screen.findByText('Nothing ready to complete')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Under Review.*1/ }))
+      .toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Under Review.*1/ }));
+    expect(await screen.findByText('Dated Stream Cleanup')).toBeInTheDocument();
+    expect(screen.getByText('Under review')).toBeInTheDocument();
+  });
+
+  it('keeps schedule-TBD and future Quests active and only past starts ready', async () => {
+    const user = userEvent.setup();
+    const scheduleTbd = {
+      ...activeQuest,
+      participationId: '11111111-aaaa-4111-8111-111111111111',
+      quest: {
+        ...activeQuest.quest,
+        id: '11111111-bbbb-4111-8111-111111111111',
+        title: 'Schedule TBD Quest',
+        startAtUtc: null,
+      },
+    };
+    const future = {
+      ...activeQuest,
+      participationId: '22222222-aaaa-4222-8222-222222222222',
+      quest: {
+        ...activeQuest.quest,
+        id: '22222222-bbbb-4222-8222-222222222222',
+        title: 'Future Quest',
+        startAtUtc: '2099-01-01T00:00:00Z',
+      },
+    };
+    const past = {
+      ...activeQuest,
+      participationId: '33333333-aaaa-4333-8333-333333333333',
+      quest: {
+        ...activeQuest.quest,
+        id: '33333333-bbbb-4333-8333-333333333333',
+        title: 'Past Quest',
+        startAtUtc: '2020-01-01T00:00:00Z',
+      },
+    };
+    stubApi([scheduleTbd, future, past]);
+    renderPage();
+
+    expect(await screen.findByText('Schedule TBD Quest')).toBeInTheDocument();
+    expect(screen.getByText('Future Quest')).toBeInTheDocument();
+    expect(screen.queryByText('Past Quest')).not.toBeInTheDocument();
+    expect(screen.getByText('Active · schedule to be confirmed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Active.*2/ })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Ready to Complete.*1/ }));
+    expect(await screen.findByText('Past Quest')).toBeInTheDocument();
+    expect(screen.queryByText('Schedule TBD Quest')).not.toBeInTheDocument();
+    expect(screen.queryByText('Future Quest')).not.toBeInTheDocument();
+  });
+
+  it('loads every Passport page before classifying an older completed Quest', async () => {
+    const completedQuest = {
+      ...activeQuest,
+      quest: {
+        ...activeQuest.quest,
+        startAtUtc: '2020-01-01T00:00:00Z',
+      },
+    };
+    const firstPageItems = Array.from({ length: 50 }, (_, index) => ({
+      completionId: `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      questId: `20000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      questTitle: `Other completed Quest ${index}`,
+      questCategory: 'RestoreNature',
+      questStatus: 'Published',
+      status: 'Verified',
+      method: 'CompletionCode',
+      completedAtUtc: '2026-07-20T09:00:00.0000000Z',
+      verifiedAtUtc: '2026-07-20T09:00:00.0000000Z',
+      xpAmount: 50,
+    }));
+    const olderCompletedItem = {
+      completionId: '30000000-0000-4000-8000-000000000000',
+      questId: activeQuest.quest.id,
+      questTitle: activeQuest.quest.title,
+      questCategory: 'CleanReduceWaste',
+      questStatus: 'Published',
+      status: 'Verified',
+      method: 'CompletionCode',
+      completedAtUtc: '2025-01-01T09:00:00.0000000Z',
+      verifiedAtUtc: '2025-01-01T09:00:00.0000000Z',
+      xpAmount: 50,
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/v1/users/me/progression')) {
+        return Promise.resolve(jsonResponse({
+          totalXp: 120,
+          level: 3,
+          rankTitle: 'Novice',
+        }));
+      }
+      if (url.includes('/v1/users/me/participations')) {
+        return Promise.resolve(jsonResponse([completedQuest]));
+      }
+      if (url.endsWith('/v1/users/me/claims')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.includes('/v1/users/me/passport/completions')) {
+        const page = new URL(url, 'http://localhost').searchParams.get('page');
+        const items = page === '2' ? [olderCompletedItem] : firstPageItems;
+        return Promise.resolve(jsonResponse({
+          items,
+          page: page === '2' ? 2 : 1,
+          pageSize: 50,
+          totalCount: 51,
+          totalPages: 2,
+          hasNextPage: page !== '2',
+          hasPreviousPage: page === '2',
+        }));
+      }
+      return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage('/my-quests?view=ready');
+
+    expect(await screen.findByText('Nothing ready to complete')).toBeInTheDocument();
+    expect(screen.queryByText('Dated Stream Cleanup')).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) =>
+      String(url).includes('page=2&pageSize=50'))).toBe(true);
   });
 
   it('contains an API failure and offers an explicit retry', async () => {
@@ -128,15 +300,29 @@ describe('MyQuestsPage', () => {
             : jsonResponse([]),
         );
       }
+      if (url.endsWith('/v1/users/me/claims')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.includes('/v1/users/me/passport/completions')) {
+        return Promise.resolve(jsonResponse({
+          items: [],
+          page: 1,
+          pageSize: 50,
+          totalCount: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }));
+      }
       return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
     }));
     const user = userEvent.setup();
     renderPage();
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('We could not load your Mission Board');
+    expect(alert).toHaveTextContent('We could not classify your Mission Board');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('Your Mission Board is ready')).toBeInTheDocument();
+    expect(await screen.findByText('No upcoming active missions')).toBeInTheDocument();
     expect(attempts).toBe(2);
   });
 });

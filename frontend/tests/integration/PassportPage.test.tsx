@@ -87,6 +87,8 @@ interface StubOptions {
   completions?: (url: string) => Promise<Response>;
   catalog?: () => Promise<Response>;
   achievements?: () => Promise<Response>;
+  summary?: () => Promise<Response>;
+  communityParticipation?: () => Promise<Response>;
 }
 
 function stubPassportApi({
@@ -94,6 +96,8 @@ function stubPassportApi({
   completions,
   catalog,
   achievements,
+  summary,
+  communityParticipation,
 }: StubOptions) {
   const fetchMock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
     const url = String(input);
@@ -102,6 +106,26 @@ function stubPassportApi({
     }
     if (url.includes('/v1/users/me/passport/completions')) {
       return completions?.(url) ?? Promise.resolve(jsonResponse(emptyHistory()));
+    }
+    if (url.endsWith('/v1/users/me/passport/community-participation')) {
+      return communityParticipation?.() ?? Promise.resolve(jsonResponse([]));
+    }
+    if (url.endsWith('/v1/users/me/passport')) {
+      return summary?.() ?? Promise.resolve(jsonResponse({
+        displayName: 'Aroha',
+        totalXp: 120,
+        level: 3,
+        rankTitle: 'Novice',
+        homeCommunity: null,
+        verifiedCompletionCount: 1,
+        selfReportedCompletionCount: 0,
+        pendingCompletionCount: 0,
+        categoryImpact: [{
+          category: 'RestoreNature',
+          verifiedCompletionCount: 1,
+          verifiedXp: 50,
+        }],
+      }));
     }
     if (url.endsWith('/v1/achievements')) {
       return catalog?.() ?? Promise.resolve(jsonResponse(achievementCatalog()));
@@ -122,6 +146,9 @@ function stubPassportApi({
         currentWeeks: 2,
         hasVerifiedImpactThisWeek: true,
       }));
+    }
+    if (url.endsWith('/v1/users/me/claims')) {
+      return Promise.resolve(jsonResponse([]));
     }
     return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
   });
@@ -209,7 +236,7 @@ describe('PassportPage', () => {
     expect(screen.getByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
     expect(screen.getByText('45 XP to Level 4')).toBeInTheDocument();
 
-    expect(screen.getByText('Restore Nature')).toBeInTheDocument();
+    expect(screen.getAllByText('Restore Nature')).not.toHaveLength(0);
     expect(screen.getByText('Verified')).toBeInTheDocument();
     expect(screen.getByText('50 XP')).toBeInTheDocument();
     const time = container.querySelector('time');
@@ -461,7 +488,9 @@ describe('PassportPage', () => {
       .toBeInTheDocument();
 
     // Progressbar ARIA values in the unified within-level unit.
-    const bar = screen.getByRole('progressbar');
+    const bar = screen.getByRole('progressbar', {
+      name: 'Progress toward Level 4',
+    });
     expect(bar).toHaveAttribute('aria-valuemin', '0');
     expect(bar).toHaveAttribute('aria-valuemax', '65');
     expect(bar).toHaveAttribute('aria-valuenow', '20');
@@ -505,9 +534,13 @@ describe('PassportPage', () => {
       .map((heading) => heading.textContent);
     expect(headings).toEqual([
       'Progress',
+      'Building Momentum',
+      'Quest category progress',
+      'Achievements',
+      'Community participation',
+      'Passport settings',
       'Home Community',
       'Share Card',
-      'Achievements',
       'Completion history',
     ]);
   });

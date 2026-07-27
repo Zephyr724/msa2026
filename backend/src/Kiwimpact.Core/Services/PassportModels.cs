@@ -36,3 +36,34 @@ public sealed record PassportCompletionItem(
     DateTimeOffset CompletedAtUtc,
     DateTimeOffset? VerifiedAtUtc,
     int? XpAmount);
+
+public sealed record PassportCategoryImpact(
+    QuestCategory Category,
+    long VerifiedCompletionCount,
+    long VerifiedXp);
+
+public sealed record PassportSummary(
+    string DisplayName,
+    long TotalXp,
+    int Level,
+    string RankTitle,
+    PassportCommunityIdentity? HomeCommunity,
+    long VerifiedCompletionCount,
+    long SelfReportedCompletionCount,
+    long PendingCompletionCount,
+    IReadOnlyList<PassportCategoryImpact> CategoryImpact);
+
+public sealed record PassportCommunityIdentity(
+    Guid Id,
+    string Name,
+    string Type,
+    Guid? ParentRegionId);
+
+public sealed record PassportCommunityParticipation(
+    PassportCommunityIdentity Community,
+    bool IsCurrentCommunity,
+    long VerifiedCompletionCount,
+    long VerifiedXp,
+    int ChallengesContributedTo,
+    int ChallengeAchievementsEarned,
+    DateTimeOffset LatestContributionAtUtc);

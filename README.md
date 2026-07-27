@@ -1,6 +1,6 @@
 # Kiwimpact — Community eco quests across New Zealand
 
-**Status: Slice 1 Region and Public Quest Read merged and frozen**
+**Status: Slices 9–12 implemented and independently reviewed**
 
 Kiwimpact is an Auckland-first gamified community environmental participation
 platform for Aotearoa New Zealand. The technical foundation is now in place.
@@ -51,7 +51,7 @@ dotnet run --project src/Kiwimpact.Api --launch-profile http
 
 The API starts on `http://localhost:5000` with the `http` launch profile.
 
-**Available endpoints:**
+**Selected public endpoints:**
 
 | Endpoint | URL |
 |----------|-----|
@@ -94,9 +94,19 @@ npm run build        # production build
 | `Cors:Origins` | Allowed CORS origins (array) |
 | `VITE_API_BASE_URL` | Browser API base URL for `apiFetch` (default: `/api`) |
 | `VITE_DEV_PROXY_TARGET` | Backend URL for Vite dev proxy (default: `http://localhost:5000`) |
+| `VITE_GOOGLE_MAPS_API_KEY` | Dedicated browser key restricted to Maps JavaScript API and approved website referrers |
+| `VITE_GOOGLE_MAPS_MAP_ID` | JavaScript map ID used by Google Maps Advanced Markers |
 
 Use `appsettings.Development.json` for local overrides, `.NET User Secrets`
 or environment variables for secrets.
+
+For local maps, copy `frontend/.env.example` to the ignored
+`frontend/.env.local`, set both Google Maps values, and restart Vite. The
+Google Cloud project must have billing and Maps JavaScript API enabled. Restrict
+the browser key to Maps JavaScript API and these local website referrers:
+`http://localhost:5173/*` and `http://127.0.0.1:5173/*`. Production needs its
+own restricted browser key and exact deployed HTTPS origins injected while
+building the Vite frontend. Never commit a real key.
 
 **Local connection string:**
 
@@ -116,24 +126,25 @@ Host=localhost;Port=5433;Database=kiwimpact;Username=kiwimpact;Password=kiwimpac
 
 ## Current State
 
-- Slice 0 Foundation is implemented.
-- Slice 1 Region and Public Quest Read is complete, merged through PR #3, and
-  frozen.
-- Current work is workflow and scope convergence before Slice 2.
-- React Router provides public Quest discovery and detail pages.
-- TanStack Query owns Region and Quest server state; discovery filters,
-  sorting, search, page, and page size are URL-owned.
-- ASP.NET Core exposes anonymous Region and published-Quest read APIs plus
-  health, OpenAPI, and Scalar endpoints.
-- Three-project Clean Architecture Lite structure is established.
-- EF Core Region, Quest, QuestImage, and Identity-backed curator persistence
-  is configured with a PostgreSQL migration and Development-only demo seeds.
+- Slices 0–8 are merged into `main`; sequential Slice 9–11 feature branches
+  implement the richer MVP product experience.
+- The current Slice 12 work aligns the production member experience with the
+  local Figma Make reference using authoritative data: full Passport summary
+  and community history, a dedicated Share Card Builder, member-momentum Home,
+  and stateful My Quests Mission Board.
+- Google Maps Quest discovery, trusted/self-reported completion, Admin Review,
+  account lifecycle, Home Community, multi-layer leaderboards, weekly streak,
+  Community Challenges, and SignalR invalidation are implemented on the
+  convergence branches.
+- TanStack Query owns server state and REST remains authoritative. SignalR is
+  invalidation-only.
+- ASP.NET Core Identity uses HttpOnly cookie authentication with antiforgery,
+  server-side authorization, ownership, validation, and privacy enforcement.
 - PostgreSQL integration tests run through Testcontainers and apply the real
-  migration.
-- Final Slice 1 verification on 2026-07-24 passed: backend build with
-  0 warnings/0 errors, 34 unit tests, 73 PostgreSQL integration tests,
-  and 65 frontend tests across 6 files, plus frontend lint, type-check,
-  and production build.
+  migrations.
+- Latest Slice 12 local gates: 326 frontend tests, 247 backend unit tests, and
+  286 PostgreSQL integration tests passed. Kimi K3 Review 59 approved the
+  Slice with no remaining Blocker or Major.
 
 ## Key References
 

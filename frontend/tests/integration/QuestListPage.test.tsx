@@ -14,6 +14,14 @@ vi.mock('../../src/hooks/useRegions', () => ({
   useRegions: vi.fn(),
 }));
 
+vi.mock('../../src/lib/googleMapsConfig', () => ({
+  googleMapsConfig: {
+    apiKey: null,
+    mapId: null,
+    isConfigured: false,
+  },
+}));
+
 const mockUseQuestList = vi.mocked(useQuestList);
 const mockUseRegions = vi.mocked(useRegions);
 
@@ -148,5 +156,20 @@ describe('Quest discovery URL and card behavior', () => {
     expect(screen.getByRole('img', {
       name: 'Fallback illustration for Dated Stream Cleanup',
     })).toHaveAttribute('src', '/images/quests/quest-fallback.svg');
+  });
+
+  it('keeps the complete Quest list available when Google Maps is not configured', () => {
+    mockUseQuestList.mockReturnValue({
+      data: questPage([datedQuest]),
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as never);
+
+    renderQuestList();
+
+    expect(screen.getByText('Quest map is temporarily unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Complete Quest list' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: datedQuest.title })).toBeInTheDocument();
   });
 });

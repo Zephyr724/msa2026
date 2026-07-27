@@ -535,6 +535,112 @@ public sealed class PassportApiTests
     }
 
     [Fact]
+    public async Task FullPassportSummaryUsesOwnAuthoritativeAggregates()
+    {
+        var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        Guid regionId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            var region = await XpLedgerTestHelpers.SeedRegionAsync(
+                db, "passport-summary-region");
+            regionId = region.Id;
+            var profile = await db.UserProfiles.SingleAsync(
+                item => item.Id == actor.UserId,
+                TestContext.Current.CancellationToken);
+            profile.UpdateCommunity(
+                region.Id,
+                showCommunityOnPassport: true,
+                DateTimeOffset.UtcNow,
+                TimeSpan.Zero);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        var completion = await SeedCompletionAsync(
+            actor.UserId,
+            QuestDifficulty.Easy,
+            communityRegionId: regionId);
+        await AwardAsync(completion);
+
+        var response = await actor.Client.GetAsync(
+            "/api/v1/users/me/passport",
+            TestContext.Current.CancellationToken);
+
+        Assert.True(
+            response.StatusCode == HttpStatusCode.OK,
+            await response.Content.ReadAsStringAsync(
+                TestContext.Current.CancellationToken));
+        var json = await ReadJsonAsync(response);
+        AssertExactKeys(
+            json,
+            "categoryImpact",
+            "displayName",
+            "homeCommunity",
+            "level",
+            "pendingCompletionCount",
+            "rankTitle",
+            "selfReportedCompletionCount",
+            "totalXp",
+            "verifiedCompletionCount");
+        Assert.Equal("Passport tester", json.GetProperty("displayName").GetString());
+        Assert.Equal(50, json.GetProperty("totalXp").GetInt64());
+        Assert.Equal(1, json.GetProperty("verifiedCompletionCount").GetInt64());
+        Assert.Equal(regionId, json.GetProperty("homeCommunity").GetProperty("id").GetGuid());
+        var category = Assert.Single(json.GetProperty("categoryImpact").EnumerateArray());
+        Assert.Equal("RestoreNature", category.GetProperty("category").GetString());
+        Assert.Equal(1, category.GetProperty("verifiedCompletionCount").GetInt64());
+        Assert.Equal(50, category.GetProperty("verifiedXp").GetInt64());
+        Assert.DoesNotContain("email", json.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("userId", json.GetRawText(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CommunityParticipationPreservesAwardTimeAttribution()
+    {
+        var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        Guid regionId;
+        var contributionTime = DateTimeOffset.UtcNow.AddMinutes(-5);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            var region = await XpLedgerTestHelpers.SeedRegionAsync(
+                db, "passport-contribution-region");
+            regionId = region.Id;
+            var challenge = CommunityChallenge.Create(
+                region.Id,
+                contributionTime.AddDays(-1),
+                contributionTime.AddDays(1),
+                targetValue: 10,
+                rewardAchievementId: null,
+                DateTimeOffset.UtcNow);
+            db.CommunityChallenges.Add(challenge);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        var completion = await SeedCompletionAsync(
+            actor.UserId,
+            QuestDifficulty.Medium,
+            contributionTime,
+            regionId);
+        await AwardAsync(completion);
+
+        var response = await actor.Client.GetAsync(
+            "/api/v1/users/me/passport/community-participation",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await ReadJsonAsync(response);
+        var item = Assert.Single(json.EnumerateArray());
+        Assert.Equal(regionId, item.GetProperty("community").GetProperty("id").GetGuid());
+        Assert.False(item.GetProperty("isCurrentCommunity").GetBoolean());
+        Assert.Equal(1, item.GetProperty("verifiedCompletionCount").GetInt64());
+        Assert.Equal(100, item.GetProperty("verifiedXp").GetInt64());
+        Assert.Equal(1, item.GetProperty("challengesContributedTo").GetInt32());
+        Assert.Equal(0, item.GetProperty("challengeAchievementsEarned").GetInt32());
+        Assert.Matches(
+            RoundTripUtcTimestamp,
+            item.GetProperty("latestContributionAtUtc").GetString());
+    }
+
+    [Fact]
     public async Task OpenApiDocumentsThePassportRoute()
     {
         var documentText = await _factory.CreateClient().GetStringAsync(
@@ -546,6 +652,16 @@ public sealed class PassportApiTests
             .GetProperty("paths")
             .TryGetProperty(PassportPath, out var path));
         Assert.True(path.TryGetProperty("get", out _));
+        Assert.True(document.RootElement
+            .GetProperty("paths")
+            .TryGetProperty("/api/v1/users/me/passport", out var summaryPath));
+        Assert.True(summaryPath.TryGetProperty("get", out _));
+        Assert.True(document.RootElement
+            .GetProperty("paths")
+            .TryGetProperty(
+                "/api/v1/users/me/passport/community-participation",
+                out var communityPath));
+        Assert.True(communityPath.TryGetProperty("get", out _));
     }
 
     private async Task<QuestCompletion> SeedCompletionAsync(

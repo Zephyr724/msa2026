@@ -1,0 +1,111 @@
+import { QueryClientProvider } from '@tanstack/react-query';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { authQueryKey } from '../../src/hooks/useAuth.ts';
+import HomePage from '../../src/pages/HomePage.tsx';
+import {
+  createTestQueryClient,
+  jsonResponse,
+} from '../organizerTestUtils.tsx';
+
+describe('Home member momentum composition', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('composes authoritative progress, community, streak, missions, and challenge data', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/v1/quests?')) {
+        return Promise.resolve(jsonResponse({
+          items: [],
+          page: 1,
+          pageSize: 3,
+          totalCount: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }));
+      }
+      if (url.endsWith('/v1/users/me/progression')) {
+        return Promise.resolve(jsonResponse({
+          totalXp: 120,
+          level: 3,
+          rankTitle: 'Novice',
+        }));
+      }
+      if (url.endsWith('/v1/users/me/profile')) {
+        return Promise.resolve(jsonResponse({
+          displayName: 'Aroha',
+          homeCommunity: {
+            id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            name: 'Henderson-Massey',
+            type: 'LocalArea',
+            parentRegionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          },
+          showCommunityOnPassport: true,
+          communityChangeAvailableAtUtc: null,
+        }));
+      }
+      if (url.endsWith('/v1/users/me/streak')) {
+        return Promise.resolve(jsonResponse({
+          currentWeeks: 3,
+          hasVerifiedImpactThisWeek: true,
+        }));
+      }
+      if (url.includes('/v1/users/me/participations')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.endsWith('/v1/community-challenges')) {
+        return Promise.resolve(jsonResponse([{
+          id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          localArea: {
+            id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            name: 'Henderson-Massey',
+            type: 'LocalArea',
+            parentRegionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          },
+          periodStartUtc: '2026-07-01T00:00:00Z',
+          periodEndUtc: '2026-08-01T00:00:00Z',
+          targetType: 'VerifiedCompletionCount',
+          targetValue: 50,
+          rewardAchievementId: null,
+          status: 'Active',
+          currentProgress: 20,
+          progressPercentage: 40,
+          isPrivacyProtected: true,
+          activeContributors: null,
+          version: 1,
+        }]));
+      }
+      return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+    }));
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(authQueryKey, {
+      userId: 'user-1',
+      displayName: 'Aroha',
+      email: 'member@example.test',
+      roles: ['Member'],
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <HomePage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Aroha' }))
+      .toBeInTheDocument();
+    expect(await screen.findByText('Level 3 · Novice · 120 XP')).toBeInTheDocument();
+    expect(await screen.findByText('3 weeks')).toBeInTheDocument();
+    expect(screen.getAllByText('Henderson-Massey')).not.toHaveLength(0);
+    expect(screen.getByRole('heading', { name: 'Community challenges' }))
+      .toBeInTheDocument();
+    expect(screen.getByText('20 complete')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Admin challenge management/ }))
+      .not.toBeInTheDocument();
+  });
+});

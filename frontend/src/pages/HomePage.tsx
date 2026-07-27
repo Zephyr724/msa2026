@@ -5,6 +5,8 @@ import {
   Compass,
   IdCard,
   Leaf,
+  Flame,
+  Home,
   ShieldCheck,
   Sparkles,
   Target,
@@ -15,6 +17,10 @@ import QuestCard from '../components/quest/QuestCard.tsx';
 import { useAuthQuery } from '../hooks/useAuth.ts';
 import { useProgression } from '../hooks/useProgression.ts';
 import { useQuestList } from '../hooks/useQuests.ts';
+import { useMyProfile, useWeeklyStreak } from '../hooks/useCommunity.ts';
+import { useMyQuestParticipationsQuery } from '../hooks/useParticipation.ts';
+import LevelProgress from '../components/passport/LevelProgress.tsx';
+import CommunityChallengesSection from '../components/community/CommunityChallengesSection.tsx';
 
 const loopSteps = [
   {
@@ -115,6 +121,7 @@ export default function HomePage() {
         <section className="border-b border-base-300/70 bg-secondary/45 py-10">
           <div className="kiwi-page">
             <MemberProgress displayName={auth.data.displayName} />
+            <CommunityChallengesSection showAdminControls={false} />
           </div>
         </section>
       )}
@@ -270,35 +277,103 @@ function HeroQuestPath() {
 
 function MemberProgress({ displayName }: { displayName: string }) {
   const progression = useProgression();
+  const profile = useMyProfile();
+  const streak = useWeeklyStreak();
+  const participations = useMyQuestParticipationsQuery('active');
 
   return (
-    <div className="kiwi-panel kiwi-topography grid gap-6 p-6 md:grid-cols-[auto_1fr_auto] md:items-center md:p-8">
-      <span className="grid size-16 place-items-center rounded-2xl bg-primary text-primary-content shadow-lg">
-        <Leaf aria-hidden="true" className="size-7" />
-      </span>
-      <div>
-        <p className="kiwi-stat-label">Welcome back</p>
-        <h2 className="mt-1 text-3xl">{displayName}</h2>
-        {progression.isPending && (
-          <p aria-live="polite" className="mt-2 text-sm text-base-content/60">
-            Loading your progress…
-          </p>
-        )}
-        {progression.data && (
-          <p className="mt-2 font-semibold text-base-content/65">
-            Level {progression.data.level} · {progression.data.rankTitle} ·{' '}
-            {progression.data.totalXp} XP
-          </p>
-        )}
-        {progression.isError && (
-          <p className="mt-2 text-sm text-base-content/60">
-            Your progress will appear when it is available.
-          </p>
-        )}
+    <div className="kiwi-panel kiwi-topography overflow-hidden">
+      <div className="grid gap-6 p-6 md:grid-cols-[auto_1fr_auto] md:items-center md:p-8">
+        <span className="grid size-16 place-items-center rounded-2xl bg-primary text-primary-content shadow-lg">
+          <Leaf aria-hidden="true" className="size-7" />
+        </span>
+        <div>
+          <p className="kiwi-stat-label">Welcome back</p>
+          <h2 className="mt-1 text-3xl">{displayName}</h2>
+          {progression.isPending && (
+            <p aria-live="polite" className="mt-2 text-sm text-base-content/60">
+              Loading your progress…
+            </p>
+          )}
+          {progression.data && (
+            <>
+              <p className="mt-2 font-semibold text-base-content/65">
+                Level {progression.data.level} · {progression.data.rankTitle} ·{' '}
+                {progression.data.totalXp} XP
+              </p>
+              <div className="mt-4 max-w-xl">
+                <LevelProgress progression={progression.data} />
+              </div>
+            </>
+          )}
+          {progression.isError && (
+            <p className="mt-2 text-sm text-base-content/60">
+              Your progress will appear when it is available.
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col items-stretch gap-2">
+          <Link className="btn btn-primary rounded-full" to="/my-quests">
+            Continue your quests <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+          <Link className="btn btn-ghost btn-sm rounded-full" to="/passport">
+            Open Passport
+          </Link>
+        </div>
       </div>
-      <Link className="btn btn-primary rounded-full" to="/my-quests">
-        Continue your quests <ArrowRight aria-hidden="true" className="size-4" />
-      </Link>
+
+      <div className="grid border-t border-base-300 md:grid-cols-3">
+        <MomentumStat
+          Icon={Target}
+          label="Active missions"
+          value={participations.data
+            ? String(participations.data.length)
+            : participations.isError ? '—' : '…'}
+          to="/my-quests"
+        />
+        <MomentumStat
+          Icon={Flame}
+          label="Verified weekly streak"
+          value={streak.data
+            ? `${streak.data.currentWeeks} weeks`
+            : streak.isError ? '—' : '…'}
+          to="/passport"
+        />
+        <MomentumStat
+          Icon={Home}
+          label="Home Community"
+          value={profile.data?.homeCommunity?.name
+            ?? (profile.isError ? 'Unavailable' : profile.isPending ? '…' : 'Choose one')}
+          to="/passport"
+        />
+      </div>
     </div>
+  );
+}
+
+function MomentumStat({
+  Icon,
+  label,
+  to,
+  value,
+}: {
+  Icon: typeof Target;
+  label: string;
+  to: string;
+  value: string;
+}) {
+  return (
+    <Link
+      className="flex items-center gap-3 border-b border-base-300 p-5 transition-colors hover:bg-secondary/70 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
+      to={to}
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+        <Icon aria-hidden="true" className="size-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="kiwi-stat-label block">{label}</span>
+        <span className="mt-1 block truncate font-extrabold">{value}</span>
+      </span>
+    </Link>
   );
 }

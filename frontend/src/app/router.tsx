@@ -19,6 +19,7 @@ import {
   ForgotPasswordPage, ResetPasswordPage,
 } from '../pages/AccountLifecyclePages.tsx';
 import AdminReviewPage from '../pages/AdminReviewPage.tsx';
+import ShareCardBuilderPage from '../pages/ShareCardBuilderPage.tsx';
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
         element: <RequireAuth />,
         children: [
           { path: '/passport', element: <PassportPage /> },
+          { path: '/passport/share', element: <ShareCardBuilderPage /> },
           { path: '/settings/password', element: <ChangePasswordPage /> },
           { path: '/admin/reviews', element: <AdminReviewPage /> },
         ],

@@ -1,4 +1,5 @@
 using Kiwimpact.Core.Enums;
+using Kiwimpact.Core.Progression;
 using Kiwimpact.Core.Repositories;
 using Kiwimpact.Core.Services;
 using Kiwimpact.Infrastructure.Data;
@@ -87,6 +88,170 @@ public sealed class PassportRepository : IPassportRepository
             .ToList();
 
         return (items, totalCount);
+    }
+
+    public async Task<PassportSummary?> GetSummaryAsync(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var profile = await _db.UserProfiles
+            .AsNoTracking()
+            .Include(item => item.HomeCommunityRegion)
+            .SingleOrDefaultAsync(item => item.Id == userId, ct);
+        if (profile is null) return null;
+
+        var completions = _db.QuestCompletions
+            .AsNoTracking()
+            .Where(item => item.UserId == userId);
+        var verifiedCount = await completions.LongCountAsync(
+            item => item.Status == QuestCompletionStatus.Verified, ct);
+        var selfReportedCount = await completions.LongCountAsync(
+            item => item.Status == QuestCompletionStatus.SelfReported, ct);
+        var pendingCount = await completions.LongCountAsync(
+            item => item.Status == QuestCompletionStatus.Pending, ct);
+
+        var categoryRows = await _db.XpTransactions
+            .AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Join(
+                _db.Quests.AsNoTracking(),
+                transaction => transaction.QuestId,
+                quest => quest.Id,
+                (transaction, quest) => new { transaction, quest.Category })
+            .GroupBy(item => item.Category)
+            .Select(group => new
+            {
+                Category = group.Key,
+                VerifiedCompletionCount = group.LongCount(),
+                VerifiedXp = group.Sum(item => (long)item.transaction.XpAmount),
+            })
+            .ToListAsync(ct);
+        var categoryImpact = categoryRows
+            .OrderBy(item => item.Category)
+            .Select(item => new PassportCategoryImpact(
+                item.Category,
+                item.VerifiedCompletionCount,
+                item.VerifiedXp))
+            .ToList();
+
+        PassportCommunityIdentity? homeCommunity = null;
+        if (profile.ShowCommunityOnPassport && profile.HomeCommunityRegion is not null)
+        {
+            homeCommunity = new PassportCommunityIdentity(
+                profile.HomeCommunityRegion.Id,
+                profile.HomeCommunityRegion.Name,
+                profile.HomeCommunityRegion.Type.ToString(),
+                profile.HomeCommunityRegion.ParentRegionId);
+        }
+
+        return new PassportSummary(
+            profile.DisplayName,
+            profile.TotalXp,
+            profile.Level,
+            ProgressionRules.RankTitleFor(profile.Level),
+            homeCommunity,
+            verifiedCount,
+            selfReportedCount,
+            pendingCount,
+            categoryImpact);
+    }
+
+    public async Task<IReadOnlyList<PassportCommunityParticipation>>
+        GetCommunityParticipationAsync(
+            Guid userId,
+            CancellationToken ct = default)
+    {
+        var currentCommunityId = await _db.UserProfiles
+            .AsNoTracking()
+            .Where(item => item.Id == userId)
+            .Select(item => item.HomeCommunityRegionId)
+            .SingleAsync(ct);
+
+        var contributions = await _db.XpTransactions
+            .AsNoTracking()
+            .Where(item =>
+                item.UserId == userId &&
+                item.CommunityRegionIdAtAward != null)
+            .Select(item => new
+            {
+                RegionId = item.CommunityRegionIdAtAward!.Value,
+                item.XpAmount,
+                item.CreatedAt,
+            })
+            .ToListAsync(ct);
+        if (contributions.Count == 0)
+            return [];
+
+        var regionIds = contributions
+            .Select(item => item.RegionId)
+            .Distinct()
+            .ToList();
+        var regions = await _db.Regions
+            .AsNoTracking()
+            .Where(item => regionIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, ct);
+        var challenges = await _db.CommunityChallenges
+            .AsNoTracking()
+            .Where(item => regionIds.Contains(item.LocalAreaRegionId))
+            .Select(item => new
+            {
+                item.Id,
+                item.LocalAreaRegionId,
+                item.PeriodStart,
+                item.PeriodEnd,
+            })
+            .ToListAsync(ct);
+        var challengeAwards = await _db.UserAchievements
+            .AsNoTracking()
+            .Where(item =>
+                item.UserId == userId &&
+                item.SourceCommunityChallengeId != null)
+            .Join(
+                _db.CommunityChallenges.AsNoTracking(),
+                award => award.SourceCommunityChallengeId,
+                challenge => challenge.Id,
+                (award, challenge) => new
+                {
+                    award.Id,
+                    challenge.LocalAreaRegionId,
+                })
+            .Where(item => regionIds.Contains(item.LocalAreaRegionId))
+            .GroupBy(item => item.LocalAreaRegionId)
+            .Select(group => new
+            {
+                RegionId = group.Key,
+                Count = group.Count(),
+            })
+            .ToDictionaryAsync(item => item.RegionId, item => item.Count, ct);
+
+        return contributions
+            .GroupBy(item => item.RegionId)
+            .Where(group => regions.ContainsKey(group.Key))
+            .Select(group =>
+            {
+                var region = regions[group.Key];
+                var contributedChallenges = challenges.Count(challenge =>
+                    challenge.LocalAreaRegionId == group.Key &&
+                    group.Any(contribution =>
+                        contribution.CreatedAt >= challenge.PeriodStart &&
+                        contribution.CreatedAt < challenge.PeriodEnd));
+                return new PassportCommunityParticipation(
+                    new PassportCommunityIdentity(
+                        region.Id,
+                        region.Name,
+                        region.Type.ToString(),
+                        region.ParentRegionId),
+                    currentCommunityId == group.Key,
+                    group.LongCount(),
+                    group.Sum(item => (long)item.XpAmount),
+                    contributedChallenges,
+                    challengeAwards.GetValueOrDefault(group.Key),
+                    group.Max(item => item.CreatedAt));
+            })
+            .OrderByDescending(item => item.IsCurrentCommunity)
+            .ThenByDescending(item => item.LatestContributionAtUtc)
+            .ThenBy(item => item.Community.Name)
+            .ToList();
     }
 
     private static int Precedence(QuestCompletionStatus status) => status switch

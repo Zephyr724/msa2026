@@ -5,7 +5,9 @@ import { useAuthQuery } from '../hooks/useAuth.ts';
 import { useProgression } from '../hooks/useProgression.ts';
 import {
   PASSPORT_HISTORY_PAGE_SIZE,
+  usePassportCommunityParticipation,
   usePassportCompletions,
+  usePassportSummary,
 } from '../hooks/usePassportCompletions.ts';
 import { ApiError } from '../lib/api/apiFetch.ts';
 import PassportSummaryCard from '../components/passport/PassportSummaryCard.tsx';
@@ -14,8 +16,11 @@ import CompletionHistoryList from '../components/passport/CompletionHistoryList.
 import PassportPagination from '../components/passport/PassportPagination.tsx';
 import { useMyClaims } from '../hooks/useCompletion.ts';
 import CommunityProfileCard from '../components/community/CommunityProfileCard.tsx';
-import WeeklyStreakCard from '../components/community/WeeklyStreakCard.tsx';
 import ShareCard from '../components/passport/ShareCard.tsx';
+import NextMilestoneCard from '../components/passport/NextMilestoneCard.tsx';
+import CategoryImpactSection from '../components/passport/CategoryImpactSection.tsx';
+import CommunityParticipationSection from '../components/passport/CommunityParticipationSection.tsx';
+import { useWeeklyStreak } from '../hooks/useCommunity.ts';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
@@ -81,6 +86,9 @@ export default function PassportPage() {
   const progression = useProgression();
   const [page, setPage] = useState(1);
   const history = usePassportCompletions(page, PASSPORT_HISTORY_PAGE_SIZE);
+  const summary = usePassportSummary();
+  const communityParticipation = usePassportCommunityParticipation();
+  const streak = useWeeklyStreak();
   const queryClient = useQueryClient();
   const claims = useMyClaims();
 
@@ -139,25 +147,57 @@ export default function PassportPage() {
             {progression.isSuccess && (
               <PassportSummaryCard
                 displayName={displayName}
+                passport={summary.data}
                 progression={progression.data}
+                streakWeeks={streak.data?.currentWeeks}
               />
             )}
           </div>
         </section>
-        <CommunityProfileCard />
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
-          <WeeklyStreakCard />
-          {progression.isSuccess && (
-            <ShareCard
-              completion={history.data?.items.find(
-                (item) => item.status === 'Verified',
-              )}
-              displayName={displayName}
-              progression={progression.data}
-            />
-          )}
-        </div>
+        {summary.isPending && <RegionSkeleton label="Loading Passport insights…" />}
+        {summary.isError && (
+          <RegionError
+            error={summary.error}
+            notReadyMessage="Your Passport insights are being prepared. Try again shortly."
+            onRetry={() => void summary.refetch()}
+          />
+        )}
+        {summary.data && (
+          <>
+            <NextMilestoneCard summary={summary.data} />
+            <CategoryImpactSection summary={summary.data} />
+          </>
+        )}
         <AchievementsSection />
+        {communityParticipation.isPending && (
+          <RegionSkeleton label="Loading community participation…" />
+        )}
+        {communityParticipation.isError && (
+          <RegionError
+            error={communityParticipation.error}
+            notReadyMessage="Your community participation is being prepared. Try again shortly."
+            onRetry={() => void communityParticipation.refetch()}
+          />
+        )}
+        {communityParticipation.data && (
+          <CommunityParticipationSection items={communityParticipation.data} />
+        )}
+        <section className="mt-10" aria-labelledby="passport-preferences-heading">
+          <p className="kiwi-stat-label">Privacy and sharing</p>
+          <h2 className="mt-1 text-2xl" id="passport-preferences-heading">
+            Passport settings
+          </h2>
+          <div className="grid gap-6 md:grid-cols-2">
+            <CommunityProfileCard />
+            <div className="mt-6">
+              <ShareCard
+                completion={history.data?.items.find(
+                  (item) => item.status === 'Verified',
+                )}
+              />
+            </div>
+          </div>
+        </section>
         <section className="kiwi-panel mt-6 p-5" aria-labelledby="claim-history-heading">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -181,11 +221,16 @@ export default function PassportPage() {
           </ul>
         </section>
         <section aria-labelledby="passport-history-heading" className="mt-6">
-          <div className="mb-4">
-            <p className="kiwi-stat-label">Impact record</p>
-            <h2 className="mt-1 text-2xl" id="passport-history-heading">
-            Completion history
-            </h2>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="kiwi-stat-label">Impact record</p>
+              <h2 className="mt-1 text-2xl" id="passport-history-heading">
+                Completion history
+              </h2>
+            </div>
+            <Link className="btn btn-outline btn-sm rounded-full" to="/passport/share">
+              Create Share Card
+            </Link>
           </div>
           <div>
             {history.isPending && (

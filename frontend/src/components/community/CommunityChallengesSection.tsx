@@ -9,7 +9,11 @@ import { useRegions } from '../../hooks/useRegions';
 import { ApiError } from '../../lib/api/apiFetch';
 import type { CommunityChallenge } from '../../types/community';
 
-export default function CommunityChallengesSection() {
+export default function CommunityChallengesSection({
+  showAdminControls = true,
+}: {
+  showAdminControls?: boolean;
+}) {
   const challenges = useCommunityChallenges();
   const auth = useAuthQuery();
   const isAdmin = auth.data?.roles?.includes('Admin') ?? false;
@@ -46,7 +50,9 @@ export default function CommunityChallengesSection() {
           <ChallengeCard challenge={challenge} key={challenge.id} />
         ))}
       </div>
-      {isAdmin && <ChallengeAdminPanel challenges={challenges.data ?? []} />}
+      {showAdminControls && isAdmin && (
+        <ChallengeAdminPanel challenges={challenges.data ?? []} />
+      )}
     </section>
   );
 }
