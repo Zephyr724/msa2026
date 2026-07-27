@@ -78,17 +78,33 @@ has occurred.
 - **Observed Slice 12 gates:** frontend lint/type-check/build passed with
   326/326 tests; backend build passed apart from five pre-existing test-helper
   EF1002 warnings, with 247/247 unit and 286/286 PostgreSQL integration tests.
+- **Slice 11A/12 commit:** committed and pushed as `cae199d` on
+  `codex/feat/slice-11-community-discovery` on 2026-07-27.
 - **Known boundary:** Google OAuth/account linking, production email-provider
-  setup, production Google Maps credentials/restrictions, Docker/deployment,
+  setup, production Google Maps credentials/restrictions, public deployment,
   and the final submission workflow remain outside Slices 9–12.
+
+### Slice 13 — Local Production Runtime
+
+- **Branch:** `codex/feat/slice-13-dockerized-runtime`
+- **Scope:** provider-neutral Dockerization only. One ASP.NET Core image serves
+  the built React application, API, SignalR, Scalar, OpenAPI, and health paths
+  from a single origin. Compose adds an explicit EF migration job, PostgreSQL,
+  durable Data Protection keys, and optional Mailpit.
+- **Verification status:** complete. Independent Kimi K3 Review 60 approved the
+  corrected code with no remaining Blocker or Major. The final image built,
+  the explicit migration job exited 0, app and PostgreSQL became healthy,
+  single-origin route smokes passed, and database plus Data Protection state
+  survived an app restart. Public hosting provider selection, DNS, billable
+  resources, public deployment, backup/restore, and provider-specific
+  forwarded-header behavior remain outside this Slice.
 
 ### Remaining P0 delivery gaps
 
-- Dockerization and deployment work is paused by explicit human instruction
-  while product-experience direction is reconsidered.
-- Full frontend/backend/PostgreSQL Dockerization with one documented startup
-  path.
 - Same-origin production deployment and observed deployed behaviour.
+- Review and explicitly approve the React Router 8.3 compatibility upgrade
+  before any future adoption of unstable RSC APIs; the current Vite SPA does
+  not use the affected mode.
 - Final full-product verification, README evidence, advanced-requirement
   selection, and a public submission video no longer than six minutes.
 

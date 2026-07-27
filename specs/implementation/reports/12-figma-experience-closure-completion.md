@@ -158,7 +158,9 @@ runtime correction. Its files and evidence are recorded in
   schedule-TBD/future Active classification.
 - The suggested first-page coherence validation was also adopted.
 - Final remaining findings: 0 Blockers and 0 Majors.
-- No Slice 12 commit, push, merge, or deployment has been performed.
+- Slice 11A and Slice 12 were committed and pushed together as `cae199d` on
+  `codex/feat/slice-11-community-discovery`. Merge and deployment have not been
+  performed.
 
 ## Repository hygiene
 

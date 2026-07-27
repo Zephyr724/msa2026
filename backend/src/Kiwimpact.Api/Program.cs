@@ -10,8 +10,10 @@ using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
 using Kiwimpact.Infrastructure.Reconciliation;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
@@ -26,6 +28,17 @@ builder.Services.AddControllers(options =>
 // Problem Details for consistent error responses
 builder.Services.AddProblemDetails();
 builder.Services.AddSignalR();
+
+var dataProtection = builder.Services
+    .AddDataProtection()
+    .SetApplicationName(
+        builder.Configuration["DataProtection:ApplicationName"] ?? "Kiwimpact");
+var dataProtectionKeyPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeyPath))
+{
+    var keyDirectory = Directory.CreateDirectory(dataProtectionKeyPath);
+    dataProtection.PersistKeysToFileSystem(keyDirectory);
+}
 
 // OpenAPI generation
 builder.Services.AddOpenApi();
@@ -241,16 +254,34 @@ var app = builder.Build();
 
 // ── Middleware Pipeline ──────────────────────────────────────────────
 app.UseExceptionHandler();
-app.UseRouting();
-app.UseCors();
 
 // HTTPS redirection enabled only in non-Development environments
 // so the local HTTP Vite proxy on port 5000 remains usable during development.
-if (!app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment() &&
+    builder.Configuration.GetValue("HttpsRedirection:Enabled", true))
 {
     app.UseHttpsRedirection();
 }
 
+app.UseDefaultFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        if (context.Context.Request.Path.StartsWithSegments("/assets"))
+        {
+            context.Context.Response.Headers.CacheControl =
+                "public,max-age=31536000,immutable";
+        }
+        else
+        {
+            context.Context.Response.Headers.CacheControl = "no-cache";
+        }
+    },
+});
+
+app.UseRouting();
+app.UseCors();
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
@@ -390,4 +421,42 @@ app.MapScalarApiReference();
 app.MapControllers();
 app.MapHub<LeaderboardHub>("/hubs/leaderboard");
 
+// Serve the built React application only for safe, non-file frontend routes.
+// Reserved server paths always retain their ordinary 404/405 response instead
+// of being converted into a misleading HTML success response.
+app.MapMethods("/{**path}", [HttpMethods.Get, HttpMethods.Head], async context =>
+{
+    var requestPath = context.Request.Path;
+    if (IsReservedServerPath(requestPath) || Path.HasExtension(requestPath))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    var indexPath = Path.Combine(app.Environment.WebRootPath ?? string.Empty, "index.html");
+    if (!File.Exists(indexPath))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    context.Response.ContentType = "text/html; charset=utf-8";
+    context.Response.Headers.CacheControl = "no-cache";
+    if (!HttpMethods.IsHead(context.Request.Method))
+    {
+        await context.Response.SendFileAsync(indexPath, context.RequestAborted);
+    }
+});
+
 app.Run();
+
+static bool IsReservedServerPath(PathString path) =>
+    StartsWithSegment(path, "/api") ||
+    StartsWithSegment(path, "/health") ||
+    StartsWithSegment(path, "/openapi") ||
+    StartsWithSegment(path, "/scalar") ||
+    StartsWithSegment(path, "/hubs");
+
+static bool StartsWithSegment(PathString path, string segment) =>
+    path.Equals(segment, StringComparison.OrdinalIgnoreCase) ||
+    path.StartsWithSegments(segment, StringComparison.OrdinalIgnoreCase);
