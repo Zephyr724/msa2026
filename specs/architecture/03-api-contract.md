@@ -107,7 +107,7 @@
 - `PATCH`: 409 if Home Community change within cooldown period. 400 if Region invalid/inactive/not LocalArea.
 - `PATCH`: first Home Community selection has no cooldown.
 - `PATCH` response includes `nextAllowedCommunityChangeAt` when cooldown is active.
-- Progression: `401` anonymous; `503 progression-not-ready` while any Verified completion still lacks its XP row (reward state incomplete; bounded ProblemDetails with no counts or internals; evaluated live on every request, never cached); `404` when the authenticated user has no profile row.
+- Progression: `401` anonymous; `503 progression-not-ready` while any Verified completion still lacks its XP row (reward state incomplete; bounded ProblemDetails with no counts or internals; evaluated live on every request, never cached); `404 profile-not-found` when the authenticated user has no profile row.
 
 ### 2.3 Regions
 
@@ -245,6 +245,12 @@
 | `GET`  | `/api/v1/users/me/passport/completions`             | Member+ | Paginated completion history. Returns one primary display record per Quest using the precedence: 1) Verified, 2) Pending EvidenceClaim, 3) SelfReported, 4) latest Rejected EvidenceClaim. |
 | `GET`  | `/api/v1/users/me/passport/community-participation` | Member+ | Community Participation section: historical contributions by community (from XpTransaction.CommunityRegionIdAtAward), including departed communities. |
 
+The authenticated progression, Passport, Passport completion,
+community-participation, and earned-achievement reads use the bounded Problem
+Details type `https://kiwimpact.app/problems/profile-not-found` for their
+existing missing-profile `404`. A generic or route-level `404` must not be
+interpreted by the client as proof that the user's Passport profile is absent.
+
 **Important error conditions:**
 
 - Passport completion history returns one primary display record per Quest — not every raw `QuestCompletion` row. Where more than one Rejected Evidence Claim exists, the latest by `CreatedAt` is used. Full Evidence Claim history remains available from `GET /api/v1/users/me/claims`.
@@ -365,7 +371,11 @@ or any supplied `page`/`pageSize`, returns 400. Rows use ordinal ranks after
 ordering by total XP descending, verified completion count descending,
 case-folded display name ascending, then internal UserId ascending; UserId is
 never serialized. The exact response is
-`{ scope, period, rows[{ rank, displayName, totalXp, verifiedCompletionCount }] }`.
+`{ scope, period, rows[{ rank, displayName, totalXp, verifiedCompletionCount,
+isCurrentUser }] }`. `isCurrentUser` is `true` only when the optional
+authenticated actor's internal UserId matches that row; it is always `false`
+for anonymous reads. Display names are never used as identity. UserId is
+never serialized.
 While any Verified completion lacks its XP transaction, the route returns
 503 `leaderboard-not-ready`. All other capabilities in this section remain
 accepted future direction.

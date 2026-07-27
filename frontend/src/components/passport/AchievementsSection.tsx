@@ -7,6 +7,8 @@ import AchievementCard from './AchievementCard.tsx';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
+const PROFILE_NOT_FOUND_TYPE =
+  'https://kiwimpact.app/problems/profile-not-found';
 
 function isNotReady(error: unknown): boolean {
   return error instanceof ApiError
@@ -15,7 +17,9 @@ function isNotReady(error: unknown): boolean {
 }
 
 function isMissingProfile(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 404;
+  return error instanceof ApiError
+    && error.status === 404
+    && error.problem?.type === PROFILE_NOT_FOUND_TYPE;
 }
 
 function AchievementsSkeleton() {

@@ -105,7 +105,7 @@ public sealed class PassportController : ControllerBase
             var problem = exception.Error switch
             {
                 PassportError.NotReady => ProblemDetailsHelper.ProgressionNotReady(),
-                _ => ProblemDetailsHelper.NotFound(exception.Message),
+                _ => ProblemDetailsHelper.ProfileNotFound(),
             };
             return StatusCode(
                 problem.Status ?? StatusCodes.Status500InternalServerError,
@@ -154,7 +154,7 @@ public sealed class PassportController : ControllerBase
         var problem = exception.Error switch
         {
             PassportError.NotReady => ProblemDetailsHelper.ProgressionNotReady(),
-            _ => ProblemDetailsHelper.NotFound(exception.Message),
+            _ => ProblemDetailsHelper.ProfileNotFound(),
         };
         return StatusCode(
             problem.Status ?? StatusCodes.Status500InternalServerError,

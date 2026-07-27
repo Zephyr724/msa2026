@@ -67,6 +67,8 @@ export function drawShareCard(
   context.fillStyle = gradient;
   context.fillRect(0, 0, size, size);
 
+  drawThemeScene(context, options.theme, palette, size);
+
   context.save();
   context.globalAlpha = options.overlay === 'dark' ? 0.18 : 0.3;
   context.strokeStyle = palette.accent;
@@ -91,12 +93,20 @@ export function drawShareCard(
   context.fillText('LOCAL ACTION · VERIFIED IMPACT', 72, 128);
 
   context.fillStyle = glass;
-  roundedRect(context, 780, 62, 228, 74, 37);
+  roundedRect(context, 744, 62, 264, 74, 37);
   context.fill();
+  drawCategoryEmblem(
+    context,
+    780,
+    99,
+    options.completion.questCategory,
+    palette.accent,
+    foreground,
+  );
   context.fillStyle = foreground;
-  context.font = '700 21px Manrope, system-ui, sans-serif';
-  context.textAlign = 'center';
-  context.fillText(category.label.toUpperCase(), 894, 107);
+  context.font = '700 19px Manrope, system-ui, sans-serif';
+  context.textAlign = 'left';
+  context.fillText(category.label.toUpperCase(), 814, 107);
   context.textAlign = 'left';
 
   context.fillStyle = muted;
@@ -141,23 +151,158 @@ export function drawShareCard(
     foreground,
   );
 
+  drawRankCrest(context, 72, 887, options.progression.rankTitle, palette.accent);
   context.fillStyle = foreground;
-  context.font = '700 36px Fredoka, Manrope, system-ui, sans-serif';
+  context.font = '700 34px Fredoka, Manrope, system-ui, sans-serif';
   if (options.showName) {
-    context.fillText(options.displayName.slice(0, 60), 72, 942);
+    context.fillText(options.displayName.slice(0, 60), 142, 928);
   }
   context.fillStyle = muted;
   context.font = '600 23px Manrope, system-ui, sans-serif';
   context.fillText(
     `Level ${options.progression.level} · ${options.progression.rankTitle}`,
-    72,
-    options.showName ? 982 : 952,
+    142,
+    options.showName ? 968 : 935,
   );
   context.textAlign = 'right';
   context.fillText(`${options.progression.totalXp} total XP`, 1008, 952);
   context.fillText('KIWIMPACT PASSPORT', 1008, 988);
   context.textAlign = 'left';
   return true;
+}
+
+function drawThemeScene(
+  context: CanvasRenderingContext2D,
+  theme: ShareCardTheme,
+  palette: Palette,
+  size: number,
+) {
+  context.save();
+  context.globalAlpha = 0.82;
+
+  if (theme === 'forest') {
+    context.fillStyle = '#0b2c20';
+    context.beginPath();
+    context.moveTo(0, 430);
+    context.quadraticCurveTo(220, 250, 470, 430);
+    context.quadraticCurveTo(720, 210, size, 405);
+    context.lineTo(size, 0);
+    context.lineTo(0, 0);
+    context.closePath();
+    context.fill();
+    context.fillStyle = '#2f8f5b';
+    for (const x of [90, 190, 820, 940]) {
+      context.beginPath();
+      context.moveTo(x, 420);
+      context.lineTo(x + 52, 278);
+      context.lineTo(x + 104, 420);
+      context.closePath();
+      context.fill();
+    }
+  } else if (theme === 'ocean') {
+    context.fillStyle = '#0d3855';
+    context.fillRect(0, 0, size, 360);
+    context.strokeStyle = palette.accent;
+    context.lineWidth = 18;
+    for (let y = 250; y <= 430; y += 58) {
+      context.beginPath();
+      context.moveTo(-40, y);
+      for (let x = -40; x <= size + 80; x += 120) {
+        context.quadraticCurveTo(x + 30, y - 24, x + 60, y);
+        context.quadraticCurveTo(x + 90, y + 24, x + 120, y);
+      }
+      context.stroke();
+    }
+  } else {
+    const sun = context.createLinearGradient(0, 0, 0, 500);
+    sun.addColorStop(0, '#f7c86c');
+    sun.addColorStop(1, '#c26d3d');
+    context.fillStyle = sun;
+    context.fillRect(0, 0, size, 440);
+    context.fillStyle = '#ffe9a8';
+    context.beginPath();
+    context.arc(820, 245, 116, Math.PI, 0);
+    context.closePath();
+    context.fill();
+    context.fillStyle = '#713d2d';
+    context.beginPath();
+    context.moveTo(0, 440);
+    context.quadraticCurveTo(250, 280, 520, 440);
+    context.quadraticCurveTo(780, 300, size, 430);
+    context.lineTo(size, 0);
+    context.lineTo(0, 0);
+    context.closePath();
+    context.fill();
+  }
+  context.restore();
+}
+
+function drawCategoryEmblem(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  category: PassportCompletionItem['questCategory'],
+  accent: string,
+  foreground: string,
+) {
+  context.save();
+  context.fillStyle = accent;
+  context.beginPath();
+  context.arc(x, y, 23, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = foreground;
+  context.lineCap = 'round';
+  context.lineJoin = 'round';
+  context.lineWidth = 3;
+  context.beginPath();
+  if (category === 'CleanReduceWaste') {
+    context.moveTo(x - 10, y - 7);
+    context.lineTo(x + 10, y - 7);
+    context.moveTo(x - 6, y - 12);
+    context.lineTo(x + 6, y - 12);
+    context.moveTo(x - 7, y - 4);
+    context.lineTo(x - 5, y + 12);
+    context.lineTo(x + 5, y + 12);
+    context.lineTo(x + 7, y - 4);
+  } else if (category === 'ObserveMeasure') {
+    context.arc(x - 3, y - 2, 9, 0, Math.PI * 2);
+    context.moveTo(x + 4, y + 5);
+    context.lineTo(x + 12, y + 13);
+  } else {
+    context.moveTo(x - 10, y + 8);
+    context.quadraticCurveTo(x - 7, y - 12, x + 12, y - 10);
+    context.quadraticCurveTo(x + 10, y + 8, x - 10, y + 8);
+    context.moveTo(x - 8, y + 7);
+    context.lineTo(x + 8, y - 6);
+  }
+  context.stroke();
+  context.restore();
+}
+
+function drawRankCrest(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  rankTitle: string,
+  accent: string,
+) {
+  context.save();
+  context.fillStyle = accent;
+  context.beginPath();
+  context.moveTo(x + 28, y);
+  context.lineTo(x + 54, y + 10);
+  context.lineTo(x + 54, y + 34);
+  context.quadraticCurveTo(x + 54, y + 52, x + 28, y + 64);
+  context.quadraticCurveTo(x + 2, y + 52, x + 2, y + 34);
+  context.lineTo(x + 2, y + 10);
+  context.closePath();
+  context.fill();
+  context.fillStyle = '#ffffff';
+  context.font = '700 24px Fredoka, Manrope, system-ui, sans-serif';
+  context.textAlign = 'center';
+  context.fillText(rankTitle.slice(0, 1).toUpperCase(), x + 28, y + 39);
+  context.textAlign = 'left';
+  context.restore();
 }
 
 function drawBadge(

@@ -1,6 +1,7 @@
-import { Shield, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useProgression } from '../hooks/useProgression.ts';
+import { RankCrest } from './game/GameArtwork.tsx';
 
 export default function PlayerStatusCapsule() {
   const progression = useProgression();
@@ -22,7 +23,7 @@ export default function PlayerStatusCapsule() {
       className="hidden items-center gap-2 rounded-full border border-accent/45 bg-accent/10 px-3 py-1.5 text-xs font-bold text-base-content transition-colors hover:bg-accent/20 lg:flex"
       to="/passport"
     >
-      <Shield aria-hidden="true" className="size-4 text-primary" />
+      <RankCrest rankTitle={progression.data.rankTitle} size={24} />
       <Zap aria-hidden="true" className="size-3.5 text-warning" />
       <span>{progression.data.totalXp} XP · Lv {progression.data.level}</span>
     </Link>

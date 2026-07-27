@@ -359,16 +359,20 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
         QuestCompletionStatus? status,
         CancellationToken ct = default)
     {
-        var query = ClaimRows().Where(row => row.completion.UserId == actorId);
+        var query = _db.QuestCompletions
+            .AsNoTracking()
+            .Where(completion =>
+                completion.Method == CompletionMethod.EvidenceClaim &&
+                completion.UserId == actorId);
         if (status.HasValue)
-            query = query.Where(row => row.completion.Status == status.Value);
+            query = query.Where(completion => completion.Status == status.Value);
         return await query
-            .OrderByDescending(row => row.completion.CreatedAt)
-            .ThenBy(row => row.completion.Id)
-            .Select(row => new EvidenceClaimSummary(
-                row.completion.Id, row.completion.UserId, row.completion.QuestId,
-                row.quest.Title, row.completion.Status, row.completion.CompletedAt,
-                row.completion.CreatedAt, row.detail.ReviewedAt))
+            .OrderByDescending(completion => completion.CreatedAt)
+            .ThenBy(completion => completion.Id)
+            .Select(completion => new EvidenceClaimSummary(
+                completion.Id, completion.UserId, completion.QuestId,
+                completion.Quest!.Title, completion.Status, completion.CompletedAt,
+                completion.CreatedAt, completion.EvidenceClaimDetail!.ReviewedAt))
             .ToListAsync(ct);
     }
 
@@ -378,13 +382,20 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
         bool isAdmin,
         CancellationToken ct = default)
     {
-        var row = await ClaimRows()
+        var completion = await _db.QuestCompletions
             .AsNoTracking()
-            .SingleOrDefaultAsync(item => item.completion.Id == claimId, ct)
+            .Include(item => item.Quest)
+            .Include(item => item.EvidenceClaimDetail)
+            .SingleOrDefaultAsync(item =>
+                item.Id == claimId &&
+                item.Method == CompletionMethod.EvidenceClaim, ct)
             ?? throw Error(QuestCompletionError.NotFound, "Claim not found.");
-        if (!isAdmin && row.completion.UserId != actorId)
+        if (!isAdmin && completion.UserId != actorId)
             throw Error(QuestCompletionError.NotFound, "Claim not found.");
-        return ToClaimRecord(row.completion, row.detail, row.quest.Title);
+        return ToClaimRecord(
+            completion,
+            completion.EvidenceClaimDetail!,
+            completion.Quest!.Title);
     }
 
     public async Task<EvidenceClaimRecord> UpdateClaimAsync(
@@ -394,17 +405,25 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
         DateTimeOffset now,
         CancellationToken ct = default)
     {
-        var row = await ClaimRows()
+        var completion = await _db.QuestCompletions
+            .Include(item => item.Quest)
+            .Include(item => item.EvidenceClaimDetail)
             .SingleOrDefaultAsync(item =>
-                item.completion.Id == claimId && item.completion.UserId == actorId, ct)
+                item.Id == claimId &&
+                item.UserId == actorId &&
+                item.Method == CompletionMethod.EvidenceClaim, ct)
             ?? throw Error(QuestCompletionError.NotFound, "Claim not found.");
         try
         {
             EnsureCompletionDate(input.CompletedAtUtc, now);
-            row.completion.UpdatePendingClaim(input.CompletedAtUtc, now);
-            row.detail.Update(input.Description, input.EvidenceUrl, input.UserDeclaration);
+            completion.UpdatePendingClaim(input.CompletedAtUtc, now);
+            completion.EvidenceClaimDetail!.Update(
+                input.Description, input.EvidenceUrl, input.UserDeclaration);
             await _db.SaveChangesAsync(ct);
-            return ToClaimRecord(row.completion, row.detail, row.quest.Title);
+            return ToClaimRecord(
+                completion,
+                completion.EvidenceClaimDetail,
+                completion.Quest!.Title);
         }
         catch (InvalidOperationException exception)
         {
@@ -444,15 +463,17 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
 
     public async Task<IReadOnlyList<EvidenceClaimSummary>> ListPendingClaimsAsync(
         CancellationToken ct = default) =>
-        await ClaimRows()
+        await _db.QuestCompletions
             .AsNoTracking()
-            .Where(row => row.completion.Status == QuestCompletionStatus.Pending)
-            .OrderBy(row => row.completion.CreatedAt)
-            .ThenBy(row => row.completion.Id)
-            .Select(row => new EvidenceClaimSummary(
-                row.completion.Id, row.completion.UserId, row.completion.QuestId,
-                row.quest.Title, row.completion.Status, row.completion.CompletedAt,
-                row.completion.CreatedAt, row.detail.ReviewedAt))
+            .Where(completion =>
+                completion.Method == CompletionMethod.EvidenceClaim &&
+                completion.Status == QuestCompletionStatus.Pending)
+            .OrderBy(completion => completion.CreatedAt)
+            .ThenBy(completion => completion.Id)
+            .Select(completion => new EvidenceClaimSummary(
+                completion.Id, completion.UserId, completion.QuestId,
+                completion.Quest!.Title, completion.Status, completion.CompletedAt,
+                completion.CreatedAt, completion.EvidenceClaimDetail!.ReviewedAt))
             .ToListAsync(ct);
 
     public async Task<EvidenceClaimRecord> ReviewClaimAsync(
@@ -573,14 +594,6 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
             item.QuestId == questId && item.UserId == actorId &&
             item.Status == QuestCompletionStatus.Verified, ct);
 
-    private IQueryable<ClaimRow> ClaimRows() =>
-        from completion in _db.QuestCompletions
-        join detail in _db.EvidenceClaimDetails
-            on completion.Id equals detail.QuestCompletionId
-        join quest in _db.Quests on completion.QuestId equals quest.Id
-        where completion.Method == CompletionMethod.EvidenceClaim
-        select new ClaimRow(completion, detail, quest);
-
     private static EvidenceClaimRecord ToClaimRecord(
         QuestCompletion completion, EvidenceClaimDetail detail, string questTitle) =>
         new(completion.Id, completion.UserId, completion.QuestId, questTitle,
@@ -603,11 +616,6 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
             throw Error(QuestCompletionError.InvalidEvidence,
                 "Completion date must be a valid date that is not in the future.");
     }
-
-    private sealed record ClaimRow(
-        QuestCompletion completion,
-        EvidenceClaimDetail detail,
-        Quest quest);
 
     private static void EnsureManagementAccess(Quest quest, Guid actorId, bool isAdmin)
     {

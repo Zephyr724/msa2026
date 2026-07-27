@@ -34,7 +34,8 @@ public sealed record RankedLeaderboardRow(
     int Rank,
     string DisplayName,
     long TotalXp,
-    long VerifiedCompletionCount);
+    long VerifiedCompletionCount,
+    bool IsCurrentUser);
 
 public sealed record CollectiveProgress(
     long TotalXp,

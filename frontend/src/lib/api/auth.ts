@@ -3,6 +3,10 @@ import type {
 } from '../../types/auth.ts';
 import { ApiError, apiFetch, resetCsrfToken } from './apiFetch.ts';
 
+export function normalizeAccountLifecycleToken(token: string): string {
+  return token.replaceAll(' ', '+');
+}
+
 export async function fetchCurrentSession(): Promise<AuthSession | null> {
   try {
     return await apiFetch<AuthSession>('/v1/auth/me');

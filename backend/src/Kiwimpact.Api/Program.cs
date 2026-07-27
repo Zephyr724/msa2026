@@ -256,7 +256,7 @@ var app = builder.Build();
 app.UseExceptionHandler();
 
 // HTTPS redirection enabled only in non-Development environments
-// so the local HTTP Vite proxy on port 5000 remains usable during development.
+// so the local HTTP Vite proxy remains usable during development.
 if (!app.Environment.IsDevelopment() &&
     builder.Configuration.GetValue("HttpsRedirection:Enabled", true))
 {

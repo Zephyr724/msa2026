@@ -17,6 +17,7 @@ const people = {
     displayName: 'Aroha',
     totalXp: 150,
     verifiedCompletionCount: 2,
+    isCurrentUser: true,
   }],
 };
 
@@ -69,6 +70,7 @@ describe('leaderboard DTO validation', () => {
       rows: [],
     },
     { ...people, rows: [{ ...people.rows[0], totalXp: -1 }] },
+    { ...people, rows: [{ ...people.rows[0], isCurrentUser: 'yes' }] },
   ])('rejects invalid people payload %#', (value) => {
     expect(() => validatePeopleLeaderboard(value)).toThrow();
   });

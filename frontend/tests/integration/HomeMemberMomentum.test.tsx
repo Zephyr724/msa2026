@@ -102,9 +102,12 @@ describe('Home member momentum composition', () => {
     expect(await screen.findByText('Level 3 · Novice · 120 XP')).toBeInTheDocument();
     expect(await screen.findByText('3 weeks')).toBeInTheDocument();
     expect(screen.getAllByText('Henderson-Massey')).not.toHaveLength(0);
-    expect(screen.getByRole('heading', { name: 'Community challenges' }))
+    expect(screen.getByRole('heading', { name: 'Henderson-Massey moves together' }))
       .toBeInTheDocument();
-    expect(screen.getByText('20 complete')).toBeInTheDocument();
+    expect(screen.getByText('of 50 verified actions')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', {
+      name: 'Henderson-Massey community challenge progress',
+    })).toHaveValue(40);
     expect(screen.queryByRole('heading', { name: /Admin challenge management/ }))
       .not.toBeInTheDocument();
   });

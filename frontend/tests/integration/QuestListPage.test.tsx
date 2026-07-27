@@ -39,6 +39,8 @@ const datedQuest: QuestListItemDto = {
   endAtUtc: null,
   locationRegion: null,
   locationDescription: null,
+  latitude: -36.8747,
+  longitude: 174.6285,
   coverImage: {
     id: 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e',
     imageUrl: '/images/quests/stream-cleanup.svg',
@@ -53,6 +55,8 @@ const undatedQuest: QuestListItemDto = {
   sourceType: 'AdminCuratedExternal',
   registrationMode: 'External',
   startAtUtc: null,
+  latitude: null,
+  longitude: null,
   coverImage: null,
 };
 
@@ -138,13 +142,23 @@ describe('Quest discovery URL and card behavior', () => {
     expect(screen.getByText('External registration')).toBeInTheDocument();
     expect(screen.getByText('Official external event')).toBeInTheDocument();
     expect(screen.getByRole('img', {
+      name: 'Illustrated environmental scene for Dated Stream Cleanup',
+    })).toBeInTheDocument();
+    expect(screen.getByRole('img', {
       name: 'Fallback illustration for Undated External Quest',
     })).toHaveAttribute('src', '/images/quests/quest-fallback.svg');
   });
 
   it('replaces a broken Quest image with the fallback', () => {
+    const brokenImageQuest = {
+      ...datedQuest,
+      coverImage: {
+        ...datedQuest.coverImage!,
+        imageUrl: 'https://images.example.test/stream-cleanup.jpg',
+      },
+    };
     mockUseQuestList.mockReturnValue({
-      data: questPage([datedQuest]),
+      data: questPage([brokenImageQuest]),
       isLoading: false,
       isError: false,
       refetch: vi.fn(),
@@ -158,9 +172,9 @@ describe('Quest discovery URL and card behavior', () => {
     })).toHaveAttribute('src', '/images/quests/quest-fallback.svg');
   });
 
-  it('keeps the complete Quest list available when Google Maps is not configured', () => {
+  it('keeps every Quest in the map result list when Google Maps is unavailable', () => {
     mockUseQuestList.mockReturnValue({
-      data: questPage([datedQuest]),
+      data: questPage([datedQuest, undatedQuest]),
       isLoading: false,
       isError: false,
       refetch: vi.fn(),
@@ -168,8 +182,25 @@ describe('Quest discovery URL and card behavior', () => {
 
     renderQuestList();
 
+    expect(screen.getByRole('button', { name: 'Cards' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('link', { name: datedQuest.title })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
     expect(screen.getByText('Quest map is temporarily unavailable')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Complete Quest list' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Quests shown in map view' }))
+      .toBeInTheDocument();
+    expect(screen.getByRole('link', { name: `Details for ${datedQuest.title}` }))
+      .toHaveAttribute('href', `/quests/${datedQuest.id}`);
+    expect(screen.getByRole('link', { name: `Details for ${undatedQuest.title}` }))
+      .toHaveAttribute('href', `/quests/${undatedQuest.id}`);
+    expect(screen.getByText('Not mapped')).toBeInTheDocument();
+    const mappedQuestRow = screen.getByRole('button', {
+      name: new RegExp(datedQuest.title),
+    });
+    fireEvent.click(mappedQuestRow);
+    expect(mappedQuestRow).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cards' }));
     expect(screen.getByRole('link', { name: datedQuest.title })).toBeInTheDocument();
   });
 });

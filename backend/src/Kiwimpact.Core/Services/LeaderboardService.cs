@@ -70,7 +70,8 @@ public sealed class LeaderboardService : ILeaderboardService
                     ((resolvedPage - 1) * resolvedPageSize) + index + 1,
                     row.DisplayName,
                     row.TotalXp,
-                    row.VerifiedCompletionCount))
+                    row.VerifiedCompletionCount,
+                    actorId.HasValue && row.UserId == actorId.Value))
                 .ToList();
         return new PeopleLeaderboard(
             resolvedScope,

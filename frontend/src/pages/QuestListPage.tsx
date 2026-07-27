@@ -1,7 +1,16 @@
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import {
+  Grid2X2,
+  Map,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+  X,
+  Zap,
+} from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import QuestCard from '../components/quest/QuestCard.tsx';
+import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
 import { QuestMap } from '../components/maps/QuestMap.tsx';
 import { CATEGORY_PRESENTATION } from '../lib/questPresentation.ts';
 import { useQuestList } from '../hooks/useQuests.ts';
@@ -11,6 +20,7 @@ import {
   QUEST_CATEGORIES,
   QUEST_DIFFICULTIES,
   QUEST_SOURCE_TYPES,
+  type QuestListItemDto,
 } from '../types/quest.ts';
 
 const SORT_OPTIONS = [
@@ -67,6 +77,8 @@ export default function QuestListPage() {
   const filters = parseFiltersFromParams(searchParams);
   const [searchInput, setSearchInput] = useState(filters.search ?? '');
   const [showFilters, setShowFilters] = useState(false);
+  const [view, setView] = useState<'cards' | 'map'>('cards');
+  const [selectedMapQuestId, setSelectedMapQuestId] = useState<string | null>(null);
 
   useEffect(() => {
     setSearchInput(filters.search ?? '');
@@ -74,6 +86,15 @@ export default function QuestListPage() {
 
   const { data, isLoading, isError, refetch } = useQuestList(filters);
   const { data: regions } = useRegions();
+
+  useEffect(() => {
+    if (
+      selectedMapQuestId !== null
+      && !data?.items.some((quest) => quest.id === selectedMapQuestId)
+    ) {
+      setSelectedMapQuestId(null);
+    }
+  }, [data?.items, selectedMapQuestId]);
 
   const updateFilters = useCallback((patch: Partial<QuestFilters>) => {
     const next = {
@@ -102,19 +123,18 @@ export default function QuestListPage() {
   ].filter(Boolean).length;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-10 sm:py-14">
+    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-8">
       <main className="kiwi-page">
         <header className="max-w-2xl">
-          <p className="kiwi-stat-label">Find your next local action</p>
-          <h1 className="mt-2 text-4xl sm:text-5xl">Discover eco quests</h1>
-          <p className="mt-3 text-lg text-base-content/62">
+          <h1 className="kiwi-page-heading">Discover eco quests</h1>
+          <p className="kiwi-page-intro mt-1">
             Explore practical ways to help around Auckland and across New Zealand.
           </p>
         </header>
 
-        <section aria-label="Quest discovery controls" className="mt-9">
-          <form className="grid gap-3 lg:grid-cols-[1fr_auto_auto]" onSubmit={handleSearch}>
-            <label className="input input-bordered flex h-12 w-full items-center gap-3 rounded-2xl bg-base-100">
+        <section aria-label="Quest discovery controls" className="mt-7">
+          <form className="grid grid-cols-[1fr_auto] gap-3 sm:grid-cols-[1fr_auto_auto_auto]" onSubmit={handleSearch}>
+            <label className="input input-bordered flex h-11 w-full items-center gap-3 rounded-[0.875rem] bg-base-100">
               <Search aria-hidden="true" className="size-5 text-base-content/45" />
               <span className="sr-only">Search quests</span>
               <input
@@ -129,7 +149,7 @@ export default function QuestListPage() {
             </label>
             <button
               aria-expanded={showFilters}
-              className="btn btn-outline h-12 rounded-2xl"
+              className="btn btn-outline h-11 min-h-11 rounded-[0.875rem]"
               onClick={() => setShowFilters((visible) => !visible)}
               type="button"
             >
@@ -139,12 +159,37 @@ export default function QuestListPage() {
                 <span className="badge badge-primary badge-sm">{activeFilterCount}</span>
               )}
             </button>
-            <button className="btn btn-primary h-12 rounded-2xl px-6" type="submit">
-              Search
-            </button>
+            <select
+              aria-label="Sort by"
+              className="select select-bordered hidden h-11 min-h-11 rounded-[0.875rem] bg-base-100 sm:block"
+              onChange={(event) => updateFilters({ sortBy: event.target.value })}
+              value={filters.sortBy ?? 'startAt'}
+            >
+              {SORT_OPTIONS.map((sort) => (
+                <option key={sort.value} value={sort.value}>{sort.label}</option>
+              ))}
+            </select>
+            <div aria-label="Quest view" className="kiwi-segmented" role="group">
+              <button
+                aria-pressed={view === 'cards'}
+                onClick={() => setView('cards')}
+                type="button"
+              >
+                <Grid2X2 aria-hidden="true" className="size-4" />
+                <span className="sr-only">Cards</span>
+              </button>
+              <button
+                aria-pressed={view === 'map'}
+                onClick={() => setView('map')}
+                type="button"
+              >
+                <Map aria-hidden="true" className="size-4" />
+                <span className="sr-only">Map</span>
+              </button>
+            </div>
           </form>
 
-          <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
             <button
               className={`btn btn-sm shrink-0 rounded-full ${
                 !filters.category ? 'btn-primary' : 'btn-outline'
@@ -156,17 +201,16 @@ export default function QuestListPage() {
             </button>
             {QUEST_CATEGORIES.map((category) => {
               const presentation = CATEGORY_PRESENTATION[category];
-              const Icon = presentation.Icon;
               return (
                 <button
-                  className={`btn btn-sm shrink-0 rounded-full ${
+                  className={`btn btn-xs h-8 min-h-8 shrink-0 rounded-full px-3 ${
                     filters.category === category ? 'btn-primary' : 'btn-outline'
                   }`}
                   key={category}
                   onClick={() => updateFilters({ category })}
                   type="button"
                 >
-                  <Icon aria-hidden="true" className="size-3.5" />
+                  <CategoryEmblem category={category} size="xs" />
                   {presentation.label}
                 </button>
               );
@@ -237,25 +281,10 @@ export default function QuestListPage() {
           )}
         </section>
 
-        <div className="mt-8 flex items-center justify-between gap-4">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-semibold text-base-content/62" aria-live="polite">
             {data ? `${data.totalCount} quest${data.totalCount === 1 ? '' : 's'} found` : 'Finding quests…'}
           </p>
-          {!showFilters && (
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-base-content/55">Sort</span>
-              <select
-                aria-label="Sort by"
-                className="select select-bordered select-sm rounded-xl bg-base-100"
-                onChange={(event) => updateFilters({ sortBy: event.target.value })}
-                value={filters.sortBy ?? 'startAt'}
-              >
-                {SORT_OPTIONS.map((sort) => (
-                  <option key={sort.value} value={sort.value}>{sort.label}</option>
-                ))}
-              </select>
-            </label>
-          )}
         </div>
 
         {isLoading && (
@@ -295,19 +324,34 @@ export default function QuestListPage() {
 
         {data && data.items.length > 0 && (
           <>
-            <section className="mt-5" aria-labelledby="quest-map-heading">
-              <div className="mb-3">
-                <p className="kiwi-stat-label">Explore nearby</p>
-                <h2 className="mt-1 text-2xl" id="quest-map-heading">Quest map</h2>
+            {view === 'map' ? (
+              <section className="mt-5" aria-labelledby="quest-map-heading">
+                <div className="mb-3">
+                  <p className="kiwi-stat-label">Explore nearby</p>
+                  <h2 className="mt-1 text-2xl" id="quest-map-heading">Quest map</h2>
+                </div>
+                <div className="space-y-5">
+                  <QuestMap
+                    onSelectQuest={setSelectedMapQuestId}
+                    quests={data.items}
+                    selectedQuestId={selectedMapQuestId}
+                  />
+                  <QuestMapResultList
+                    onSelectQuest={(questId) => setSelectedMapQuestId(
+                      selectedMapQuestId === questId ? null : questId,
+                    )}
+                    quests={data.items}
+                    selectedQuestId={selectedMapQuestId}
+                  />
+                </div>
+              </section>
+            ) : (
+              <div className="mt-4 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {data.items.map((quest) => (
+                  <QuestCard key={quest.id} quest={quest} />
+                ))}
               </div>
-              <QuestMap quests={data.items} />
-            </section>
-            <h2 className="mt-9 text-2xl">Complete Quest list</h2>
-            <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {data.items.map((quest) => (
-                <QuestCard key={quest.id} quest={quest} />
-              ))}
-            </div>
+            )}
             <nav
               aria-label="Quest result pages"
               className="mt-10 flex items-center justify-center gap-4"
@@ -336,6 +380,83 @@ export default function QuestListPage() {
         )}
       </main>
     </div>
+  );
+}
+
+function QuestMapResultList({
+  onSelectQuest,
+  quests,
+  selectedQuestId,
+}: {
+  onSelectQuest: (questId: string) => void;
+  quests: QuestListItemDto[];
+  selectedQuestId: string | null;
+}) {
+  return (
+    <section aria-labelledby="map-results-heading">
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div>
+          <p className="kiwi-stat-label">Current results</p>
+          <h3 className="mt-1 text-xl" id="map-results-heading">
+            Quests in this search
+          </h3>
+        </div>
+        <span className="text-xs font-semibold text-base-content/55">
+          {quests.length} shown
+        </span>
+      </div>
+      <ul aria-label="Quests shown in map view" className="space-y-2.5">
+        {quests.map((quest) => {
+          const hasCoordinates = typeof quest.latitude === 'number'
+            && typeof quest.longitude === 'number';
+          const selected = selectedQuestId === quest.id;
+          return (
+            <li
+              className={`rounded-2xl border bg-base-100 p-3 transition-colors ${
+                selected
+                  ? 'border-primary bg-primary/5'
+                  : 'border-base-300 hover:border-primary/35'
+              }`}
+              key={quest.id}
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  aria-pressed={selected}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  onClick={() => onSelectQuest(quest.id)}
+                  type="button"
+                >
+                  <CategoryEmblem category={quest.category} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-bold">{quest.title}</span>
+                    <span className="mt-1 flex items-center gap-1.5 truncate text-xs text-base-content/58">
+                      <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
+                      {quest.locationDescription
+                        ?? quest.locationRegion?.name
+                        ?? 'Location to be confirmed'}
+                    </span>
+                  </span>
+                </button>
+                <span className="hidden items-center gap-1 text-xs font-extrabold text-base-content sm:inline-flex">
+                  <Zap aria-hidden="true" className="size-3.5 text-warning" />
+                  {quest.xpAward} XP
+                </span>
+                {!hasCoordinates && (
+                  <span className="badge badge-ghost badge-sm">Not mapped</span>
+                )}
+                <Link
+                  aria-label={`Details for ${quest.title}`}
+                  className="btn btn-outline btn-sm rounded-full"
+                  to={`/quests/${quest.id}`}
+                >
+                  Details
+                </Link>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

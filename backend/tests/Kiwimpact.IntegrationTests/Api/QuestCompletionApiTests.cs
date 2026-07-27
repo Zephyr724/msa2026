@@ -60,6 +60,22 @@ public sealed class QuestCompletionApiTests
     }
 
     [Fact]
+    public async Task MyClaims_EmptyMemberHistory_ReturnsAnEmptyList()
+    {
+        var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
+
+        var response = await actor.Client.GetAsync(
+            "/api/v1/users/me/claims",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var claims = await response.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        Assert.Equal(JsonValueKind.Array, claims.ValueKind);
+        Assert.Empty(claims.EnumerateArray());
+    }
+
+    [Fact]
     public async Task UnsupportedRoleIsForbiddenAndAuthorizedRolesUseSessionIdentity()
     {
         var observer = await CreateAuthenticatedClientAsync("Observer");

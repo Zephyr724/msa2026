@@ -111,7 +111,9 @@ dotnet test
 dotnet run --project src/Kiwimpact.Api --launch-profile http
 ```
 
-The API starts on `http://localhost:5000` with the `http` launch profile.
+The API starts on `http://localhost:5091` with the `http` launch profile. Port
+`5091` avoids the macOS Control Center/AirPlay service that commonly reserves
+port `5000`.
 
 **Selected public endpoints:**
 
@@ -158,7 +160,7 @@ npm run build        # production build
 | `DataProtection:KeyPath` | Optional durable filesystem key directory |
 | `HttpsRedirection:Enabled` | HTTPS redirect switch; defaults on outside Development |
 | `VITE_API_BASE_URL` | Browser API base URL for `apiFetch` (default: `/api`) |
-| `VITE_DEV_PROXY_TARGET` | Backend URL for Vite dev proxy (default: `http://localhost:5000`) |
+| `VITE_DEV_PROXY_TARGET` | Backend URL for Vite dev proxy (default: `http://localhost:5091`) |
 | `VITE_GOOGLE_MAPS_API_KEY` | Dedicated browser key restricted to Maps JavaScript API and approved website referrers |
 | `VITE_GOOGLE_MAPS_MAP_ID` | JavaScript map ID used by Google Maps Advanced Markers |
 

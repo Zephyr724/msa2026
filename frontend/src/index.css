@@ -113,11 +113,84 @@
     margin-inline: auto;
   }
 
+  .kiwi-page-wide {
+    width: min(100% - 2rem, 80rem);
+    margin-inline: auto;
+  }
+
   .kiwi-panel {
     border: 1px solid var(--color-base-300);
-    border-radius: 1.5rem;
+    border-radius: 1.25rem;
     background: var(--color-base-100);
-    box-shadow: 0 18px 48px color-mix(in oklab, #183026 7%, transparent);
+    box-shadow: 0 8px 24px color-mix(in oklab, #183026 5%, transparent);
+  }
+
+  .kiwi-soft-panel {
+    border: 1px solid color-mix(in oklab, var(--color-base-300) 88%, transparent);
+    border-radius: 1.25rem;
+    background: color-mix(in oklab, var(--color-base-100) 92%, transparent);
+  }
+
+  .kiwi-segmented {
+    display: inline-flex;
+    gap: 0.25rem;
+    border: 1px solid var(--color-base-300);
+    border-radius: 1rem;
+    background: var(--color-secondary);
+    padding: 0.25rem;
+  }
+
+  .kiwi-segmented > button,
+  .kiwi-segmented > a {
+    min-height: 2.5rem;
+    border-radius: 0.75rem;
+    padding-inline: 0.85rem;
+    color: color-mix(in oklab, var(--color-base-content) 66%, transparent);
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .kiwi-segmented > [aria-pressed="true"],
+  .kiwi-segmented > [aria-selected="true"] {
+    background: var(--color-neutral);
+    color: var(--color-neutral-content);
+    box-shadow: 0 5px 12px color-mix(in oklab, #183026 12%, transparent);
+  }
+
+  .kiwi-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.65rem;
+    border: 1px solid var(--color-base-300);
+    border-radius: 999px;
+    background: var(--color-base-100);
+    padding-inline: 0.6rem;
+    color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .kiwi-section-title {
+    font-family: "Fredoka", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+    font-size: clamp(1.55rem, 2vw, 2rem);
+    line-height: 1.15;
+    letter-spacing: -0.018em;
+  }
+
+  .kiwi-page-heading {
+    font-size: clamp(1.875rem, 3vw, 2.25rem);
+    line-height: 1.12;
+  }
+
+  .kiwi-page-intro {
+    color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+    font-size: 1rem;
+    line-height: 1.6;
   }
 
   .kiwi-eyebrow {

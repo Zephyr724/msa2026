@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -237,7 +237,7 @@ describe('PassportPage', () => {
     expect(screen.getByText('45 XP to Level 4')).toBeInTheDocument();
 
     expect(screen.getAllByText('Restore Nature')).not.toHaveLength(0);
-    expect(screen.getByText('Verified')).toBeInTheDocument();
+    expect(screen.getAllByText('Verified')).not.toHaveLength(0);
     expect(screen.getByText('50 XP')).toBeInTheDocument();
     const time = container.querySelector('time');
     expect(time).toHaveAttribute('dateTime', '2026-07-20T09:00:00.0000000Z');
@@ -329,13 +329,30 @@ describe('PassportPage', () => {
   it('F13: shows "Passport unavailable" on a missing-profile 404', async () => {
     stubPassportApi({
       progression: () =>
-        Promise.resolve(jsonResponse({ title: 'Not Found', status: 404 }, 404)),
+        Promise.resolve(jsonResponse({
+          type: 'https://kiwimpact.app/problems/profile-not-found',
+          title: 'Profile Not Found',
+          status: 404,
+        }, 404)),
     });
     renderPassport();
 
     await waitFor(() =>
       expect(summaryRegion()).toHaveTextContent('Passport unavailable'));
     expect(summaryRegion().querySelector('button')).not.toBeInTheDocument();
+  });
+
+  it('does not mislabel an unrelated 404 as a missing Passport profile', async () => {
+    stubPassportApi({
+      progression: () =>
+        Promise.resolve(jsonResponse({ title: 'Not Found', status: 404 }, 404)),
+    });
+    renderPassport();
+
+    await waitFor(() =>
+      expect(summaryRegion()).toHaveTextContent('We could not load this section.'));
+    expect(summaryRegion()).not.toHaveTextContent('Passport unavailable');
+    expect(summaryRegion().querySelector('button')).toHaveTextContent('Retry');
   });
 
   it('F14: shows a generic per-region error with Retry on an unexpected 500', async () => {
@@ -514,7 +531,7 @@ describe('PassportPage', () => {
     await screen.findByText('First Steps');
 
     const main = container.querySelector('main');
-    expect(main?.className).toContain('max-w-5xl');
+    expect(main?.className).toContain('kiwi-page-wide');
     expect(main?.querySelector('.md\\:grid-cols-3')).not.toBeInTheDocument();
     expect(summaryRegion().className).not.toContain('md:col-span-1');
     expect(historyRegion().className).not.toContain('md:col-span-2');
@@ -543,5 +560,46 @@ describe('PassportPage', () => {
       'Share Card',
       'Completion history',
     ]);
+  });
+
+  it('filters against the complete Passport history rather than only the visible page', async () => {
+    const verified = completionItem();
+    const selfReported = completionItem({
+      completionId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      questId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      questTitle: 'Waste-free habit',
+      questCategory: 'CleanReduceWaste',
+      status: 'SelfReported',
+      method: 'SelfReported',
+      verifiedAtUtc: null,
+      xpAmount: null,
+    });
+    stubPassportApi({
+      completions: (url) => Promise.resolve(jsonResponse(
+        url.includes('pageSize=50')
+          ? {
+            items: [verified, selfReported],
+            page: 1,
+            pageSize: 50,
+            totalCount: 2,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          }
+          : historyPage([verified]),
+      )),
+    });
+    const user = userEvent.setup();
+    renderPassport();
+
+    await within(historyRegion()).findByText('Harbour restoration day');
+    await user.click(screen.getByRole('button', { name: 'Self-reported' }));
+
+    expect(await within(historyRegion()).findByText('Waste-free habit')).toBeInTheDocument();
+    await user.selectOptions(
+      screen.getByLabelText('Filter completion history by category'),
+      'RestoreNature',
+    );
+    expect(await within(historyRegion()).findByText('No matching records.')).toBeInTheDocument();
   });
 });

@@ -1,4 +1,12 @@
-import { Medal, ShieldCheck, Trophy, Users, Zap } from 'lucide-react';
+import {
+  Radio,
+  RefreshCw,
+  ShieldCheck,
+  Trophy,
+  Users,
+  WifiOff,
+  Zap,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useAuthQuery } from '../hooks/useAuth.ts';
 import {
@@ -14,6 +22,8 @@ import type {
   PeopleLeaderboardScope,
 } from '../types/leaderboard.ts';
 import CommunityChallengesSection from '../components/community/CommunityChallengesSection.tsx';
+import { MedalArtwork } from '../components/game/GameArtwork.tsx';
+import { useUiStore } from '../stores/useUiStore.ts';
 
 export default function LeaderboardPage() {
   const auth = useAuthQuery();
@@ -38,84 +48,90 @@ export default function LeaderboardPage() {
   );
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-10 sm:py-14">
-      <main className="kiwi-page max-w-5xl">
-        <header className="text-center">
-          <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-accent/15 text-warning">
-            <Trophy aria-hidden="true" className="size-7" />
-          </span>
-          <p className="kiwi-stat-label mt-5">Verified community momentum</p>
-          <h1 className="mt-2 text-4xl sm:text-5xl">Leaderboard</h1>
-          <p className="mx-auto mt-3 max-w-2xl text-lg text-base-content/62">
-            Celebrate verified action locally, across Auckland, and throughout
-            Aotearoa New Zealand.
-          </p>
+    <div className="min-h-[calc(100vh-4rem)] overflow-x-hidden bg-base-200 py-8">
+      <main className="kiwi-page max-w-[56.25rem]">
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="kiwi-page-heading">Leaderboard</h1>
+            <p className="kiwi-page-intro mt-1 max-w-2xl">
+              Verified eco quest completions across Kiwimpact.
+            </p>
+          </div>
+          <LiveImpactStatus />
         </header>
 
-        <section className="kiwi-panel mt-8 p-4 sm:p-5" aria-label="Leaderboard view">
-          <div className="tabs tabs-box mx-auto w-fit" role="tablist">
+        <section className="mt-6" aria-label="Leaderboard view">
+          <div className="kiwi-segmented w-fit" role="tablist">
             <button
-              className={`tab ${mode === 'people' ? 'tab-active' : ''}`}
+              aria-selected={mode === 'people'}
+              className={mode === 'people' ? 'active' : ''}
               onClick={() => setMode('people')}
               role="tab"
               type="button"
             >
+              <Users aria-hidden="true" className="size-4" />
               People
             </button>
             <button
-              className={`tab ${mode === 'communities' ? 'tab-active' : ''}`}
+              aria-selected={mode === 'communities'}
+              className={mode === 'communities' ? 'active' : ''}
               onClick={() => setMode('communities')}
               role="tab"
               type="button"
             >
+              <Trophy aria-hidden="true" className="size-4" />
               Communities
             </button>
           </div>
 
           {mode === 'people' ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <FilterSelect
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <SegmentedOptions
                 label="Scope"
                 onChange={(value) => setPeopleScope(value as PeopleLeaderboardScope)}
+                options={[
+                  ...(auth.data ? [{ label: 'My Community', value: 'myCommunity' }] : []),
+                  { label: 'Auckland', value: 'auckland' },
+                  { label: 'New Zealand', value: 'nz' },
+                ]}
                 value={peopleScope}
-              >
-                {auth.data && <option value="myCommunity">My Community</option>}
-                <option value="auckland">Auckland</option>
-                <option value="nz">New Zealand</option>
-              </FilterSelect>
-              <FilterSelect
+              />
+              <SegmentedOptions
                 label="Period"
                 onChange={(value) => setPeoplePeriod(value as PeopleLeaderboardPeriod)}
+                options={[
+                  { label: 'Weekly', value: 'weekly' },
+                  { label: 'Monthly', value: 'monthly' },
+                  { label: 'All time', value: 'allTime' },
+                ]}
                 value={peoplePeriod}
-              >
-                <option value="weekly">This week</option>
-                <option value="monthly">This month</option>
-                <option value="allTime">All time</option>
-              </FilterSelect>
+              />
             </div>
           ) : (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <FilterSelect
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <SegmentedOptions
                 label="Scope"
                 onChange={(value) => setCommunityScope(value as CommunitiesLeaderboardScope)}
+                options={[
+                  { label: 'Auckland', value: 'auckland' },
+                  { label: 'New Zealand', value: 'nz' },
+                ]}
                 value={communityScope}
-              >
-                <option value="auckland">Auckland</option>
-                <option value="nz">New Zealand</option>
-              </FilterSelect>
-              <FilterSelect
+              />
+              <SegmentedOptions
                 label="Period"
                 onChange={(value) => setCommunityPeriod(value as CommunitiesLeaderboardPeriod)}
+                options={[
+                  { label: 'Monthly', value: 'monthly' },
+                  { label: 'All time', value: 'allTime' },
+                ]}
                 value={communityPeriod}
-              >
-                <option value="monthly">This month</option>
-                <option value="allTime">All time</option>
-              </FilterSelect>
+              />
             </div>
           )}
         </section>
 
-        <section className="mt-8" aria-live="polite">
+        <section className="mt-6" aria-live="polite">
           {mode === 'people' ? (
             <PeopleStandings query={people} />
           ) : (
@@ -134,6 +150,44 @@ export default function LeaderboardPage() {
         </aside>
       </main>
     </div>
+  );
+}
+
+function LiveImpactStatus() {
+  const status = useUiStore((state) => state.liveImpactStatus);
+  const presentation = {
+    connecting: {
+      Icon: RefreshCw,
+      label: 'Connecting to live updates…',
+      classes: 'border-info/25 bg-info/8 text-info',
+      iconClasses: 'animate-spin',
+    },
+    live: {
+      Icon: Radio,
+      label: 'Live verified impact',
+      classes: 'border-primary/20 bg-primary/8 text-primary',
+      iconClasses: '',
+    },
+    reconnecting: {
+      Icon: RefreshCw,
+      label: 'Reconnecting…',
+      classes: 'border-warning/30 bg-warning/10 text-warning',
+      iconClasses: 'animate-spin',
+    },
+    unavailable: {
+      Icon: WifiOff,
+      label: 'Live updates unavailable · REST data shown',
+      classes: 'border-base-300 bg-secondary text-base-content/60',
+      iconClasses: '',
+    },
+  }[status];
+  const Icon = presentation.Icon;
+
+  return (
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-extrabold ${presentation.classes}`}>
+      <Icon aria-hidden="true" className={`size-3.5 ${presentation.iconClasses}`} />
+      {presentation.label}
+    </span>
   );
 }
 
@@ -165,9 +219,20 @@ function PeopleStandings({
           <thead><tr><th>Rank</th><th>Member</th><th className="text-right">XP</th><th className="text-right">Quests</th></tr></thead>
           <tbody>
             {query.data.rows.map((row) => (
-              <tr key={row.rank}>
+              <tr
+                aria-current={row.isCurrentUser ? 'true' : undefined}
+                className={row.isCurrentUser ? 'bg-primary/8' : undefined}
+                key={row.rank}
+              >
                 <td><RankMarker rank={row.rank} /></td>
-                <td className="font-semibold">{row.displayName}</td>
+                <td className="font-semibold">
+                  <span className="inline-flex items-center gap-2">
+                    {row.displayName}
+                    {row.isCurrentUser && (
+                      <span className="badge badge-primary badge-sm">You</span>
+                    )}
+                  </span>
+                </td>
                 <td className="text-right font-bold tabular-nums">{row.totalXp}</td>
                 <td className="text-right tabular-nums">{row.verifiedCompletionCount}</td>
               </tr>
@@ -215,14 +280,25 @@ function CommunityStandings({
 }
 
 function Podium({ rows }: { rows: LeaderboardRow[] }) {
+  const displayRows = rows.length === 3 ? [rows[1], rows[0], rows[2]] : rows;
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {rows.map((row, index) => (
-        <article className="kiwi-panel p-5 text-center" key={row.rank}>
-          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-            {index === 0 ? <Trophy className="size-6" /> : <Medal className="size-6" />}
+    <div className="grid items-end gap-4 pt-4 sm:grid-cols-3">
+      {displayRows.map((row) => (
+        <article
+          className={`kiwi-panel relative p-5 text-center ${
+            row.rank === 1 ? 'border-accent/60 bg-accent/8 sm:pb-8 sm:pt-7' : ''
+          } ${row.isCurrentUser ? 'ring-2 ring-primary ring-offset-2 ring-offset-base-200' : ''}`}
+          key={row.rank}
+        >
+          <span className="mx-auto block w-fit">
+            <MedalArtwork position={Math.min(row.rank, 3) as 1 | 2 | 3} size={52} />
           </span>
-          <p className="mt-4 truncate text-xl font-bold">{row.displayName}</p>
+          <p className="mt-4 truncate text-xl font-bold">
+            {row.displayName}
+            {row.isCurrentUser && (
+              <span className="badge badge-primary badge-sm ml-2 align-middle">You</span>
+            )}
+          </p>
           <p className="mt-1 text-sm text-base-content/55">Rank {row.rank}</p>
           <p className="mt-4 inline-flex items-center gap-1.5 font-extrabold">
             <Zap className="size-4 text-warning" /> {row.totalXp} XP
@@ -234,6 +310,9 @@ function Podium({ rows }: { rows: LeaderboardRow[] }) {
 }
 
 function RankMarker({ rank }: { rank: number }) {
+  if (rank >= 1 && rank <= 3) {
+    return <MedalArtwork position={rank as 1 | 2 | 3} size={30} />;
+  }
   return (
     <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-sm font-extrabold text-primary">
       {rank}
@@ -241,23 +320,29 @@ function RankMarker({ rank }: { rank: number }) {
   );
 }
 
-function FilterSelect(props: {
+function SegmentedOptions(props: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  children: React.ReactNode;
+  options: { label: string; value: string }[];
 }) {
   return (
-    <label>
-      <span className="kiwi-stat-label mb-2 block">{props.label}</span>
-      <select
-        className="select select-bordered w-full"
-        onChange={(event) => props.onChange(event.target.value)}
-        value={props.value}
-      >
-        {props.children}
-      </select>
-    </label>
+    <div>
+      <span className="sr-only">{props.label}</span>
+      <div aria-label={props.label} className="kiwi-segmented max-w-full overflow-x-auto" role="group">
+        {props.options.map((option) => (
+          <button
+            aria-pressed={props.value === option.value}
+            className="whitespace-nowrap"
+            key={option.value}
+            onClick={() => props.onChange(option.value)}
+            type="button"
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

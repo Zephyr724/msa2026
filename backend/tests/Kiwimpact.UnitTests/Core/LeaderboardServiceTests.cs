@@ -29,6 +29,32 @@ public sealed class LeaderboardServiceTests
         Assert.True(leaderboardRepository.ObservedAucklandOnly);
         Assert.NotNull(leaderboardRepository.ObservedFromUtc);
         Assert.Equal(1, xpRepository.ReadinessCalls);
+        Assert.All(result.Rows, row => Assert.False(row.IsCurrentUser));
+    }
+
+    [Fact]
+    public async Task AuthenticatedReadMarksOnlyTheIdentitySafeActorRow()
+    {
+        var actorId = Guid.NewGuid();
+        var rows = new[]
+        {
+            new LeaderboardRepositoryRow(Guid.NewGuid(), "Same name", 200, 2),
+            new LeaderboardRepositoryRow(actorId, "Same name", 100, 1),
+        };
+        var service = new LeaderboardService(
+            new FakeLeaderboardRepository(rows, 2),
+            new FakeXpLedgerRepository());
+
+        var result = await service.GetPeopleLeaderboardAsync(
+            actorId,
+            "auckland",
+            "weekly",
+            null,
+            null,
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.Rows[0].IsCurrentUser);
+        Assert.True(result.Rows[1].IsCurrentUser);
     }
 
     [Fact]

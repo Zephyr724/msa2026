@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -102,9 +102,12 @@ describe('MyQuestsPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Mission Board' }))
       .toBeInTheDocument();
-    expect(await screen.findByText('Dated Stream Cleanup')).toBeInTheDocument();
+    expect((await screen.findAllByText('Dated Stream Cleanup')).length).toBeGreaterThan(0);
     expect(screen.getByText(/Active · starts/)).toBeInTheDocument();
     expect(screen.getByText('Level 3 · Novice')).toBeInTheDocument();
+    expect(screen.getByText('Next milestone')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recent achievements' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Passport preview' })).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url]) =>
       String(url).endsWith('/v1/users/me/participations?status=all'))).toBe(true);
   });
@@ -159,7 +162,7 @@ describe('MyQuestsPage', () => {
     expect(screen.getByRole('button', { name: /Under Review.*1/ }))
       .toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Under Review.*1/ }));
-    expect(await screen.findByText('Dated Stream Cleanup')).toBeInTheDocument();
+    expect((await screen.findAllByText('Dated Stream Cleanup')).length).toBeGreaterThan(0);
     expect(screen.getByText('Under review')).toBeInTheDocument();
   });
 
@@ -198,16 +201,20 @@ describe('MyQuestsPage', () => {
     stubApi([scheduleTbd, future, past]);
     renderPage();
 
+    const missionList = (await screen.findByRole('heading', { name: 'Your quests' }))
+      .closest('section');
+    expect(missionList).not.toBeNull();
+    const missions = within(missionList!);
     expect(await screen.findByText('Schedule TBD Quest')).toBeInTheDocument();
     expect(screen.getByText('Future Quest')).toBeInTheDocument();
-    expect(screen.queryByText('Past Quest')).not.toBeInTheDocument();
+    expect(missions.queryByText('Past Quest')).not.toBeInTheDocument();
     expect(screen.getByText('Active · schedule to be confirmed')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Active.*2/ })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Ready to Complete.*1/ }));
-    expect(await screen.findByText('Past Quest')).toBeInTheDocument();
-    expect(screen.queryByText('Schedule TBD Quest')).not.toBeInTheDocument();
-    expect(screen.queryByText('Future Quest')).not.toBeInTheDocument();
+    expect(await missions.findByText('Past Quest')).toBeInTheDocument();
+    expect(missions.queryByText('Schedule TBD Quest')).not.toBeInTheDocument();
+    expect(missions.queryByText('Future Quest')).not.toBeInTheDocument();
   });
 
   it('loads every Passport page before classifying an older completed Quest', async () => {

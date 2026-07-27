@@ -1,6 +1,7 @@
 import {
   CheckCircle2,
   KeyRound,
+  Share2,
   ShieldCheck,
   Sparkles,
   X,
@@ -400,6 +401,13 @@ function CompletionRewardOverlay({
         <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Link className="btn border-0 bg-white text-primary hover:bg-white/90" to="/passport">
             View Passport
+          </Link>
+          <Link
+            className="btn border-white/30 bg-transparent text-white hover:bg-white/10"
+            to="/passport/share"
+          >
+            <Share2 aria-hidden="true" className="size-4" />
+            Create Share Card
           </Link>
           <button
             className="btn border-white/30 bg-transparent text-white hover:bg-white/10"

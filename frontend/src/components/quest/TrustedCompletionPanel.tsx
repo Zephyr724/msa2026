@@ -8,12 +8,19 @@ import {
 } from '../../hooks/useCompletion';
 import { ApiError } from '../../lib/api/apiFetch';
 
-export default function TrustedCompletionPanel({ questId }: { questId: string }) {
+export default function TrustedCompletionPanel({
+  mode: controlledMode,
+  questId,
+}: {
+  mode?: 'claim' | 'self';
+  questId: string;
+}) {
   const auth = useAuthQuery();
   const state = useMyQuestCompletionQuery(questId);
   const claim = useSubmitEvidenceClaim(questId);
   const selfReport = useSelfReportCompletion(questId);
   const [mode, setMode] = useState<'claim' | 'self'>('claim');
+  const selectedMode = controlledMode ?? mode;
   const [description, setDescription] = useState('');
   const [evidenceUrl, setEvidenceUrl] = useState('');
   const [completedDate, setCompletedDate] = useState(
@@ -24,7 +31,7 @@ export default function TrustedCompletionPanel({ questId }: { questId: string })
   if (!auth.data || state.isPending || !state.data) return null;
   if (state.data.status === 'Verified') return null;
 
-  const mutation = mode === 'claim' ? claim : selfReport;
+  const mutation = selectedMode === 'claim' ? claim : selfReport;
   const error = mutation.error instanceof ApiError
     ? mutation.error.problem?.detail ?? 'The completion could not be saved.'
     : mutation.isError ? 'The completion could not be saved.' : null;
@@ -32,7 +39,7 @@ export default function TrustedCompletionPanel({ questId }: { questId: string })
   async function submit(event: FormEvent) {
     event.preventDefault();
     const completedAtUtc = new Date(`${completedDate}T12:00:00Z`).toISOString();
-    if (mode === 'claim') {
+    if (selectedMode === 'claim') {
       await claim.mutateAsync({
         description,
         evidenceUrl: evidenceUrl.trim() || null,
@@ -58,16 +65,18 @@ export default function TrustedCompletionPanel({ questId }: { questId: string })
   return (
     <section className="kiwi-panel p-5">
       <h2 className="text-xl">Record your impact</h2>
-      <div className="tabs tabs-box mt-4 grid grid-cols-2" role="tablist">
-        <button className={`tab ${mode === 'claim' ? 'tab-active' : ''}`}
-          onClick={() => setMode('claim')} role="tab" type="button">
-          <FileCheck2 className="mr-1 size-4" /> Verify
-        </button>
-        <button className={`tab ${mode === 'self' ? 'tab-active' : ''}`}
-          onClick={() => setMode('self')} role="tab" type="button">
-          <NotebookPen className="mr-1 size-4" /> Self-report
-        </button>
-      </div>
+      {controlledMode === undefined && (
+        <div className="tabs tabs-box mt-4 grid grid-cols-2" role="tablist">
+          <button className={`tab ${selectedMode === 'claim' ? 'tab-active' : ''}`}
+            onClick={() => setMode('claim')} role="tab" type="button">
+            <FileCheck2 className="mr-1 size-4" /> Verify
+          </button>
+          <button className={`tab ${selectedMode === 'self' ? 'tab-active' : ''}`}
+            onClick={() => setMode('self')} role="tab" type="button">
+            <NotebookPen className="mr-1 size-4" /> Self-report
+          </button>
+        </div>
+      )}
       <form className="mt-4 space-y-3" onSubmit={(event) => void submit(event)}>
         <label className="form-control block">
           <span className="mb-1 block text-sm font-bold">Completion date</span>
@@ -75,7 +84,7 @@ export default function TrustedCompletionPanel({ questId }: { questId: string })
             onChange={(event) => setCompletedDate(event.target.value)}
             required type="date" value={completedDate} />
         </label>
-        {mode === 'claim' && (
+        {selectedMode === 'claim' && (
           <>
             <label className="form-control block">
               <span className="mb-1 block text-sm font-bold">What did you do?</span>
@@ -95,14 +104,14 @@ export default function TrustedCompletionPanel({ questId }: { questId: string })
             </label>
           </>
         )}
-        {mode === 'self' && (
+        {selectedMode === 'self' && (
           <p className="rounded-2xl bg-base-200 p-3 text-sm text-base-content/65">
             Self-reports appear in your Passport but do not award XP or leaderboard progress.
           </p>
         )}
         {error && <div className="alert alert-error text-sm" role="alert">{error}</div>}
         <button className="btn btn-primary w-full" disabled={mutation.isPending} type="submit">
-          {mutation.isPending ? 'Saving…' : mode === 'claim' ? 'Submit evidence' : 'Save self-report'}
+          {mutation.isPending ? 'Saving…' : selectedMode === 'claim' ? 'Submit evidence' : 'Save self-report'}
         </button>
       </form>
     </section>

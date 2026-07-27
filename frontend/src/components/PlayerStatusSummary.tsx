@@ -1,7 +1,8 @@
-import { Shield, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { useAuthQuery } from '../hooks/useAuth.ts';
 import { useProgression } from '../hooks/useProgression.ts';
 import { deriveLevelProgress } from '../lib/progressionRules.ts';
+import { RankCrest } from './game/GameArtwork.tsx';
 
 export default function PlayerStatusSummary() {
   const auth = useAuthQuery();
@@ -10,14 +11,14 @@ export default function PlayerStatusSummary() {
   return (
     <section
       aria-labelledby="player-status-title"
-      className="kiwi-panel kiwi-topography grid gap-5 p-6 sm:grid-cols-[auto_1fr] sm:items-center sm:p-8"
+      className="kiwi-panel kiwi-topography grid gap-4 overflow-hidden p-5 sm:grid-cols-[auto_1fr] sm:items-center"
     >
-      <span className="grid size-20 place-items-center rounded-[1.5rem] bg-primary text-primary-content shadow-lg">
-        <Shield aria-hidden="true" className="size-9" />
+      <span className="grid size-16 place-items-center rounded-[1.1rem] border border-primary/15 bg-secondary shadow-sm">
+        <RankCrest rankTitle={progression.data?.rankTitle ?? 'Novice'} size={48} />
       </span>
       <div>
         <p className="kiwi-stat-label">Player status</p>
-        <h2 className="mt-1 text-3xl" id="player-status-title">
+        <h2 className="mt-1 text-2xl" id="player-status-title">
           {auth.data?.displayName ?? 'Your progress'}
         </h2>
         {progression.isPending && (
@@ -61,7 +62,7 @@ function ProgressDetails({
       <p className="mt-1 font-semibold text-base-content/65">
         Level {level} · {rankTitle}
       </p>
-      <div className="mt-4 flex items-center justify-between gap-3 text-sm font-bold">
+      <div className="mt-3 flex items-center justify-between gap-3 text-xs font-bold">
         <span className="inline-flex items-center gap-1.5">
           <Zap aria-hidden="true" className="size-4 text-warning" />
           {totalXp} XP
@@ -74,7 +75,7 @@ function ProgressDetails({
       </div>
       <progress
         aria-label={`Level ${level} progress`}
-        className="progress progress-primary mt-2 h-3 w-full"
+        className="progress progress-primary mt-2 h-2 w-full"
         max="100"
         value={progress}
       />

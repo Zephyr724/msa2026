@@ -8,6 +8,7 @@ export interface LeaderboardRow {
   displayName: string;
   totalXp: number;
   verifiedCompletionCount: number;
+  isCurrentUser: boolean;
 }
 
 export interface PeopleLeaderboard {

@@ -3,11 +3,12 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { ApiError } from '../../src/lib/api/apiFetch';
 import QuestDetailPage from '../../src/pages/QuestDetailPage';
-import { useQuestDetail, useQuestImages } from '../../src/hooks/useQuests';
+import { useQuestDetail, useQuestImages, useQuestList } from '../../src/hooks/useQuests';
 
 vi.mock('../../src/hooks/useQuests', () => ({
   useQuestDetail: vi.fn(),
   useQuestImages: vi.fn(),
+  useQuestList: vi.fn(),
 }));
 
 vi.mock('../../src/components/quest/QuestParticipationPanel', () => ({
@@ -20,6 +21,7 @@ vi.mock('../../src/components/quest/QuestCompletionPanel', () => ({
 
 const mockUseQuestDetail = vi.mocked(useQuestDetail);
 const mockUseQuestImages = vi.mocked(useQuestImages);
+const mockUseQuestList = vi.mocked(useQuestList);
 
 function renderDetailPage() {
   const router = createMemoryRouter(
@@ -33,6 +35,7 @@ function renderDetailPage() {
 describe('Quest detail error states', () => {
   beforeEach(() => {
     mockUseQuestImages.mockReturnValue({ data: [] } as never);
+    mockUseQuestList.mockReturnValue({ data: undefined } as never);
   });
 
   it('renders not found only for HTTP 404', () => {

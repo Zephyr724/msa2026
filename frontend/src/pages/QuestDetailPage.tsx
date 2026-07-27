@@ -1,7 +1,10 @@
 import {
   ArrowLeft,
+  ArrowRight,
   CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   ExternalLink,
   Image as ImageIcon,
@@ -11,10 +14,10 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import QuestCompletionPanel from '../components/quest/QuestCompletionPanel.tsx';
+import QuestCompletionMethods from '../components/quest/QuestCompletionMethods.tsx';
 import QuestParticipationPanel from '../components/quest/QuestParticipationPanel.tsx';
-import TrustedCompletionPanel from '../components/quest/TrustedCompletionPanel.tsx';
 import {
   CATEGORY_PRESENTATION,
   DIFFICULTY_LABELS,
@@ -23,15 +26,34 @@ import {
   SOURCE_LABELS,
 } from '../lib/questPresentation.ts';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
-import { useQuestDetail, useQuestImages } from '../hooks/useQuests.ts';
+import { QuestMap } from '../components/maps/QuestMap.tsx';
+import { useQuestDetail, useQuestImages, useQuestList } from '../hooks/useQuests.ts';
 import { ApiError } from '../lib/api/apiFetch.ts';
+import QuestCard, { RepositoryQuestScene } from '../components/quest/QuestCard.tsx';
 
 const QUEST_IMAGE_FALLBACK = '/images/quests/quest-fallback.svg';
+
+function isRepositoryQuestPlaceholder(imageUrl: string | null | undefined) {
+  return Boolean(
+    imageUrl?.startsWith('/images/quests/')
+      && imageUrl.endsWith('.svg')
+      && imageUrl !== QUEST_IMAGE_FALLBACK,
+  );
+}
 
 export default function QuestDetailPage() {
   const { questId } = useParams<{ questId: string }>();
   const questQuery = useQuestDetail(questId!);
   const images = useQuestImages(questId!);
+  const related = useQuestList(
+    {
+      category: questQuery.data?.category,
+      page: 1,
+      pageSize: 4,
+    },
+    Boolean(questQuery.data),
+  );
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   if (questQuery.isLoading) return <QuestDetailSkeleton />;
 
@@ -66,15 +88,37 @@ export default function QuestDetailPage() {
   const quest = questQuery.data;
   const category = CATEGORY_PRESENTATION[quest.category];
   const cover = quest.coverImage?.imageUrl ?? QUEST_IMAGE_FALLBACK;
+  const coverIsRepositoryPlaceholder = isRepositoryQuestPlaceholder(cover);
+  const selectedGalleryImage = images.data?.[galleryIndex];
+  const supportsCompletionCode = quest.sourceType === 'OrganizerOwned'
+    && quest.registrationMode === 'Native';
+  const completionBriefing = supportsCompletionCode
+    ? 'Use the organizer’s completion code, or keep a clearly labelled self-report.'
+    : quest.sourceType === 'OrganizerOwned'
+      ? 'Keep a clearly labelled self-report after taking part; it earns no XP.'
+      : 'Submit private evidence for Admin review, or keep a clearly labelled self-report.';
+  const completionSummary = [
+    ...(supportsCompletionCode ? ['Code'] : []),
+    ...(quest.sourceType !== 'OrganizerOwned' ? ['Evidence'] : []),
+    'Self-report',
+  ].join(' · ');
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-base-200">
-      <section className="relative h-[22rem] overflow-hidden bg-secondary sm:h-[29rem]">
-        <img
-          alt={quest.coverImage?.altText ?? `Fallback illustration for ${quest.title}`}
-          className="h-full w-full object-cover"
-          src={cover}
-        />
+      <section className="relative h-64 overflow-hidden bg-secondary md:h-[26.25rem]">
+        {coverIsRepositoryPlaceholder ? (
+          <RepositoryQuestScene category={quest.category} title={quest.title} />
+        ) : (
+          <img
+            alt={quest.coverImage?.altText ?? `Fallback illustration for ${quest.title}`}
+            className="h-full w-full object-cover"
+            onError={(event) => {
+              event.currentTarget.onerror = null;
+              event.currentTarget.src = QUEST_IMAGE_FALLBACK;
+            }}
+            src={cover}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-base-200" />
         <div className="kiwi-page absolute inset-x-0 top-5">
           <Link
@@ -100,17 +144,17 @@ export default function QuestDetailPage() {
         </div>
       </section>
 
-      <main className="kiwi-page grid gap-8 pb-16 pt-8 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start">
+      <main className="kiwi-page grid gap-8 pb-12 pt-8 lg:grid-cols-[minmax(0,1fr)_21.25rem] lg:items-start">
         <div className="min-w-0">
           <div className="flex flex-wrap gap-2">
             <span className="badge badge-success badge-outline">Published quest</span>
             <span className="badge badge-outline">{SOURCE_LABELS[quest.sourceType]}</span>
           </div>
-          <h1 className="mt-4 text-4xl leading-tight sm:text-5xl">{quest.title}</h1>
+          <h1 className="mt-3 text-3xl leading-tight md:text-4xl">{quest.title}</h1>
 
           <section
             aria-label="Quest details"
-            className="kiwi-panel mt-7 grid gap-5 p-5 sm:grid-cols-2 sm:p-6"
+            className="kiwi-panel mt-6 grid gap-4 p-5 sm:grid-cols-2"
           >
             <Detail icon={CalendarDays} label="Date & time">
               {formatQuestDate(quest.startAtUtc)}
@@ -128,7 +172,7 @@ export default function QuestDetailPage() {
             </Detail>
           </section>
 
-          <section className="mt-7 rounded-3xl border border-accent/40 bg-accent/10 p-5 sm:p-6">
+          <section className="mt-5 rounded-[1.25rem] border border-accent/40 bg-accent/10 p-5">
             <h2 className="flex items-center gap-2 text-xl">
               <Sparkles aria-hidden="true" className="size-5 text-warning" />
               Rewards for completing
@@ -145,13 +189,13 @@ export default function QuestDetailPage() {
             </div>
           </section>
 
-          <section className="kiwi-panel mt-7 p-5 sm:p-6">
-            <h2 className="text-2xl">Quest briefing</h2>
-            <ol className="mt-5 grid gap-4">
+          <section className="kiwi-panel mt-5 p-5">
+            <h2 className="text-xl">Quest briefing</h2>
+            <ol className="mt-4 grid gap-3">
               {[
                 ['Join this quest', 'Add it to your Mission Board.'],
                 ['Take part', 'Follow the organizer’s details and attend the activity.'],
-                ['Verify your completion', 'Enter the completion code shared by the organizer.'],
+                ['Record your completion', completionBriefing],
                 ['Earn your reward', `Receive ${quest.xpAward} XP after verification.`],
               ].map(([title, description], index) => (
                 <li className="grid grid-cols-[2rem_1fr] gap-3" key={title}>
@@ -167,9 +211,9 @@ export default function QuestDetailPage() {
             </ol>
           </section>
 
-          <section className="mt-9">
+          <section className="mt-7">
             <h2 className="text-2xl">About this quest</h2>
-            <p className="mt-4 whitespace-pre-wrap text-base leading-8 text-base-content/72">
+            <p className="mt-3 whitespace-pre-wrap text-base leading-7 text-base-content/72">
               {quest.description}
             </p>
           </section>
@@ -200,33 +244,107 @@ export default function QuestDetailPage() {
 
           {images.data && images.data.length > 0 && (
             <section className="mt-9">
-              <h2 className="flex items-center gap-2 text-2xl">
-                <ImageIcon aria-hidden="true" className="size-5 text-primary" />
-                Gallery
-              </h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
-                {images.data.map((image) => (
-                  <figure className="overflow-hidden rounded-2xl border border-base-300 bg-base-100" key={image.id}>
-                    <img
-                      alt={image.altText}
-                      className="h-40 w-full object-cover"
-                      loading="lazy"
-                      src={image.imageUrl}
-                    />
-                    {image.creatorName && (
-                      <figcaption className="p-3 text-xs text-base-content/60">
-                        {image.creatorName}
-                        {image.licenceNote && ` — ${image.licenceNote}`}
-                      </figcaption>
-                    )}
-                  </figure>
-                ))}
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="kiwi-stat-label">See the experience</p>
+                  <h2 className="mt-1 flex items-center gap-2 text-2xl">
+                    <ImageIcon aria-hidden="true" className="size-5 text-primary" />
+                    Quest gallery
+                  </h2>
+                </div>
+                {images.data.length > 1 && (
+                  <div className="flex gap-2">
+                    <button
+                      aria-label="Previous image"
+                      className="btn btn-outline btn-sm btn-square rounded-full"
+                      onClick={() => setGalleryIndex((galleryIndex - 1 + images.data.length) % images.data.length)}
+                      type="button"
+                    >
+                      <ChevronLeft aria-hidden="true" className="size-4" />
+                    </button>
+                    <button
+                      aria-label="Next image"
+                      className="btn btn-outline btn-sm btn-square rounded-full"
+                      onClick={() => setGalleryIndex((galleryIndex + 1) % images.data.length)}
+                      type="button"
+                    >
+                      <ChevronRight aria-hidden="true" className="size-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <figure className="mt-4 overflow-hidden rounded-3xl border border-base-300 bg-base-100">
+                {isRepositoryQuestPlaceholder(selectedGalleryImage?.imageUrl) ? (
+                  <div className="h-[18rem] sm:h-[27rem]">
+                    <RepositoryQuestScene category={quest.category} title={quest.title} />
+                  </div>
+                ) : (
+                  <img
+                    alt={selectedGalleryImage?.altText}
+                    className="h-[18rem] w-full object-cover sm:h-[27rem]"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = QUEST_IMAGE_FALLBACK;
+                    }}
+                    src={selectedGalleryImage?.imageUrl}
+                  />
+                )}
+                {(selectedGalleryImage?.creatorName || selectedGalleryImage?.licenceNote) && (
+                  <figcaption className="px-5 py-3 text-xs text-base-content/60">
+                    {selectedGalleryImage?.creatorName}
+                    {selectedGalleryImage?.licenceNote
+                      && ` — ${selectedGalleryImage.licenceNote}`}
+                  </figcaption>
+                )}
+              </figure>
+              {images.data.length > 1 && (
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {images.data.map((image, index) => (
+                    <button
+                      aria-label={`View gallery image ${index + 1}`}
+                      aria-pressed={galleryIndex === index}
+                      className={`shrink-0 overflow-hidden rounded-xl border-2 ${
+                        galleryIndex === index ? 'border-primary' : 'border-transparent'
+                      }`}
+                      key={image.id}
+                      onClick={() => setGalleryIndex(index)}
+                      type="button"
+                    >
+                      {isRepositoryQuestPlaceholder(image.imageUrl) ? (
+                        <div className="h-16 w-24" aria-hidden="true">
+                          <RepositoryQuestScene category={quest.category} title={quest.title} />
+                        </div>
+                      ) : (
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="h-16 w-24 object-cover"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = QUEST_IMAGE_FALLBACK;
+                          }}
+                          src={image.imageUrl}
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {typeof quest.latitude === 'number' && typeof quest.longitude === 'number' && (
+            <section className="mt-9" aria-labelledby="quest-location-heading">
+              <p className="kiwi-stat-label">Plan your visit</p>
+              <h2 className="mt-1 text-2xl" id="quest-location-heading">Quest location</h2>
+              <div className="mt-4">
+                <QuestMap quests={[quest]} />
               </div>
             </section>
           )}
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-24">
+        <aside className="space-y-4 lg:sticky lg:top-24" id="quest-actions">
           <section className="kiwi-panel p-5">
             <h2 className="text-xl">Quest snapshot</h2>
             <dl className="mt-4 grid gap-3 text-sm">
@@ -234,7 +352,7 @@ export default function QuestDetailPage() {
               <Snapshot label="Difficulty" value={DIFFICULTY_LABELS[quest.difficulty]} />
               <Snapshot
                 label="Completion"
-                value={quest.registrationMode === 'Native' ? 'Completion code' : 'See quest source'}
+                value={completionSummary}
               />
               <Snapshot
                 label="Registration"
@@ -248,16 +366,39 @@ export default function QuestDetailPage() {
             questId={quest.id}
             registrationMode={quest.registrationMode}
           />
-          <QuestCompletionPanel
-            key={quest.id}
+          <QuestCompletionMethods
             questId={quest.id}
             questTitle={quest.title}
             registrationMode={quest.registrationMode}
+            sourceType={quest.sourceType}
             xpAward={quest.xpAward}
           />
-          <TrustedCompletionPanel questId={quest.id} />
         </aside>
       </main>
+
+      {related.data && related.data.items.filter((item) => item.id !== quest.id).length > 0 && (
+        <section className="border-t border-base-300 bg-secondary/45 py-12">
+          <div className="kiwi-page">
+            <p className="kiwi-stat-label">Keep exploring</p>
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="mt-1 text-3xl">More quests you may like</h2>
+              <Link className="btn btn-ghost btn-sm hidden sm:inline-flex" to="/quests">View all</Link>
+            </div>
+            <div className="mt-6 grid gap-5 md:grid-cols-3">
+              {related.data.items
+                .filter((item) => item.id !== quest.id)
+                .slice(0, 3)
+                .map((item) => <QuestCard key={item.id} quest={item} />)}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <div className="fixed inset-x-0 bottom-[4.35rem] z-30 border-t border-base-300 bg-base-100/95 p-3 shadow-xl backdrop-blur md:hidden">
+        <a className="btn btn-primary w-full rounded-full" href="#quest-actions">
+          View quest actions <ArrowRight aria-hidden="true" className="size-4" />
+        </a>
+      </div>
     </div>
   );
 }

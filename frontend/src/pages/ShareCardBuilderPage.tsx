@@ -113,7 +113,7 @@ export default function ShareCardBuilderPage() {
   const failed = history.isError || progression.isError;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-10 sm:py-14">
+    <div className="min-h-[calc(100vh-4rem)] overflow-x-hidden bg-base-200 py-8">
       <main className="kiwi-page">
         <Link className="btn btn-ghost btn-sm -ml-3 mb-5" to="/passport">
           <ArrowLeft aria-hidden="true" className="size-4" />
@@ -121,8 +121,8 @@ export default function ShareCardBuilderPage() {
         </Link>
         <header>
           <p className="kiwi-stat-label">Privacy-safe sharing</p>
-          <h1 className="mt-2 text-4xl sm:text-5xl">Share Card Builder</h1>
-          <p className="mt-3 max-w-2xl text-lg text-base-content/62">
+          <h1 className="mt-1 kiwi-page-heading">Share Card Builder</h1>
+          <p className="kiwi-page-intro mt-1 max-w-2xl">
             Turn one of your verified completions into a personal achievement card.
           </p>
         </header>
@@ -168,7 +168,7 @@ export default function ShareCardBuilderPage() {
         )}
 
         {!loading && !failed && selected && progression.data && auth.data && (
-          <div className="mt-8 grid gap-8 lg:grid-cols-[21rem_minmax(0,1fr)] lg:items-start">
+          <div className="mt-7 grid min-w-0 gap-8 lg:grid-cols-[21.25rem_minmax(0,1fr)] lg:items-start">
             <div className="space-y-4">
               <section className="kiwi-panel p-5" aria-labelledby="completion-choice-heading">
                 <h2 className="text-lg" id="completion-choice-heading">Select completion</h2>
@@ -218,12 +218,12 @@ export default function ShareCardBuilderPage() {
                     >
                       <span
                         aria-hidden="true"
-                        className={`mx-auto mb-2 block h-9 rounded-xl ${
+                        className={`relative mx-auto mb-2 block h-9 overflow-hidden rounded-xl ${
                           value === 'forest'
-                            ? 'bg-gradient-to-br from-emerald-950 to-emerald-500'
+                            ? 'bg-emerald-950 before:absolute before:inset-x-0 before:bottom-0 before:h-5 before:rounded-t-[100%] before:bg-emerald-500'
                             : value === 'ocean'
-                              ? 'bg-gradient-to-br from-slate-900 to-sky-500'
-                              : 'bg-gradient-to-br from-amber-950 to-orange-400'
+                              ? 'bg-slate-900 before:absolute before:inset-x-0 before:bottom-1 before:h-3 before:rounded-[50%] before:border-t-4 before:border-sky-300'
+                              : 'bg-orange-950 before:absolute before:bottom-0 before:right-2 before:size-7 before:rounded-t-full before:bg-amber-300'
                         }`}
                       />
                       {THEME_LABELS[value]}
@@ -293,7 +293,7 @@ export default function ShareCardBuilderPage() {
               </aside>
             </div>
 
-            <section aria-labelledby="live-preview-heading" className="lg:sticky lg:top-24">
+            <section aria-labelledby="live-preview-heading" className="min-w-0 lg:sticky lg:top-24">
               <div className="mx-auto mb-4 flex max-w-[35rem] items-end justify-between gap-4">
                 <div>
                   <p className="flex items-center gap-2 text-sm font-bold" id="live-preview-heading">

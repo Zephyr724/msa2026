@@ -391,9 +391,7 @@ public sealed class AuthController : ControllerBase
     {
         var root = (_configuration["Auth:FrontendBaseUrl"] ?? "http://localhost:5173")
             .TrimEnd('/');
-        return QueryHelpers.AddQueryString(
-            root + path,
-            query.ToDictionary(item => item.Key, item => (string?)item.Value));
+        return FrontendAccountLinkBuilder.Build(root, path, query);
     }
 
     private static bool TryDecodeToken(string encoded, out string token)

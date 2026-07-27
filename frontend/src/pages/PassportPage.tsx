@@ -5,6 +5,7 @@ import { useAuthQuery } from '../hooks/useAuth.ts';
 import { useProgression } from '../hooks/useProgression.ts';
 import {
   PASSPORT_HISTORY_PAGE_SIZE,
+  useAllPassportCompletions,
   usePassportCommunityParticipation,
   usePassportCompletions,
   usePassportSummary,
@@ -21,9 +22,13 @@ import NextMilestoneCard from '../components/passport/NextMilestoneCard.tsx';
 import CategoryImpactSection from '../components/passport/CategoryImpactSection.tsx';
 import CommunityParticipationSection from '../components/passport/CommunityParticipationSection.tsx';
 import { useWeeklyStreak } from '../hooks/useCommunity.ts';
+import { CATEGORY_PRESENTATION } from '../lib/questPresentation.ts';
+import { QUEST_CATEGORIES, type QuestCategory } from '../types/quest.ts';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
+const PROFILE_NOT_FOUND_TYPE =
+  'https://kiwimpact.app/problems/profile-not-found';
 
 function isNotReady(error: unknown): boolean {
   return error instanceof ApiError
@@ -32,7 +37,9 @@ function isNotReady(error: unknown): boolean {
 }
 
 function isMissingProfile(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 404;
+  return error instanceof ApiError
+    && error.status === 404
+    && error.problem?.type === PROFILE_NOT_FOUND_TYPE;
 }
 
 function RegionSkeleton({ label }: { label: string }) {
@@ -85,7 +92,12 @@ export default function PassportPage() {
   const auth = useAuthQuery();
   const progression = useProgression();
   const [page, setPage] = useState(1);
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'verified' | 'selfReported'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | QuestCategory>('all');
   const history = usePassportCompletions(page, PASSPORT_HISTORY_PAGE_SIZE);
+  const completeHistory = useAllPassportCompletions(
+    historyFilter !== 'all' || categoryFilter !== 'all',
+  );
   const summary = usePassportSummary();
   const communityParticipation = usePassportCommunityParticipation();
   const streak = useWeeklyStreak();
@@ -117,18 +129,39 @@ export default function PassportPage() {
   // The RequireAuth guard guarantees a session here; the display name comes
   // from the existing session query only (no duplicated identity state).
   const displayName = auth.data?.displayName ?? '';
+  const usesCompleteHistory = historyFilter !== 'all' || categoryFilter !== 'all';
+  const historyItems = !usesCompleteHistory
+    ? history.data?.items ?? []
+    : completeHistory.data ?? [];
+  const visibleHistoryItems = historyItems.filter((item) => {
+    const statusMatches = historyFilter === 'all'
+      || (historyFilter === 'verified' && item.status === 'Verified')
+      || (historyFilter === 'selfReported' && item.status === 'SelfReported');
+    const categoryMatches = categoryFilter === 'all'
+      || item.questCategory === categoryFilter;
+    return statusMatches && categoryMatches;
+  });
+  const historyPending = usesCompleteHistory ? completeHistory.isPending : history.isPending;
+  const historyError = usesCompleteHistory ? completeHistory.isError : history.isError;
+  const historyErrorValue = usesCompleteHistory ? completeHistory.error : history.error;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-10 sm:py-14">
-      <main className="kiwi-page max-w-5xl">
-        <header>
-          <p className="kiwi-stat-label">Personal Impact Passport</p>
-          <h1 className="mt-2 text-4xl sm:text-5xl">{displayName} — Passport</h1>
-          <p className="mt-3 max-w-2xl text-lg text-base-content/62">
-            Your verified, reviewed, and self-reported participation in one place.
-          </p>
+    <div className="min-h-[calc(100vh-4rem)] overflow-x-hidden bg-base-200 py-8">
+      <main className="kiwi-page-wide">
+        <header className="mb-5 flex justify-end">
+          <div>
+            <h1 className="sr-only">{displayName} — Passport</h1>
+          </div>
+          <nav
+            aria-label="Passport sections"
+            className="kiwi-segmented min-w-0 w-full max-w-full overflow-x-auto lg:w-auto"
+          >
+            <a href="#passport-summary-heading">Overview</a>
+            <a href="#passport-achievements">Achievements</a>
+            <a href="#passport-history-heading">History</a>
+          </nav>
         </header>
-        <div className="mt-8">
+        <div>
         <section aria-labelledby="passport-summary-heading">
           <h2 className="sr-only" id="passport-summary-heading">
             Progress
@@ -168,7 +201,9 @@ export default function PassportPage() {
             <CategoryImpactSection summary={summary.data} />
           </>
         )}
-        <AchievementsSection />
+        <div id="passport-achievements">
+          <AchievementsSection />
+        </div>
         {communityParticipation.isPending && (
           <RegionSkeleton label="Loading community participation…" />
         )}
@@ -228,22 +263,57 @@ export default function PassportPage() {
                 Completion history
               </h2>
             </div>
-            <Link className="btn btn-outline btn-sm rounded-full" to="/passport/share">
-              Create Share Card
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <div aria-label="Completion history filter" className="kiwi-segmented" role="group">
+                {([
+                  ['all', 'All'],
+                  ['verified', 'Verified'],
+                  ['selfReported', 'Self-reported'],
+                ] as const).map(([value, label]) => (
+                  <button
+                    aria-pressed={historyFilter === value}
+                    className={historyFilter === value ? 'active' : ''}
+                    key={value}
+                    onClick={() => setHistoryFilter(value)}
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <select
+                aria-label="Filter completion history by category"
+                className="select select-bordered select-sm rounded-xl bg-base-100"
+                onChange={(event) => setCategoryFilter(event.target.value as 'all' | QuestCategory)}
+                value={categoryFilter}
+              >
+                <option value="all">All categories</option>
+                {QUEST_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {CATEGORY_PRESENTATION[category].label}
+                  </option>
+                ))}
+              </select>
+              <Link className="btn btn-outline btn-sm rounded-full" to="/passport/share">
+                Create Share Card
+              </Link>
+            </div>
           </div>
           <div>
-            {history.isPending && (
+            {historyPending && (
               <RegionSkeleton label="Loading your completion history…" />
             )}
-            {history.isError && (
+            {historyError && (
               <RegionError
-                error={history.error}
+                error={historyErrorValue}
                 notReadyMessage="Your completion history is being prepared. Try again shortly."
-                onRetry={() => void history.refetch()}
+                onRetry={() => {
+                  if (!usesCompleteHistory) void history.refetch();
+                  else void completeHistory.refetch();
+                }}
               />
             )}
-            {history.isSuccess && history.data.items.length === 0 && (
+            {!historyPending && !historyError && historyItems.length === 0 && (
               <div className="kiwi-panel p-10 text-center">
                 <p className="text-base-content/70">No verified completions yet.</p>
                 <Link className="btn btn-primary btn-sm mt-4 rounded-full" to="/quests">
@@ -251,10 +321,18 @@ export default function PassportPage() {
                 </Link>
               </div>
             )}
-            {history.isSuccess && history.data.items.length > 0 && (
+            {!historyPending && !historyError && historyItems.length > 0 && visibleHistoryItems.length === 0 && (
+              <div className="kiwi-panel p-8 text-center">
+                <p className="font-bold">No matching records.</p>
+                <p className="mt-1 text-sm text-base-content/60">
+                  Change the history filter to see other completion types.
+                </p>
+              </div>
+            )}
+            {!historyPending && !historyError && visibleHistoryItems.length > 0 && (
               <>
-                <CompletionHistoryList items={history.data.items} />
-                {history.data.totalPages > 1 && (
+                <CompletionHistoryList items={visibleHistoryItems} />
+                {!usesCompleteHistory && history.data && history.data.totalPages > 1 && (
                   <PassportPagination
                     hasNextPage={history.data.hasNextPage}
                     hasPreviousPage={history.data.hasPreviousPage}

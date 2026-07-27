@@ -11,6 +11,7 @@ function payload(rows: unknown[] = [{
   displayName: 'Aroha',
   totalXp: 150,
   verifiedCompletionCount: 2,
+  isCurrentUser: true,
 }]) {
   return {
     scope: 'auckland',
@@ -73,6 +74,8 @@ describe('LeaderboardPage', () => {
     expect(within(table).getByText('Aroha')).toBeInTheDocument();
     expect(within(table).getByText('150')).toHaveClass('text-right');
     expect(within(table).getByText('2')).toHaveClass('text-right');
+    expect(within(table).getByText('You')).toBeInTheDocument();
+    expect(within(table).getByRole('row', { current: true })).toHaveClass('bg-primary/8');
   });
 
   it('switches to the communities leaderboard', async () => {

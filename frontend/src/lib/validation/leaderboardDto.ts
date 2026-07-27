@@ -20,7 +20,8 @@ export function validatePeopleLeaderboard(payload: unknown): PeopleLeaderboard {
       && isSafeNonNegative(row.rank)
       && typeof row.displayName === 'string'
       && isSafeNonNegative(row.totalXp)
-      && isSafeNonNegative(row.verifiedCompletionCount))) {
+      && isSafeNonNegative(row.verifiedCompletionCount)
+      && typeof row.isCurrentUser === 'boolean')) {
     return {
       scope: 'nz',
       period: 'allTime',
@@ -43,7 +44,8 @@ export function validatePeopleLeaderboard(payload: unknown): PeopleLeaderboard {
       && isSafeNonNegative(row.rank)
       && typeof row.displayName === 'string'
       && isSafeNonNegative(row.totalXp)
-      && isSafeNonNegative(row.verifiedCompletionCount))) {
+      && isSafeNonNegative(row.verifiedCompletionCount)
+      && typeof row.isCurrentUser === 'boolean')) {
     throw new Error('People leaderboard response is not valid.');
   }
   if (payload.isPrivacyProtected

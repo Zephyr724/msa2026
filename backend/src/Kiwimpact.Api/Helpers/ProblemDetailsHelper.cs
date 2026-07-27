@@ -81,6 +81,17 @@ internal static class ProblemDetailsHelper
         };
     }
 
+    public static ProblemDetails ProfileNotFound()
+    {
+        return new ProblemDetails
+        {
+            Type = "https://kiwimpact.app/problems/profile-not-found",
+            Title = "Profile Not Found",
+            Status = StatusCodes.Status404NotFound,
+            Detail = "Profile not found."
+        };
+    }
+
     public static ProblemDetails LeaderboardNotReady()
     {
         return new ProblemDetails

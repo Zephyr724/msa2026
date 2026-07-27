@@ -46,7 +46,9 @@ describe('App shell', () => {
       name: /Kiwimpact.*Turn local action into lasting progress/i,
     })).toBeInTheDocument();
     expect(
-      screen.getByText(/Community eco quests across New Zealand\./),
+      screen.getByText(
+        /Discover eco quests near you, get verified, earn XP, and build your Impact Passport/i,
+      ),
     ).toBeInTheDocument();
     for (const link of screen.getAllByRole('link', { name: 'Discover' })) {
       expect(link).toHaveAttribute('href', '/quests');

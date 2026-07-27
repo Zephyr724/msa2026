@@ -1,21 +1,9 @@
-import { useState, type ComponentType } from 'react';
-import {
-  Award,
-  Footprints,
-  Medal,
-  TrendingUp,
-  type LucideProps,
-} from 'lucide-react';
+import { useState } from 'react';
 import type {
   AchievementCatalogItem,
   EarnedAchievement,
 } from '../../types/achievement.ts';
-
-const ICONS_BY_CODE: Record<string, ComponentType<LucideProps>> = {
-  'verified-completions-1': Footprints,
-  'verified-completions-3': TrendingUp,
-  'verified-completions-5': Medal,
-};
+import { AchievementBadgeArt } from '../game/GameArtwork.tsx';
 
 function guardedIconUrl(iconUrl: string | null): string | null {
   if (iconUrl === null) return null;
@@ -32,16 +20,16 @@ function guardedIconUrl(iconUrl: string | null): string | null {
 function AchievementIcon({
   code,
   iconUrl,
+  label,
   muted,
 }: {
   code: string;
   iconUrl: string | null;
+  label: string;
   muted: boolean;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const Icon = ICONS_BY_CODE[code] ?? Award;
   const safeIconUrl = guardedIconUrl(iconUrl);
-  const className = `size-9 ${muted ? 'text-base-content/35' : 'text-primary'}`;
 
   if (safeIconUrl !== null && !imageFailed) {
     return (
@@ -57,10 +45,11 @@ function AchievementIcon({
   }
 
   return (
-    <Icon
-      aria-hidden="true"
-      className={className}
-      focusable="false"
+    <AchievementBadgeArt
+      code={code}
+      label={label}
+      size={52}
+      unlocked={!muted}
     />
   );
 }
@@ -80,17 +69,16 @@ export default function AchievementCard(props: AchievementCardProps) {
 
   return (
     <li className={`kiwi-card-hover card overflow-hidden border bg-base-100 ${
-      unlocked ? 'border-primary/35' : 'border-base-300'
+      unlocked ? 'border-primary/35 shadow-sm' : 'border-base-300'
     }`}>
       <div className="card-body gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className={`grid size-14 place-items-center rounded-2xl ${
-            unlocked ? 'bg-primary/12' : 'bg-secondary'
-          }`}>
+          <span className="grid size-16 place-items-center">
             <AchievementIcon
               key={`${achievement.code}:${achievement.iconUrl ?? ''}`}
               code={achievement.code}
               iconUrl={achievement.iconUrl}
+              label={achievement.name}
               muted={!unlocked}
             />
           </span>

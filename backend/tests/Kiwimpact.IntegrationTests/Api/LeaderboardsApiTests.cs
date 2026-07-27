@@ -59,6 +59,7 @@ public sealed class LeaderboardsApiTests
         AssertExactKeys(
             row,
             "displayName",
+            "isCurrentUser",
             "rank",
             "totalXp",
             "verifiedCompletionCount");
@@ -66,6 +67,7 @@ public sealed class LeaderboardsApiTests
         Assert.Equal("Aroha", row.GetProperty("displayName").GetString());
         Assert.Equal(150, row.GetProperty("totalXp").GetInt64());
         Assert.Equal(2, row.GetProperty("verifiedCompletionCount").GetInt64());
+        Assert.False(row.GetProperty("isCurrentUser").GetBoolean());
         Assert.DoesNotContain(
             rankedUserId.ToString("D"),
             json.GetRawText(),

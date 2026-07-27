@@ -27,12 +27,13 @@ export function usePassportSummary() {
   });
 }
 
-export function useAllPassportCompletions() {
+export function useAllPassportCompletions(enabled = true) {
   const queryClient = useQueryClient();
   return useQuery({
     queryKey: passportKeys.allCompletions,
     queryFn: ({ signal }) =>
       fetchAllPassportCompletions({ queryClient, signal }),
+    enabled,
     retry: false,
   });
 }

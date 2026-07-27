@@ -468,6 +468,9 @@ public sealed class PassportApiTests
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var problem = await ReadJsonAsync(response);
+        Assert.Equal(
+            "https://kiwimpact.app/problems/profile-not-found",
+            problem.GetProperty("type").GetString());
         Assert.Equal(404, problem.GetProperty("status").GetInt32());
         Assert.Equal("Profile not found.", problem.GetProperty("detail").GetString());
     }
@@ -486,6 +489,9 @@ public sealed class PassportApiTests
         // The profile-existence check precedes any page composition.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var problem = await ReadJsonAsync(response);
+        Assert.Equal(
+            "https://kiwimpact.app/problems/profile-not-found",
+            problem.GetProperty("type").GetString());
         Assert.Equal(404, problem.GetProperty("status").GetInt32());
         Assert.Equal("Profile not found.", problem.GetProperty("detail").GetString());
     }

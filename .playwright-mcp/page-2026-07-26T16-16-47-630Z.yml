@@ -1,0 +1,630 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e39]:
+      - status [ref=e41]
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e45]:
+            - button "Main menu" [ref=e46]
+            - generic [ref=e49]:
+              - generic [ref=e51]:
+                - button "Kiwimpact MVP UI Design, file name" [ref=e52]: Kiwimpact MVP UI Design
+                - generic [ref=e53]: File name
+              - button "Edit file menu" [ref=e57]
+            - generic [ref=e58]:
+              - generic [ref=e59]:
+                - status
+              - link "AI, Learn more" [ref=e60]:
+                - /url: https://help.figma.com/hc/articles/23870272542231
+                - generic [ref=e61]: AI
+              - button "Version history" [ref=e62]:
+                - generic: Version 7
+          - generic [ref=e67]:
+            - generic [ref=e73]:
+              - generic [ref=e74]:
+                - region "Reasoning for Version 1, Kiwimpact MVP UI Design" [ref=e77]:
+                  - generic [ref=e78]:
+                    - button "Show reasoning" [ref=e80] [cursor=pointer]: Reasoning
+                    - button "Show files" [ref=e82] [cursor=pointer]: Worked with 6 files
+                    - generic [ref=e84]:
+                      - paragraph [ref=e85]: "The implementation is complete. Here's what was built:"
+                      - paragraph [ref=e86]:
+                        - strong [ref=e87]: "8 fully functional Batch 1 pages:"
+                      - list [ref=e88]:
+                        - listitem [ref=e89]:
+                          - strong [ref=e90]: Landing
+                          - text: — Hero with stylized Auckland map + floating XP card, 3 featured quest cards, how-it-works steps, progress/achievement preview, trust section, footer
+                        - listitem [ref=e91]:
+                          - strong [ref=e92]: Discover
+                          - text: — Search, category chip filters, sort control, cards/map view toggle with split layout, empty state
+                        - listitem [ref=e93]:
+                          - strong [ref=e94]: Quest Detail
+                          - text: — Full detail with sticky action card, guest/joined/external variants, map placeholder, verification instructions, related quests, mobile sticky bottom bar
+                        - listitem [ref=e95]:
+                          - strong [ref=e96]: My Quests
+                          - text: — Player header (Mia K., Level 7), next action card, tabbed quest list, achievement preview, Passport preview
+                        - listitem [ref=e97]:
+                          - strong [ref=e98]: Completion Modal
+                          - text: "— 3-step flow: choose method → enter code (with loading/error) or claim form (with privacy notice) or self-report (clearly marked No XP) → success"
+                        - listitem [ref=e99]:
+                          - strong [ref=e100]: Reward Overlay
+                          - text: — Animated 3-phase reveal with level-up state, skip button
+                        - listitem [ref=e101]:
+                          - strong [ref=e102]: Passport
+                          - text: — Profile summary, 8-badge achievement grid (locked/in-progress/earned), filterable completion timeline
+                        - listitem [ref=e103]:
+                          - strong [ref=e104]: Share Card Builder
+                          - text: — Controls panel + live 1080×1080 square preview with 3 category themes
+                      - paragraph [ref=e105]:
+                        - strong [ref=e106]: "Design system applied:"
+                        - text: Manrope font, Kiwimpact brand colors (forest green/purple/gold), 20px card radius, 14px button radius, topographic SVG decorations, pill badges, progress bars. Light/dark theme fully wired. Demo banner lets you toggle guest ↔ member and jump between pages.
+                    - generic [ref=e111]:
+                      - heading "Kiwimpact MVP UI Design" [level=3] [ref=e112]
+                      - generic [ref=e113]: Version 1
+                - generic [ref=e117]:
+                  - button [ref=e118] [cursor=pointer]
+                  - generic [ref=e122]:
+                    - heading "Create Landing and Member Journeys" [level=3] [ref=e123]
+                    - generic [ref=e124]: Version 2
+                - region "Reasoning for Version 3, Revise current design prompt" [ref=e127]:
+                  - generic [ref=e128]:
+                    - button "Show reasoning" [ref=e130] [cursor=pointer]: Reasoning
+                    - paragraph [ref=e133]: Let me read the second iteration prompt file first.
+                    - button "Show files" [ref=e135] [cursor=pointer]: Worked with 5 files
+                    - button "Show reasoning" [ref=e137] [cursor=pointer]: Reasoning
+                    - paragraph [ref=e140]: "I'll implement all the Round 2A and 2B changes: Fredoka typography, icon+label navigation with pill active states, geographic leaderboard scopes with community progress, My Community filter on Discover, enhanced Passport with category bars and community identity, mature Share Card, and improved completion states."
+                    - generic [ref=e142]:
+                      - paragraph [ref=e143]: "All second-iteration changes are applied. Here's what changed:"
+                      - paragraph [ref=e144]:
+                        - strong [ref=e145]: Typography (Round 2A §1)
+                      - list [ref=e146]:
+                        - listitem [ref=e147]:
+                          - text: Added Fredoka font to
+                          - code [ref=e148]: fonts.css
+                          - text: ; applied
+                          - code [ref=e149]: font-display
+                          - text: class to all headings, quest titles, level numbers, achievement names, reward overlay text, nav brand, and stat numerals
+                      - paragraph [ref=e150]:
+                        - strong [ref=e151]: Navigation (Round 2A §3)
+                      - list [ref=e152]:
+                        - listitem [ref=e153]: "Desktop member nav: icon + label pill buttons with filled-pill active state"
+                        - listitem [ref=e154]: "Guest nav: Discover + Leaderboard + How it works text links"
+                        - listitem [ref=e155]: "Mobile bottom nav: icon + label, 44px minimum touch targets"
+                      - paragraph [ref=e156]:
+                        - strong [ref=e157]: Community Selector (Round 2A §4)
+                      - list [ref=e158]:
+                        - listitem [ref=e159]:
+                          - text: New
+                          - code [ref=e160]: CommunitySelector
+                          - text: "modal: Country → City → Community dropdowns"
+                        - listitem [ref=e161]: "States: default → loading spinner → saved confirmation with auto-close"
+                        - listitem [ref=e162]: Privacy notice, 30-day cooldown disclaimer
+                        - listitem [ref=e163]: "Demo banner: \"Set community\" button opens the selector"
+                      - paragraph [ref=e164]:
+                        - strong [ref=e165]: Leaderboard (Round 2A §5)
+                      - list [ref=e166]:
+                        - listitem [ref=e167]:
+                          - text: "Two separate control groups:"
+                          - strong [ref=e168]: Geographic scope
+                          - text: (My Community | Auckland | New Zealand) +
+                          - strong [ref=e169]: Time period
+                          - text: (Weekly | Monthly | All time)
+                        - listitem [ref=e170]: "Default signed-in: My Community + Weekly"
+                        - listitem [ref=e171]: Community cooperative progress panel (42 quests / 18 contributors / 6 categories)
+                        - listitem [ref=e172]: "Small-community state (< 5 members): no full leaderboard, shows collective stats + \"View Auckland\" button"
+                        - listitem [ref=e173]: Rank movement indicators (↑+2, ↓−1, —) on all rows
+                        - listitem [ref=e174]: Personal best shown in header
+                        - listitem [ref=e175]: Live / Reconnecting / Unavailable states preserved
+                      - paragraph [ref=e176]:
+                        - strong [ref=e177]: Discover (Round 2B §1)
+                      - list [ref=e178]:
+                        - listitem [ref=e179]: "\"My Community\" chip filter (not \"Near Me\") in category row"
+                        - listitem [ref=e180]: Setup prompt when no community is set (non-blocking)
+                        - listitem [ref=e181]: Quest cards show coarse community label (e.g., "Henderson-Massey, West Auckland")
+                      - paragraph [ref=e182]:
+                        - strong [ref=e183]: Passport (Round 2B §3)
+                      - list [ref=e184]:
+                        - listitem [ref=e185]: 6 category progress bars with per-category accent colours
+                        - listitem [ref=e186]: Community identity badge (e.g., "Henderson-Massey Contributor") in profile header
+                        - listitem [ref=e187]: Link to community leaderboard from Passport
+                        - listitem [ref=e188]: Emoji filter buttons for timeline
+                      - paragraph [ref=e189]:
+                        - strong [ref=e190]: Completion/Reward (Round 2B §4)
+                      - list [ref=e191]:
+                        - listitem [ref=e192]: "Reduced motion state: skips all animations, shows instant final state, badge in overlay"
+                        - listitem [ref=e193]:
+                          - text: "Reward overlay:"
+                          - code [ref=e194]: prefers-reduced-motion
+                          - text: media query wired up; demo toggle in banner
+                      - paragraph [ref=e195]:
+                        - strong [ref=e196]: Share Card (Round 2B §5)
+                      - list [ref=e197]:
+                        - listitem [ref=e198]: Achievement badge shown on card when available
+                        - listitem [ref=e199]: Rank title displayed; privacy exclusions list in sidebar
+                    - generic [ref=e204]:
+                      - heading "Revise current design prompt" [level=3] [ref=e205]
+                      - generic [ref=e206]: Version 3
+                - generic [ref=e210]:
+                  - button [ref=e211] [cursor=pointer]
+                  - generic [ref=e215]:
+                    - heading "Revise current design prompt" [level=3] [ref=e216]
+                    - generic [ref=e217]: Version 4
+                - region "Reasoning for Version 5, Apply all suggested changes" [ref=e220]:
+                  - generic [ref=e221]:
+                    - button "Show reasoning" [ref=e223] [cursor=pointer]: Reasoning
+                    - paragraph [ref=e226]: Let me read the spec file first.
+                    - button "Show files" [ref=e228] [cursor=pointer]: Worked with 4 files
+                    - button "Show reasoning" [ref=e230] [cursor=pointer]: Reasoning
+                    - paragraph [ref=e233]: Now let me read the current App.tsx and theme files before making changes.
+                    - button "Show reasoning" [ref=e235] [cursor=pointer]: Reasoning
+                    - button "Show reasoning" [ref=e237] [cursor=pointer]: Reasoning
+                    - paragraph [ref=e240]: "Now I'll write the complete third-iteration App.tsx with all required changes:"
+                    - generic [ref=e242]:
+                      - paragraph [ref=e243]: The complete third-iteration App.tsx has been written — all ~2,400 lines of the redesigned Kiwimpact MVP.
+                      - paragraph [ref=e244]: "Here's what was delivered per the spec:"
+                      - paragraph [ref=e245]:
+                        - strong [ref=e246]: Typography
+                        - text: — All
+                        - code [ref=e247]: font-display
+                        - text: headings now use
+                        - code [ref=e248]: font-medium
+                        - text: (Fredoka 500). No more
+                        - code [ref=e249]: font-extrabold
+                        - text: on display type.
+                      - paragraph [ref=e250]:
+                        - strong [ref=e251]: Custom gameful icon system
+                        - text: — Six distinct
+                        - code [ref=e252]: CategoryEmblem
+                        - text: SVGs (2–3 colour layers, badge quality), four
+                        - code [ref=e253]: RankCrest
+                        - text: SVG shields (Novice/Scout/Adventurer/Ranger),
+                        - code [ref=e254]: AchievementBadgeSVG
+                        - text: (hexagonal badges, locked/earned states, no emoji),
+                        - code [ref=e255]: MedalArtwork
+                        - text: (custom Top 1/2/3 circular medals, not emoji).
+                      - paragraph [ref=e256]:
+                        - strong [ref=e257]: Images on every card
+                        - text: —
+                        - code [ref=e258]: QuestImage
+                        - text: component with loading skeleton + error fallback. All 6 quests, landing hero, and community challenge have dedicated Unsplash image URLs.
+                      - paragraph [ref=e259]:
+                        - strong [ref=e260]:
+                          - code [ref=e261]: MissionCard
+                        - text: — Image-led with category emblem overlay, XP pill, tags (Good first Quest / Almost full / Recommended), coarse location, spots urgency, difficulty shield, verification, and state.
+                      - paragraph [ref=e262]:
+                        - strong [ref=e263]: New components
+                        - text: —
+                        - code [ref=e264]: PlayerStatusCapsule
+                        - text: (compact + full),
+                        - code [ref=e265]: NextMilestoneCard
+                        - text: (achievement + rank variants),
+                        - code [ref=e266]: CommunityChallenge
+                        - text: (Henderson-Massey 42/50, July, 12 days, badge reward).
+                      - paragraph [ref=e267]:
+                        - strong [ref=e268]: Leaderboard
+                        - text: "— Geo button shows actual area name \"Henderson-Massey\" with \"My Community\" as sub-label. \"X XP to reach #Y\" distance info pinned under user row."
+                      - paragraph [ref=e269]:
+                        - strong [ref=e270]: Passport
+                        - text: — Verified quest counts as primary category progress metric (not just XP). Stamp-led history with thumbnail images. Rank Crest as identity header.
+                      - paragraph [ref=e271]:
+                        - strong [ref=e272]: Reward overlay
+                        - text: "— 7-frame sequence: verified → XP count-up → level progress → Achievement unlocked → Community Challenge update (43/50) → Passport updated → next action."
+                      - paragraph [ref=e273]:
+                        - strong [ref=e274]: Share Card
+                        - text: — Full-bleed Unsplash background image with colour overlay,
+                        - code [ref=e275]: AchievementBadgeSVG
+                        - text: and
+                        - code [ref=e276]: CategoryEmblem
+                        - text: on card.
+                    - generic [ref=e281]:
+                      - heading "Apply all suggested changes" [level=3] [ref=e282]
+                      - generic [ref=e283]: Version 5
+                - generic [ref=e287]:
+                  - button [ref=e288] [cursor=pointer]
+                  - generic [ref=e292]:
+                    - heading "Apply all suggested changes" [level=3] [ref=e293]
+                    - generic [ref=e294]: Version 6
+              - region "Reasoning for Version 7, Implement all requested changes" [ref=e297]:
+                - generic [ref=e298]:
+                  - button "Show reasoning" [ref=e300] [cursor=pointer]: Reasoning
+                  - button "Show files" [ref=e302] [cursor=pointer]: Worked with 3 files
+                  - paragraph [ref=e305]: Large set of changes. Let me plan them all, then write the full revised file.
+                  - button "Show reasoning" [ref=e307] [cursor=pointer]: Reasoning
+                  - generic [ref=e309]:
+                    - paragraph [ref=e310]: "All 14 P0 items from spec-08 are now implemented. Here's what changed in v3.1:"
+                    - list [ref=e311]:
+                      - listitem [ref=e312]:
+                        - strong [ref=e313]: Landing hero
+                        - text: — map on the right with
+                        - code [ref=e314]: clickable
+                        - text: prop that navigates to Discover
+                      - listitem [ref=e315]:
+                        - strong [ref=e316]: State-aware CTAs
+                        - text: — logged-in users with joined quests see "View My Quests" / "Continue Quest" instead of "Join free"
+                      - listitem [ref=e317]:
+                        - strong [ref=e318]: Personal Progress vs Community Challenge
+                        - text: "— two clearly separate blocks: quest path + achievement path with arrow flows, and standalone community block"
+                      - listitem [ref=e319]:
+                        - strong [ref=e320]: Badge borders
+                        - text: — all badges (
+                        - code [ref=e321]: CategoryBadge
+                        - text: ","
+                        - code [ref=e322]: XPPill
+                        - text: ","
+                        - code [ref=e323]: DiffBadge
+                        - text: ","
+                        - code [ref=e324]: VerifyBadge
+                        - text: ","
+                        - code [ref=e325]: SourceChip
+                        - text: ","
+                        - code [ref=e326]: TagChip
+                        - text: ","
+                        - code [ref=e327]: StatusChip
+                        - text: ) now use
+                        - code [ref=e328]: border border-*-200 dark:border-*-700
+                      - listitem [ref=e329]:
+                        - strong [ref=e330]: Discover map view
+                        - text: "— vertical layout:"
+                        - code [ref=e331]: h-[380px]
+                        - text: map full-width on top, quest list below
+                      - listitem [ref=e332]:
+                        - strong [ref=e333]: Quest detail gallery
+                        - text: —
+                        - code [ref=e334]: QuestDetailGallery
+                        - text: component with prev/next nav and thumbnail strip
+                      - listitem [ref=e335]:
+                        - strong [ref=e336]: Level detail modal
+                        - text: —
+                        - code [ref=e337]: LevelDetailModal
+                        - text: opened by clicking the Level display, shows full rank ladder
+                      - listitem [ref=e338]:
+                        - strong [ref=e339]: Streak tooltip
+                        - text: — hover/focus on streak button reveals full tooltip explaining verified-only counting + reset rules
+                      - listitem [ref=e340]:
+                        - strong [ref=e341]: Challenge detail modal
+                        - text: —
+                        - code [ref=e342]: ChallengeDetailModal
+                        - text: opened by "View challenge details" entry CTA
+                      - listitem [ref=e343]:
+                        - strong [ref=e344]: Passport sections separated
+                        - text: — Community challenge participation is its own section above Completion history with a clear separator note
+                      - listitem [ref=e345]:
+                        - strong [ref=e346]: Leaderboard People/Communities tabs
+                        - text: —
+                        - code [ref=e347]: COMMUNITY_COMPARISON
+                        - text: data with fair avg-per-member ranking
+                      - listitem [ref=e348]:
+                        - strong [ref=e349]: Share card preview prominent
+                        - text: —
+                        - code [ref=e350]: lg:grid-cols-[340px_1fr]
+                        - text: layout with full
+                        - code [ref=e351]: aspect-square
+                        - text: preview on the right
+                      - listitem [ref=e352]:
+                        - strong [ref=e353]: Community selection in Profile Settings
+                        - text: —
+                        - code [ref=e354]: CommunitySelector
+                        - text: modal stays in Profile Settings; leaderboard shows a note that scope browsing doesn't change Home Community
+                      - listitem [ref=e355]:
+                        - strong [ref=e356]: No new major systems added
+                  - generic [ref=e361]:
+                    - heading "Implement all requested changes" [level=3] [ref=e362]
+                    - generic [ref=e363]: Version 7
+            - generic [ref=e366]:
+              - generic [ref=e367]:
+                - generic [ref=e368]: Sign up to use Figma Make
+                - generic [ref=e370]:
+                  - button "Sign up" [ref=e371]
+                  - button "Continue with Google" [ref=e374]
+              - generic [ref=e375]:
+                - generic [ref=e378]:
+                  - textbox [disabled] [ref=e379]:
+                    - paragraph [ref=e380]
+                  - generic: Ask for changes
+                - generic [ref=e382]:
+                  - generic [ref=e384]:
+                    - button "Add context" [disabled] [ref=e385]
+                    - button "Select a Make kit" [disabled] [ref=e387]
+                    - generic [ref=e388]:
+                      - checkbox "Edit" [disabled] [ref=e389]
+                      - generic: Edit
+                  - generic [ref=e390]:
+                    - button "Chat mode" [disabled] [ref=e392]:
+                      - generic: Build
+                    - button "Select model" [disabled] [ref=e394]:
+                      - generic: Default
+                    - button "Dictate" [disabled] [ref=e397]
+        - slider "Resize handle" [ref=e398]
+      - generic [ref=e400]:
+        - generic [ref=e402]:
+          - generic [ref=e404]:
+            - button "Reload" [ref=e405]
+            - generic [ref=e463]:
+              - generic [ref=e464]: /
+              - combobox "Path to page or screen" [ref=e465]
+            - generic [ref=e406]:
+              - checkbox "Mobile preview" [ref=e407]
+              - generic: Mobile preview
+          - generic [ref=e408]:
+            - generic [ref=e410]:
+              - button "Multiplayer tools" [ref=e412]
+              - button "Follow Zephyr Chen" [ref=e415]
+            - button "Open full-screen view" [ref=e421]
+            - button "Share" [ref=e422]
+        - iframe [ref=e466]:
+          - generic [ref=f6e5]:
+            - banner [ref=f6e6]:
+              - generic [ref=f6e7]:
+                - button "Kiwimpact" [ref=f6e8]
+                - navigation [ref=f6e14]:
+                  - button "Discover" [ref=f6e15]
+                  - button "Leaderboard" [ref=f6e19]
+                  - link "How it works" [ref=f6e26] [cursor=pointer]:
+                    - /url: "#how-it-works"
+                - generic [ref=f6e27]:
+                  - button [ref=f6e28]
+                  - button "Sign in" [ref=f6e31]
+                  - button "Join free" [ref=f6e32]
+            - generic [ref=f6e33]:
+              - generic [ref=f6e34]: Demo
+              - button "→ Member view (Mia K.)" [ref=f6e36]
+              - generic [ref=f6e38]:
+                - button "landing" [ref=f6e39]
+                - button "discover" [ref=f6e40]
+                - button "quest detail" [ref=f6e41]
+                - button "my quests" [ref=f6e42]
+                - button "passport" [ref=f6e43]
+                - button "leaderboard" [ref=f6e44]
+                - button "share card" [ref=f6e45]
+            - generic [ref=f6e47]:
+              - generic [ref=f6e50]:
+                - generic [ref=f6e51]:
+                  - generic [ref=f6e52]: Auckland-first eco adventures
+                  - heading "Turn local action into lasting progress." [level=1] [ref=f6e56]: Turn local action intolasting progress.
+                  - paragraph [ref=f6e57]: Discover eco quests near you, get verified, earn XP, and build your Impact Passport — together.
+                  - generic [ref=f6e58]:
+                    - generic [ref=f6e59]: Discover
+                    - generic [ref=f6e63]: Join
+                    - generic [ref=f6e67]: Verify
+                    - generic [ref=f6e71]: Earn XP
+                    - generic [ref=f6e75]: Grow Passport
+                    - generic [ref=f6e79]: Help community
+                  - generic [ref=f6e81]:
+                    - button "Explore quests" [ref=f6e82]
+                    - button "Join free" [ref=f6e85]
+                - generic [ref=f6e86]:
+                  - button "Open map view" [ref=f6e87] [cursor=pointer]:
+                    - img [ref=f6e88]:
+                      - generic [ref=f6e95]: Auckland region · Illustrative only
+                    - generic [ref=f6e96]: Henderson-Massey
+                    - generic [ref=f6e102]: Albert-Eden
+                    - generic [ref=f6e108]: Māngere-Ōtāhuhu
+                    - generic [ref=f6e114]: Henderson-Massey
+                    - generic [ref=f6e120]: Open map
+                  - generic [ref=f6e123]: 3-week streak
+              - generic [ref=f6e129]:
+                - generic [ref=f6e130]:
+                  - generic [ref=f6e131]:
+                    - generic [ref=f6e132]:
+                      - paragraph [ref=f6e133]: Your Next Steps
+                      - heading "Personal Progress" [level=2] [ref=f6e134]
+                    - button "My Quests" [ref=f6e135]
+                  - generic [ref=f6e138]:
+                    - paragraph [ref=f6e139]: Quest path
+                    - generic [ref=f6e140]:
+                      - generic [ref=f6e141]:
+                        - generic [ref=f6e142]: Active
+                        - generic [ref=f6e146]:
+                          - generic [ref=f6e147]:
+                            - generic:
+                              - img "Current quest"
+                          - paragraph [ref=f6e148]: Restore the Harbour Edge
+                      - generic [ref=f6e149]: then
+                      - generic [ref=f6e153]:
+                        - generic [ref=f6e154]: Up next
+                        - generic [ref=f6e155]:
+                          - generic [ref=f6e156]:
+                            - generic:
+                              - img "Next quest"
+                          - paragraph [ref=f6e157]: Neighbourhood Litter Sweep
+                  - generic [ref=f6e158]:
+                    - paragraph [ref=f6e159]: Achievement path
+                    - generic [ref=f6e160]:
+                      - generic [ref=f6e161]:
+                        - img "Local Helper badge (earned)" [ref=f6e162]
+                        - generic [ref=f6e169]:
+                          - paragraph [ref=f6e170]: Earned
+                          - paragraph [ref=f6e171]: Local Helper
+                      - generic [ref=f6e174]:
+                        - img "Nature Restorer badge (locked)" [ref=f6e175]
+                        - generic [ref=f6e182]:
+                          - paragraph [ref=f6e183]: 2/3
+                          - paragraph [ref=f6e184]: Nature Restorer
+                - generic [ref=f6e185]:
+                  - generic [ref=f6e187]:
+                    - paragraph [ref=f6e188]: Community Goal
+                    - heading "Henderson-Massey Challenge" [level=2] [ref=f6e189]
+                  - generic [ref=f6e190]:
+                    - img "Community members working together outdoors" [ref=f6e193]
+                    - generic [ref=f6e194]:
+                      - generic [ref=f6e195]:
+                        - generic [ref=f6e196]:
+                          - paragraph [ref=f6e197]: Community Challenge
+                          - heading "Henderson-Massey" [level=3] [ref=f6e198]
+                          - paragraph [ref=f6e199]: Complete 50 verified quests in July
+                        - generic [ref=f6e200]: 12 days left
+                      - generic [ref=f6e203]:
+                        - generic [ref=f6e204]: 42 / 50
+                        - generic [ref=f6e205]: 8 quests remaining
+                      - generic [ref=f6e206]:
+                        - img "Local Changemakers badge (locked)" [ref=f6e207]
+                        - generic [ref=f6e214]:
+                          - paragraph [ref=f6e215]: "Reward: Local Changemakers badge"
+                          - paragraph [ref=f6e216]: For all contributors when community reaches goal
+                      - paragraph [ref=f6e217]: Any verified quest in Henderson-Massey during July counts automatically.
+                      - button "View challenge details" [ref=f6e218]
+              - generic [ref=f6e222]:
+                - generic [ref=f6e223]:
+                  - generic [ref=f6e224]:
+                    - heading "Featured quests" [level=2] [ref=f6e225]
+                    - paragraph [ref=f6e226]: Active opportunities around Auckland.
+                  - button "View all" [ref=f6e227]
+                - generic [ref=f6e230]:
+                  - generic [ref=f6e231] [cursor=pointer]:
+                    - generic [ref=f6e232]:
+                      - img "Restore the Harbour Edge — Restore Nature" [ref=f6e235]
+                      - img "Restore Nature emblem" [ref=f6e238]
+                      - generic [ref=f6e245]: 100 XP
+                      - generic [ref=f6e249]: Recommended for you
+                    - generic [ref=f6e251]:
+                      - generic [ref=f6e252]:
+                        - paragraph [ref=f6e253]: Restore Nature
+                        - heading "Restore the Harbour Edge" [level=3] [ref=f6e254]
+                        - paragraph [ref=f6e255]: Green Auckland Collective
+                      - generic [ref=f6e256]:
+                        - generic [ref=f6e257]: Sat 26 Jul, 9:00 AM
+                        - generic [ref=f6e261]: Henderson-Massey, West Auckland
+                        - generic [ref=f6e266]: 7 of 30 spots left
+                      - generic [ref=f6e273]:
+                        - generic [ref=f6e274]: Medium
+                        - generic [ref=f6e277]: Completion code
+                      - generic [ref=f6e280]:
+                        - generic [ref=f6e281]: Organizer quest
+                        - generic [ref=f6e282]: View
+                  - generic [ref=f6e285] [cursor=pointer]:
+                    - generic [ref=f6e286]:
+                      - img "Backyard Bird Count — Observe & Measure" [ref=f6e289]
+                      - img "Observe & Measure emblem" [ref=f6e292]
+                      - generic [ref=f6e301]: 50 XP
+                      - generic [ref=f6e305]: Good first Quest
+                    - generic [ref=f6e307]:
+                      - generic [ref=f6e308]:
+                        - paragraph [ref=f6e309]: Observe & Measure
+                        - heading "Backyard Bird Count" [level=3] [ref=f6e310]
+                        - paragraph [ref=f6e311]: Kiwimpact
+                      - generic [ref=f6e312]:
+                        - generic [ref=f6e313]: Any time
+                        - generic [ref=f6e317]: Anywhere in Auckland
+                      - generic [ref=f6e322]:
+                        - generic [ref=f6e323]: Easy
+                        - generic [ref=f6e326]: Evidence reviewed
+                      - generic [ref=f6e330]:
+                        - generic [ref=f6e331]: Kiwimpact challenge
+                        - generic [ref=f6e332]: View
+                  - generic [ref=f6e335] [cursor=pointer]:
+                    - generic [ref=f6e336]:
+                      - img "Neighbourhood Litter Sweep — Clean & Reduce Waste" [ref=f6e339]
+                      - img "Clean & Reduce Waste emblem" [ref=f6e342]
+                      - generic [ref=f6e351]: 50 XP
+                      - generic [ref=f6e355]: Almost full
+                    - generic [ref=f6e357]:
+                      - generic [ref=f6e358]:
+                        - paragraph [ref=f6e359]: Clean & Reduce Waste
+                        - heading "Neighbourhood Litter Sweep" [level=3] [ref=f6e360]
+                        - paragraph [ref=f6e361]: Mount Eden Residents Group
+                      - generic [ref=f6e362]:
+                        - generic [ref=f6e363]: Sun 27 Jul, 8:30 AM
+                        - generic [ref=f6e367]: Albert-Eden, Mount Eden
+                        - generic [ref=f6e372]: 3 of 20 spots left
+                      - generic [ref=f6e379]:
+                        - generic [ref=f6e380]: Easy
+                        - generic [ref=f6e383]: Completion code
+                      - generic [ref=f6e386]:
+                        - generic [ref=f6e387]: Organizer quest
+                        - generic [ref=f6e388]: View
+              - generic [ref=f6e392]:
+                - generic [ref=f6e393]:
+                  - heading "One connected loop" [level=2] [ref=f6e394]
+                  - paragraph [ref=f6e395]: Every step builds on the last.
+                - generic [ref=f6e396]:
+                  - generic [ref=f6e397]:
+                    - img "Restore Nature emblem" [ref=f6e399]
+                    - generic [ref=f6e406]: "01"
+                    - heading "Discover a Quest" [level=3] [ref=f6e407]
+                    - paragraph [ref=f6e408]: Browse by category, location, and difficulty. Find something meaningful near you.
+                  - generic [ref=f6e409]:
+                    - img "Observe & Measure emblem" [ref=f6e411]
+                    - generic [ref=f6e420]: "02"
+                    - heading "Join and complete it" [level=3] [ref=f6e421]
+                    - paragraph [ref=f6e422]: Attend, participate, then enter your completion code or submit evidence.
+                  - generic [ref=f6e423]:
+                    - img "Protect Wildlife emblem" [ref=f6e425]
+                    - generic [ref=f6e432]: "03"
+                    - heading "Get verified" [level=3] [ref=f6e433]
+                    - paragraph [ref=f6e434]: Verified completions earn XP, streak credit, and leaderboard position.
+                  - generic [ref=f6e435]:
+                    - img "Learn & Share emblem" [ref=f6e437]
+                    - generic [ref=f6e443]: "04"
+                    - heading "Earn XP and advance" [level=3] [ref=f6e444]
+                    - paragraph [ref=f6e445]: Level up, unlock achievement badges, and track your rank title progression.
+                  - generic [ref=f6e446]:
+                    - img "Grow & Compost emblem" [ref=f6e448]
+                    - generic [ref=f6e456]: "05"
+                    - heading "Help your community" [level=3] [ref=f6e457]
+                    - paragraph [ref=f6e458]: Every verified quest counts toward the Henderson-Massey community monthly goal.
+                  - generic [ref=f6e459]:
+                    - img "Clean & Reduce Waste emblem" [ref=f6e461]
+                    - generic [ref=f6e470]: "06"
+                    - heading "Grow your Passport" [level=3] [ref=f6e471]
+                    - paragraph [ref=f6e472]: Your Personal Impact Passport records everything — share your achievements.
+              - generic [ref=f6e474]:
+                - generic [ref=f6e475]:
+                  - heading "Build your Impact Passport" [level=2] [ref=f6e476]
+                  - paragraph [ref=f6e477]: Every verified quest adds to your Passport — a personal record that's yours to keep and share.
+                  - generic [ref=f6e478]:
+                    - generic [ref=f6e483]:
+                      - paragraph [ref=f6e484]: Lv 1–39
+                      - paragraph [ref=f6e485]: 40 levels
+                    - generic [ref=f6e489]:
+                      - paragraph [ref=f6e490]: 4 Rank titles
+                      - paragraph [ref=f6e491]: Novice to Ranger
+                    - generic [ref=f6e496]:
+                      - paragraph [ref=f6e497]: 8 to earn
+                      - paragraph [ref=f6e498]: Achievement badges
+                    - generic [ref=f6e502]:
+                      - paragraph [ref=f6e503]: Weekly
+                      - paragraph [ref=f6e504]: Streak tracking
+                - generic [ref=f6e505]:
+                  - generic [ref=f6e506]:
+                    - img "First Step badge (earned)" [ref=f6e507]
+                    - paragraph [ref=f6e515]: First Step
+                  - generic [ref=f6e519]:
+                    - img "Local Helper badge (earned)" [ref=f6e520]
+                    - paragraph [ref=f6e529]: Local Helper
+                  - generic [ref=f6e533]:
+                    - img "Nature Restorer badge (locked)" [ref=f6e534]
+                    - generic [ref=f6e542]:
+                      - paragraph [ref=f6e543]: Nature Restorer
+                      - generic [ref=f6e544]: 2/3
+                  - generic [ref=f6e547]:
+                    - img "Wildlife Ally badge (locked)" [ref=f6e548]
+                    - generic [ref=f6e556]:
+                      - paragraph [ref=f6e557]: Wildlife Ally
+                      - generic [ref=f6e558]: 0/1
+                  - generic [ref=f6e560]:
+                    - img "Waste Warrior badge (locked)" [ref=f6e561]
+                    - generic [ref=f6e569]:
+                      - paragraph [ref=f6e570]: Waste Warrior
+                      - generic [ref=f6e571]: 1/3
+              - generic [ref=f6e575]:
+                - heading "Ready to make an impact?" [level=2] [ref=f6e576]
+                - paragraph [ref=f6e577]: Join Kiwimpact — Auckland's growing community of eco quest participants.
+                - generic [ref=f6e578]:
+                  - button "Explore quests" [ref=f6e579]
+                  - button "Create free account" [ref=f6e582]
+              - contentinfo [ref=f6e583]:
+                - generic [ref=f6e584]:
+                  - generic [ref=f6e585]:
+                    - generic [ref=f6e590]: Kiwimpact
+                    - generic [ref=f6e591]: · Community eco quests across New Zealand
+                  - paragraph [ref=f6e592]: © 2026 Kiwimpact. Auckland-first.
+    - toolbar "Help/zoom toolbar" [ref=e27]:
+      - button "Help" [ref=e29]
+  - generic:
+    - status
+    - group [ref=e443]:
+      - alert [ref=e445]
+      - alert [ref=e447]
+    - region "Do not sell or share my personal info" [ref=e467]:
+      - link "Do not sell or share my personal info" [ref=e468]:
+        - /url: /opt-out/

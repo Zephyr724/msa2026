@@ -6,7 +6,8 @@ namespace Kiwimpact.Api.Contracts
         int Rank,
         string DisplayName,
         long TotalXp,
-        long VerifiedCompletionCount);
+        long VerifiedCompletionCount,
+        bool IsCurrentUser);
 
     public sealed record CollectiveProgressDto(
         long TotalXp,
@@ -60,7 +61,8 @@ namespace Kiwimpact.Api.Mapping
                     row.Rank,
                     row.DisplayName,
                     row.TotalXp,
-                    row.VerifiedCompletionCount)).ToList());
+                    row.VerifiedCompletionCount,
+                    row.IsCurrentUser)).ToList());
 
         public static CommunitiesLeaderboardDto ToDto(
             this CommunitiesLeaderboard leaderboard) =>

@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AuthCard } from './LoginPage';
 import {
-  changePassword, confirmEmail, forgotPassword, resendConfirmation, resetPassword,
+  changePassword, confirmEmail, forgotPassword, normalizeAccountLifecycleToken,
+  resendConfirmation, resetPassword,
 } from '../lib/api/auth';
 import { ApiError } from '../lib/api/apiFetch';
 
@@ -15,9 +16,12 @@ function messageFor(error: unknown): string {
 export function ConfirmEmailPage() {
   const [params] = useSearchParams();
   const [state, setState] = useState<'pending' | 'success' | 'error'>('pending');
+  const confirmationAttempted = useRef(false);
   useEffect(() => {
+    if (confirmationAttempted.current) return;
+    confirmationAttempted.current = true;
     const userId = params.get('userId');
-    const token = params.get('token');
+    const token = normalizeAccountLifecycleToken(params.get('token') ?? '');
     if (!userId || !token) {
       setState('error');
       return;
@@ -97,7 +101,8 @@ export function ResetPasswordPage() {
     if (password !== confirmation) { setMessage('Passwords must match.'); return; }
     try {
       setMessage((await resetPassword(
-        params.get('email') ?? '', params.get('token') ?? '',
+        params.get('email') ?? '',
+        normalizeAccountLifecycleToken(params.get('token') ?? ''),
         password, confirmation,
       )).message);
     } catch (error) { setMessage(messageFor(error)); }
