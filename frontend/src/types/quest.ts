@@ -55,6 +55,8 @@ export interface QuestLocationRegionDto {
   id: string;
   name: string;
   type: import("../types/region").RegionType;
+  administrativeAreaName?: string | null;
+  countryName?: string | null;
 }
 
 export interface QuestListItemDto {
@@ -67,6 +69,7 @@ export interface QuestListItemDto {
   difficulty: QuestDifficulty;
   xpAward: number;
   capacity: number | null;
+  availableSpots?: number | null;
   startAtUtc: string | null;
   endAtUtc: string | null;
   locationRegion: QuestLocationRegionDto | null;

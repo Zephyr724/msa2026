@@ -19,6 +19,15 @@ using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile(
+        "appsettings.Development.local.json",
+        optional: true,
+        reloadOnChange: false);
+    // Keep environment variables authoritative for shared/dev-hosted runs.
+    builder.Configuration.AddEnvironmentVariables();
+}
 
 // ── Service Registration ────────────────────────────────────────────
 builder.Services.AddScoped<ApiAntiforgeryFilter>();
@@ -383,10 +392,8 @@ if (seedRoles || (app.Environment.IsDevelopment() &&
             services.GetRequiredService<UserManager<ApplicationUser>>(),
             new DemoAccountSeedOptions(
                 seedDemoAccounts,
-                builder.Configuration["DemoAccounts:Organizer:Email"],
-                builder.Configuration["DemoAccounts:Organizer:Password"],
-                builder.Configuration["DemoAccounts:Admin:Email"],
-                builder.Configuration["DemoAccounts:Admin:Password"]));
+                builder.Configuration["DemoAccounts:Password"],
+                DemoAccountSeedOptions.StandardPersonas));
     }
 }
 

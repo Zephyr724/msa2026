@@ -1,4 +1,5 @@
 import {
+  ArrowUpDown,
   Grid2X2,
   Map,
   MapPin,
@@ -12,7 +13,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 import QuestCard from '../components/quest/QuestCard.tsx';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
 import { QuestMap } from '../components/maps/QuestMap.tsx';
-import { CATEGORY_PRESENTATION } from '../lib/questPresentation.ts';
+import {
+  CATEGORY_PRESENTATION,
+  questDiscoveryHighlight,
+} from '../lib/questPresentation.ts';
 import { useQuestList } from '../hooks/useQuests.ts';
 import { useRegions } from '../hooks/useRegions.ts';
 import type { QuestFilters } from '../lib/api/quests.ts';
@@ -149,7 +153,7 @@ export default function QuestListPage() {
             </label>
             <button
               aria-expanded={showFilters}
-              className="btn btn-outline h-11 min-h-11 rounded-[0.875rem]"
+              className="btn btn-outline h-11 min-h-11 rounded-[0.875rem] border-primary/45 text-primary hover:border-primary hover:bg-primary hover:text-primary-content"
               onClick={() => setShowFilters((visible) => !visible)}
               type="button"
             >
@@ -159,19 +163,33 @@ export default function QuestListPage() {
                 <span className="badge badge-primary badge-sm">{activeFilterCount}</span>
               )}
             </button>
-            <select
-              aria-label="Sort by"
-              className="select select-bordered hidden h-11 min-h-11 rounded-[0.875rem] bg-base-100 sm:block"
-              onChange={(event) => updateFilters({ sortBy: event.target.value })}
-              value={filters.sortBy ?? 'startAt'}
+            <label className="relative hidden sm:block">
+              <ArrowUpDown
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-primary"
+              />
+              <span className="sr-only">Sort quests</span>
+              <select
+                aria-label="Sort by"
+                className="select h-11 min-h-11 rounded-[0.875rem] border-primary/45 bg-base-100 pl-9 font-semibold leading-none text-base-content focus:border-primary focus:outline-primary"
+                onChange={(event) => updateFilters({ sortBy: event.target.value })}
+                value={filters.sortBy ?? 'startAt'}
+              >
+                {SORT_OPTIONS.map((sort) => (
+                  <option key={sort.value} value={sort.value}>{sort.label}</option>
+                ))}
+              </select>
+            </label>
+            <div
+              aria-label="Quest view"
+              className="inline-flex h-11 items-center rounded-[0.875rem] border border-primary/45 bg-base-100 p-1"
+              role="group"
             >
-              {SORT_OPTIONS.map((sort) => (
-                <option key={sort.value} value={sort.value}>{sort.label}</option>
-              ))}
-            </select>
-            <div aria-label="Quest view" className="kiwi-segmented" role="group">
               <button
                 aria-pressed={view === 'cards'}
+                className={`grid size-8 place-items-center rounded-[0.65rem] transition-colors ${
+                  view === 'cards' ? 'bg-primary text-primary-content' : 'text-primary hover:bg-primary/10'
+                }`}
                 onClick={() => setView('cards')}
                 type="button"
               >
@@ -180,6 +198,9 @@ export default function QuestListPage() {
               </button>
               <button
                 aria-pressed={view === 'map'}
+                className={`grid size-8 place-items-center rounded-[0.65rem] transition-colors ${
+                  view === 'map' ? 'bg-primary text-primary-content' : 'text-primary hover:bg-primary/10'
+                }`}
                 onClick={() => setView('map')}
                 type="button"
               >
@@ -191,8 +212,10 @@ export default function QuestListPage() {
 
           <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
             <button
-              className={`btn btn-sm shrink-0 rounded-full ${
-                !filters.category ? 'btn-primary' : 'btn-outline'
+              className={`btn btn-sm shrink-0 rounded-full border ${
+                !filters.category
+                  ? 'border-primary bg-primary text-primary-content'
+                  : 'border-primary/45 bg-base-100 text-primary hover:border-primary hover:bg-primary/10'
               }`}
               onClick={() => updateFilters({ category: undefined })}
               type="button"
@@ -203,8 +226,10 @@ export default function QuestListPage() {
               const presentation = CATEGORY_PRESENTATION[category];
               return (
                 <button
-                  className={`btn btn-xs h-8 min-h-8 shrink-0 rounded-full px-3 ${
-                    filters.category === category ? 'btn-primary' : 'btn-outline'
+                  className={`btn btn-xs h-8 min-h-8 shrink-0 rounded-full border px-3 ${
+                    filters.category === category
+                      ? presentation.tone
+                      : presentation.softTone
                   }`}
                   key={category}
                   onClick={() => updateFilters({ category })}
@@ -348,7 +373,11 @@ export default function QuestListPage() {
             ) : (
               <div className="mt-4 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {data.items.map((quest) => (
-                  <QuestCard key={quest.id} quest={quest} />
+                  <QuestCard
+                    highlightLabel={questDiscoveryHighlight(quest)}
+                    key={quest.id}
+                    quest={quest}
+                  />
                 ))}
               </div>
             )}

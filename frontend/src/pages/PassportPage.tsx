@@ -147,20 +147,8 @@ export default function PassportPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] overflow-x-hidden bg-base-200 py-8">
-      <main className="kiwi-page-wide">
-        <header className="mb-5 flex justify-end">
-          <div>
-            <h1 className="sr-only">{displayName} — Passport</h1>
-          </div>
-          <nav
-            aria-label="Passport sections"
-            className="kiwi-segmented min-w-0 w-full max-w-full overflow-x-auto lg:w-auto"
-          >
-            <a href="#passport-summary-heading">Overview</a>
-            <a href="#passport-achievements">Achievements</a>
-            <a href="#passport-history-heading">History</a>
-          </nav>
-        </header>
+      <main className="kiwi-page-wide max-w-[1200px]">
+        <h1 className="sr-only">{displayName} — Passport</h1>
         <div>
         <section aria-labelledby="passport-summary-heading">
           <h2 className="sr-only" id="passport-summary-heading">

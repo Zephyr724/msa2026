@@ -270,6 +270,13 @@ public sealed class AuthApiTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task RoleAndConfiguredDemoSeeding_IsIdempotentAndRequiresExplicitValues()
     {
+        Assert.Equal(9, DemoAccountSeedOptions.StandardPersonas.Count);
+        Assert.All(
+            new[] { AppRoles.Member, AppRoles.Organizer, AppRoles.Admin },
+            role => Assert.Equal(
+                3,
+                DemoAccountSeedOptions.StandardPersonas.Count(account => account.Role == role)));
+
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
@@ -279,49 +286,101 @@ public sealed class AuthApiTests : IClassFixture<CustomWebApplicationFactory>
         await IdentitySeed.SeedRolesAsync(roleManager, TestContext.Current.CancellationToken);
         Assert.Equal(3, await db.Roles.CountAsync(TestContext.Current.CancellationToken));
 
+        var memberEmail = UniqueEmail();
         var organizerEmail = UniqueEmail();
         var adminEmail = UniqueEmail();
         var runtimePassword = $"{Guid.NewGuid():N}aA1!";
+        var personas = new[]
+        {
+            new DemoAccountSeedPersona(memberEmail, "Seeded member", AppRoles.Member),
+            new DemoAccountSeedPersona(organizerEmail, "Seeded external organizer", AppRoles.Organizer),
+            new DemoAccountSeedPersona(adminEmail, "Seeded admin", AppRoles.Admin),
+        };
         await IdentitySeed.SeedDemoAccountsAsync(
             db,
             userManager,
             new DemoAccountSeedOptions(
                 Enabled: false,
-                organizerEmail,
-                runtimePassword,
-                adminEmail,
-                runtimePassword),
+                Password: runtimePassword,
+                Accounts: personas),
             TestContext.Current.CancellationToken);
+        Assert.Null(await userManager.FindByEmailAsync(memberEmail));
         Assert.Null(await userManager.FindByEmailAsync(organizerEmail));
         Assert.Null(await userManager.FindByEmailAsync(adminEmail));
 
         var enabled = new DemoAccountSeedOptions(
             Enabled: true,
-            organizerEmail,
-            runtimePassword,
-            adminEmail,
-            runtimePassword);
-        await IdentitySeed.SeedDemoAccountsAsync(
-            db, userManager, enabled, TestContext.Current.CancellationToken);
+            Password: runtimePassword,
+            Accounts: personas);
         await IdentitySeed.SeedDemoAccountsAsync(
             db, userManager, enabled, TestContext.Current.CancellationToken);
 
+        var seededOrganizer = await userManager.FindByEmailAsync(organizerEmail);
+        Assert.NotNull(seededOrganizer);
+        var staleOrganizerProfile = await db.UserProfiles.SingleAsync(
+            profile => profile.Id == seededOrganizer.Id,
+            TestContext.Current.CancellationToken);
+        staleOrganizerProfile.UpdateDisplayName(
+            "Stale organizer display name",
+            DateTimeOffset.UtcNow);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        await IdentitySeed.SeedDemoAccountsAsync(
+            db, userManager, enabled, TestContext.Current.CancellationToken);
+
+        var member = await userManager.FindByEmailAsync(memberEmail);
         var organizer = await userManager.FindByEmailAsync(organizerEmail);
         var admin = await userManager.FindByEmailAsync(adminEmail);
+        Assert.NotNull(member);
         Assert.NotNull(organizer);
         Assert.NotNull(admin);
+        Assert.True(member.EmailConfirmed);
+        Assert.True(organizer.EmailConfirmed);
+        Assert.True(admin.EmailConfirmed);
+        Assert.True(await userManager.CheckPasswordAsync(member, runtimePassword));
+        Assert.True(await userManager.CheckPasswordAsync(organizer, runtimePassword));
+        Assert.True(await userManager.CheckPasswordAsync(admin, runtimePassword));
+        Assert.Equal(
+            new[] { AppRoles.Member },
+            (await userManager.GetRolesAsync(member)).Order().ToArray());
         Assert.Equal(
             new[] { AppRoles.Member, AppRoles.Organizer },
             (await userManager.GetRolesAsync(organizer)).Order().ToArray());
         Assert.Equal(
             new[] { AppRoles.Admin, AppRoles.Member },
             (await userManager.GetRolesAsync(admin)).Order().ToArray());
+        Assert.Equal(
+            "Seeded external organizer",
+            (await db.UserProfiles.SingleAsync(
+                profile => profile.Id == organizer.Id,
+                TestContext.Current.CancellationToken)).DisplayName);
+        Assert.Equal(1, await db.UserProfiles.CountAsync(
+            profile => profile.Id == member.Id,
+            TestContext.Current.CancellationToken));
         Assert.Equal(1, await db.UserProfiles.CountAsync(
             profile => profile.Id == organizer.Id,
             TestContext.Current.CancellationToken));
         Assert.Equal(1, await db.UserProfiles.CountAsync(
             profile => profile.Id == admin.Id,
             TestContext.Current.CancellationToken));
+
+        await IdentitySeed.SeedDemoAccountsAsync(
+            db,
+            userManager,
+            new DemoAccountSeedOptions(
+                Enabled: true,
+                Password: runtimePassword,
+                Accounts:
+                [
+                    new DemoAccountSeedPersona(
+                        organizerEmail,
+                        "Seeded external organizer",
+                        AppRoles.Member),
+                ]),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(
+            new[] { AppRoles.Member },
+            (await userManager.GetRolesAsync(organizer)).Order().ToArray());
     }
 
     [Fact]

@@ -1,12 +1,12 @@
 import {
   ArrowRight,
   Award,
+  CalendarDays,
   ChevronRight,
   Clock3,
   Compass,
   FileCheck2,
   Flag,
-  Flame,
   History,
   IdCard,
   MapPin,
@@ -19,7 +19,6 @@ import {
 import { Link, useSearchParams } from 'react-router-dom';
 import PlayerStatusSummary from '../components/PlayerStatusSummary.tsx';
 import { AchievementBadgeArt } from '../components/game/GameArtwork.tsx';
-import QuestCard from '../components/quest/QuestCard.tsx';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
 import { useMyAchievements } from '../hooks/useAchievements.ts';
 import { useMyClaims } from '../hooks/useCompletion.ts';
@@ -32,7 +31,15 @@ import {
   useAllPassportCompletions,
 } from '../hooks/usePassportCompletions.ts';
 import { useMyQuestParticipationsQuery } from '../hooks/useParticipation.ts';
-import { CATEGORY_PRESENTATION } from '../lib/questPresentation.ts';
+import {
+  CATEGORY_PRESENTATION,
+  DIFFICULTY_LABELS,
+  DIFFICULTY_TONES,
+  SOURCE_LABELS,
+  SOURCE_TONES,
+  formatQuestDate,
+  questHighlightTone,
+} from '../lib/questPresentation.ts';
 import type { EvidenceClaimSummary } from '../types/completion.ts';
 import type {
   PassportCompletionItem,
@@ -185,47 +192,7 @@ export default function MyQuestsPage() {
         <div className="mt-5">
           <PlayerStatusSummary />
         </div>
-        <section
-          aria-label="Mission momentum"
-          className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-        >
-          <MissionSignal
-            Icon={Target}
-            label="Active missions"
-            supporting="Quests currently on your board"
-            value={participations.isPending ? '…' : participations.isError ? '—' : String(activeParticipations.length)}
-          />
-          <MissionSignal
-            Icon={Flame}
-            label="Weekly streak"
-            supporting={streak.data?.hasVerifiedImpactThisWeek
-              ? 'Verified action recorded this week'
-              : 'Complete a verified quest this week'}
-            value={streak.isPending ? '…' : streak.isError ? '—' : `${streak.data?.currentWeeks ?? 0} weeks`}
-          />
-          <MissionSignal
-            Icon={Flag}
-            label="Community goal"
-            supporting={challenges.data?.[0]
-              ? `${challenges.data[0].currentProgress} of ${challenges.data[0].targetValue} verified actions`
-              : challenges.isError ? 'Progress unavailable' : 'No active challenge'}
-            value={challenges.isPending
-              ? '…'
-              : challenges.data?.[0] ? `${Math.round(challenges.data[0].progressPercentage)}%` : '—'}
-          />
-          <MissionSignal
-            Icon={MapPin}
-            label="Home community"
-            supporting={profile.data?.homeCommunity
-              ? 'Your local leaderboard and challenge context'
-              : profile.isError ? 'Community context unavailable' : 'Choose a Home Community in your profile'}
-            value={profile.isPending
-              ? '…'
-              : profile.data?.homeCommunity?.name ?? 'Not set'}
-          />
-        </section>
-
-        <section className="mt-4 grid gap-4 lg:grid-cols-2" aria-label="Mission guidance">
+        <section className="mt-4 grid gap-4 lg:grid-cols-2" aria-label="Mission momentum">
           <article className="kiwi-panel p-4">
             <div className="flex items-start gap-4">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent/15 text-warning">
@@ -235,8 +202,11 @@ export default function MyQuestsPage() {
                 <p className="kiwi-stat-label">Next milestone</p>
                 <h2 className="mt-1 text-lg">Keep building verified progress</h2>
                 <p className="mt-1 text-sm leading-relaxed text-base-content/62">
-                  Your next verified action advances the milestones shown in
-                  your Passport.
+                  Your next verified action advances your Passport. Your
+                  current weekly streak is{' '}
+                  <strong>{streak.isPending ? 'loading' : streak.isError
+                    ? 'unavailable'
+                    : `${streak.data?.currentWeeks ?? 0} weeks`}</strong>.
                 </p>
                 <Link className="btn btn-ghost btn-sm -ml-3 mt-3" to="/passport">
                   View milestones <ChevronRight aria-hidden="true" className="size-4" />
@@ -248,20 +218,48 @@ export default function MyQuestsPage() {
           <article className="rounded-[1.25rem] border border-primary/20 bg-primary/8 p-4">
             <div className="flex items-start gap-4">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-content">
-                <Sparkles aria-hidden="true" className="size-5" />
+                <Flag aria-hidden="true" className="size-5" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="kiwi-stat-label">{priorityAction.eyebrow}</p>
-                <h2 className="mt-1 truncate text-lg">{priorityAction.title}</h2>
+                <p className="kiwi-stat-label">Community challenge</p>
+                <h2 className="mt-1 truncate text-lg">
+                  {challenges.data?.[0]
+                    ? `${challenges.data[0].localArea.name} community goal`
+                    : 'Your local community goal'}
+                </h2>
                 <p className="mt-1 text-sm leading-relaxed text-base-content/62">
-                  {priorityAction.description}
+                  {challenges.isPending
+                    ? 'Loading verified community progress…'
+                    : challenges.data?.[0]
+                      ? `${challenges.data[0].currentProgress} of ${challenges.data[0].targetValue} verified actions · ${Math.round(challenges.data[0].progressPercentage)}%`
+                      : challenges.isError ? 'Community progress unavailable.' : 'No active challenge.'}
                 </p>
-                <Link className="btn btn-primary btn-sm mt-4" to={priorityAction.href}>
-                  {priorityAction.label} <ArrowRight aria-hidden="true" className="size-4" />
-                </Link>
+                <p className="mt-2 text-xs font-semibold text-base-content/55">
+                  Home community: {profile.isPending
+                    ? 'Loading…'
+                    : profile.data?.homeCommunity?.name ?? 'Not set'}
+                </p>
               </div>
             </div>
           </article>
+        </section>
+
+        <section className="mt-4 rounded-[1.25rem] border border-primary/20 bg-primary/8 p-4" aria-label="Next action">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent/15 text-warning">
+              <Sparkles aria-hidden="true" className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="kiwi-stat-label">{priorityAction.eyebrow}</p>
+              <h2 className="mt-1 truncate text-lg">{priorityAction.title}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-base-content/62">
+                {priorityAction.description}
+              </p>
+            </div>
+            <Link className="btn btn-primary btn-sm shrink-0 rounded-full" to={priorityAction.href}>
+              {priorityAction.label} <ArrowRight aria-hidden="true" className="size-4" />
+            </Link>
+          </div>
         </section>
 
         <section className="mt-7" aria-labelledby="mission-list-title">
@@ -283,16 +281,16 @@ export default function MyQuestsPage() {
             </div>
             <div
               aria-label="Mission Board view"
-              className="grid grid-cols-2 gap-1 rounded-2xl border border-base-300 bg-base-100 p-1 md:grid-cols-4"
+              className="grid grid-cols-2 border-b border-base-300 md:grid-cols-4"
               role="group"
             >
               {primaryTabs.map((tab) => (
                 <button
                   aria-pressed={view === tab.value}
-                  className={`min-h-11 rounded-xl px-3 py-2 text-sm font-bold transition-colors ${
+                  className={`min-h-11 border-b-2 px-3 py-2 text-sm font-bold transition-colors ${
                     view === tab.value
-                      ? 'bg-primary text-primary-content'
-                      : 'text-base-content/65 hover:bg-secondary'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-base-content/60 hover:border-primary/30 hover:text-primary'
                   }`}
                   key={tab.value}
                   onClick={() => setView(tab.value)}
@@ -506,31 +504,6 @@ export default function MyQuestsPage() {
   );
 }
 
-function MissionSignal({
-  Icon,
-  label,
-  supporting,
-  value,
-}: {
-  Icon: typeof Target;
-  label: string;
-  supporting: string;
-  value: string;
-}) {
-  return (
-    <article className="kiwi-soft-panel flex items-center gap-3 p-3.5">
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-        <Icon aria-hidden="true" className="size-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="kiwi-stat-label">{label}</p>
-        <p className="mt-0.5 kiwi-display text-xl">{value}</p>
-        <p className="mt-1 truncate text-xs text-base-content/55">{supporting}</p>
-      </div>
-    </article>
-  );
-}
-
 function QuestGrid({
   items,
   status,
@@ -539,14 +512,65 @@ function QuestGrid({
   status: (item: MyQuestParticipationListItemDto) => string;
 }) {
   return (
-    <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-      {items.map((item) => (
-        <QuestCard
-          key={item.participationId}
-          quest={item.quest}
-          statusLabel={status(item)}
-        />
-      ))}
+    <div className="mt-5 grid gap-3">
+      {items.map((item) => {
+        const quest = item.quest;
+        const statusText = status(item);
+        return (
+          <Link
+            aria-label={`View ${quest.title}`}
+            className="group grid overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100 transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md sm:grid-cols-[11rem_minmax(0,1fr)_auto]"
+            key={item.participationId}
+            to={`/quests/${quest.id}`}
+          >
+            <figure className="relative h-36 overflow-hidden bg-base-200 sm:h-full sm:min-h-40">
+              <img
+                alt={quest.coverImage?.altText ?? ''}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = '/images/quests/quest-fallback.svg';
+                }}
+                src={quest.coverImage?.imageUrl ?? '/images/quests/quest-fallback.svg'}
+              />
+              <span className="absolute bottom-3 left-3">
+                <CategoryEmblem category={quest.category} size="sm" />
+              </span>
+            </figure>
+            <div className="min-w-0 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${questHighlightTone(statusText)}`}>
+                  {statusText}
+                </span>
+                <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${DIFFICULTY_TONES[quest.difficulty]}`}>
+                  {DIFFICULTY_LABELS[quest.difficulty]}
+                </span>
+              </div>
+              <h3 className="mt-2 text-xl transition-colors group-hover:text-primary">{quest.title}</h3>
+              <div className="mt-3 grid gap-1.5 text-xs text-base-content/62">
+                <span className="flex items-center gap-2">
+                  <CalendarDays aria-hidden="true" className="size-4 shrink-0 text-primary" />
+                  {formatQuestDate(quest.startAtUtc)}
+                </span>
+                <span className="flex min-w-0 items-start gap-2">
+                  <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <span className="line-clamp-2">
+                    {quest.locationDescription ?? quest.locationRegion?.name ?? 'Location to be confirmed'}
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-base-300 px-4 py-3 sm:flex-col sm:items-end sm:justify-center sm:border-l sm:border-t-0">
+              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${SOURCE_TONES[quest.sourceType]}`}>
+                {SOURCE_LABELS[quest.sourceType]}
+              </span>
+              <span className="inline-flex items-center gap-1 text-sm font-bold text-primary">
+                Open <ChevronRight aria-hidden="true" className="size-4" />
+              </span>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }

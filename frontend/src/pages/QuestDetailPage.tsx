@@ -24,6 +24,7 @@ import {
   formatQuestDate,
   REGISTRATION_LABELS,
   SOURCE_LABELS,
+  questLocationTrail,
 } from '../lib/questPresentation.ts';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
 import { QuestMap } from '../components/maps/QuestMap.tsx';
@@ -89,7 +90,20 @@ export default function QuestDetailPage() {
   const category = CATEGORY_PRESENTATION[quest.category];
   const cover = quest.coverImage?.imageUrl ?? QUEST_IMAGE_FALLBACK;
   const coverIsRepositoryPlaceholder = isRepositoryQuestPlaceholder(cover);
-  const selectedGalleryImage = images.data?.[galleryIndex];
+  const galleryItems = images.data?.length
+    ? images.data
+    : [{
+        id: 'repository-placeholder',
+        imageUrl: cover,
+        altText: quest.coverImage?.altText ?? `Illustration for ${quest.title}`,
+        sortOrder: 0,
+        isCover: true,
+        creatorName: null,
+        sourceUrl: null,
+        licenceNote: null,
+      }];
+  const selectedGalleryImage = galleryItems[galleryIndex] ?? galleryItems[0]!;
+  const locationTrail = questLocationTrail(quest.locationRegion);
   const supportsCompletionCode = quest.sourceType === 'OrganizerOwned'
     && quest.registrationMode === 'Native';
   const completionBriefing = supportsCompletionCode
@@ -137,7 +151,7 @@ export default function QuestDetailPage() {
                 {category.label}
               </p>
               <p className="text-sm font-semibold">
-                {quest.locationRegion?.name ?? 'Location to be confirmed'}
+                {quest.locationDescription ?? quest.locationRegion?.name ?? 'Location to be confirmed'}
               </p>
             </div>
           </div>
@@ -159,7 +173,7 @@ export default function QuestDetailPage() {
             <Detail icon={CalendarDays} label="Date & time">
               {formatQuestDate(quest.startAtUtc)}
             </Detail>
-            <Detail icon={MapPin} label="General location">
+            <Detail icon={MapPin} label="Quest location">
               {quest.locationDescription ?? quest.locationRegion?.name ?? 'To be confirmed'}
             </Detail>
             {quest.endAtUtc && (
@@ -168,8 +182,24 @@ export default function QuestDetailPage() {
               </Detail>
             )}
             <Detail icon={Users} label="Capacity">
-              {quest.capacity ? `Up to ${quest.capacity} participants` : 'No capacity published'}
+              {quest.capacity === null
+                ? 'No capacity published'
+                : quest.availableSpots === undefined || quest.availableSpots === null
+                  ? `Up to ${quest.capacity} participants`
+                  : `${quest.availableSpots} of ${quest.capacity} places available`}
             </Detail>
+            {locationTrail.length > 0 && (
+              <div className="sm:col-span-2">
+                <dt className="kiwi-stat-label">Community · region · country</dt>
+                <dd className="mt-2 flex flex-wrap gap-2">
+                  {locationTrail.map((part) => (
+                    <span className="rounded-full border border-primary/25 bg-primary/5 px-3 py-1 text-xs font-bold text-primary" key={part}>
+                      {part}
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            )}
           </section>
 
           <section className="mt-5 rounded-[1.25rem] border border-accent/40 bg-accent/10 p-5">
@@ -242,8 +272,7 @@ export default function QuestDetailPage() {
             </section>
           )}
 
-          {images.data && images.data.length > 0 && (
-            <section className="mt-9">
+          <section className="mt-9">
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="kiwi-stat-label">See the experience</p>
@@ -252,12 +281,12 @@ export default function QuestDetailPage() {
                     Quest gallery
                   </h2>
                 </div>
-                {images.data.length > 1 && (
+                {galleryItems.length > 1 && (
                   <div className="flex gap-2">
                     <button
                       aria-label="Previous image"
                       className="btn btn-outline btn-sm btn-square rounded-full"
-                      onClick={() => setGalleryIndex((galleryIndex - 1 + images.data.length) % images.data.length)}
+                      onClick={() => setGalleryIndex((galleryIndex - 1 + galleryItems.length) % galleryItems.length)}
                       type="button"
                     >
                       <ChevronLeft aria-hidden="true" className="size-4" />
@@ -265,7 +294,7 @@ export default function QuestDetailPage() {
                     <button
                       aria-label="Next image"
                       className="btn btn-outline btn-sm btn-square rounded-full"
-                      onClick={() => setGalleryIndex((galleryIndex + 1) % images.data.length)}
+                      onClick={() => setGalleryIndex((galleryIndex + 1) % galleryItems.length)}
                       type="button"
                     >
                       <ChevronRight aria-hidden="true" className="size-4" />
@@ -297,9 +326,9 @@ export default function QuestDetailPage() {
                   </figcaption>
                 )}
               </figure>
-              {images.data.length > 1 && (
+              {galleryItems.length > 1 && (
                 <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                  {images.data.map((image, index) => (
+                  {galleryItems.map((image, index) => (
                     <button
                       aria-label={`View gallery image ${index + 1}`}
                       aria-pressed={galleryIndex === index}
@@ -330,13 +359,15 @@ export default function QuestDetailPage() {
                   ))}
                 </div>
               )}
-            </section>
-          )}
+          </section>
 
           {typeof quest.latitude === 'number' && typeof quest.longitude === 'number' && (
             <section className="mt-9" aria-labelledby="quest-location-heading">
               <p className="kiwi-stat-label">Plan your visit</p>
               <h2 className="mt-1 text-2xl" id="quest-location-heading">Quest location</h2>
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-base-content/68">
+                {quest.locationDescription ?? quest.locationRegion?.name ?? 'Location to be confirmed'}
+              </p>
               <div className="mt-4">
                 <QuestMap quests={[quest]} />
               </div>

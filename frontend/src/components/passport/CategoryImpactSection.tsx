@@ -26,7 +26,7 @@ export default function CategoryImpactSection({
         A truthful breakdown of your verified records. Bars compare your own
         category totals; they are not targets or environmental outcome claims.
       </p>
-      <div className="kiwi-panel mt-4 grid gap-x-8 gap-y-5 p-5 md:grid-cols-2">
+      <div className="kiwi-panel mt-4 grid gap-y-5 p-5">
         {QUEST_CATEGORIES.map((category) => {
           const presentation = CATEGORY_PRESENTATION[category];
           const impact = impactByCategory.get(category);

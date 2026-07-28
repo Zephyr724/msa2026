@@ -200,12 +200,17 @@ public sealed class QuestParticipationRepository : IQuestParticipationRepository
         CancellationToken ct = default)
     {
         var history = await _db.QuestParticipations
-            .AsNoTracking()
+            .AsNoTrackingWithIdentityResolution()
             .Where(item => item.UserId == actorId)
             .Include(item => item.Quest)
                 .ThenInclude(quest => quest!.Images)
             .Include(item => item.Quest)
                 .ThenInclude(quest => quest!.LocationRegion)
+                    .ThenInclude(region => region!.ParentRegion)
+                        .ThenInclude(region => region!.ParentRegion)
+            .Include(item => item.Quest)
+                .ThenInclude(quest => quest!.Participations)
+            .AsSplitQuery()
             .OrderByDescending(item => item.JoinedAt)
             .ThenByDescending(item => item.Id)
             .ToListAsync(ct);

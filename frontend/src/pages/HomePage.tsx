@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import QuestCard from '../components/quest/QuestCard.tsx';
+import { RepositoryQuestScene } from '../components/quest/QuestCard.tsx';
 import { useAuthQuery } from '../hooks/useAuth.ts';
 import { useProgression } from '../hooks/useProgression.ts';
 import { useQuestList } from '../hooks/useQuests.ts';
@@ -28,6 +29,7 @@ import {
 import { useMyQuestParticipationsQuery } from '../hooks/useParticipation.ts';
 import LevelProgress from '../components/passport/LevelProgress.tsx';
 import { RankCrest } from '../components/game/GameArtwork.tsx';
+import { questDiscoveryHighlight } from '../lib/questPresentation.ts';
 import type { CommunityChallenge } from '../types/community.ts';
 
 const loopSteps = [
@@ -175,7 +177,10 @@ export default function HomePage() {
             <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
               {featured.data.items.map((quest) => (
                 <div className="w-[84vw] max-w-sm shrink-0 snap-center md:w-auto md:max-w-none" key={quest.id}>
-                  <QuestCard quest={quest} />
+                  <QuestCard
+                    highlightLabel={questDiscoveryHighlight(quest)}
+                    quest={quest}
+                  />
                 </div>
               ))}
             </div>
@@ -291,8 +296,12 @@ export default function HomePage() {
 function HeroMapPreview() {
   return (
     <div className="relative mx-auto w-full max-w-[36rem]">
-      <div className="overflow-hidden rounded-[1.25rem] border border-primary/15 bg-base-100 p-2 shadow-sm">
-        <div className="relative h-[17rem] overflow-hidden rounded-[1rem] border border-primary/15 bg-[#dcefdc] md:h-[18rem]">
+      <Link
+        aria-label="Explore quests on the Auckland map"
+        className="group block overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100 shadow-sm transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+        to="/quests"
+      >
+        <div className="relative h-[17rem] overflow-hidden bg-[#dcefdc] md:h-[18rem]">
           <div
             aria-hidden="true"
             className="absolute inset-0 opacity-90"
@@ -319,14 +328,11 @@ function HeroMapPreview() {
             </div>
             <Map aria-hidden="true" className="size-5 text-primary" />
           </div>
-          <Link
-            className="btn btn-primary btn-sm absolute bottom-4 right-4 rounded-full shadow-lg"
-            to="/quests"
-          >
+          <span className="btn btn-primary btn-sm absolute bottom-4 right-4 rounded-full shadow-lg">
             Explore the map <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
+          </span>
         </div>
-      </div>
+      </Link>
       <div className="absolute -bottom-4 left-5 rounded-full border border-accent/40 bg-base-100 px-4 py-2 text-sm font-extrabold shadow-xl">
         <span className="inline-flex items-center gap-2">
           <Flame aria-hidden="true" className="size-4 text-warning" />
@@ -372,48 +378,69 @@ function GuestProgressPreview() {
 
 function PassportShowcase({ signedIn }: { signedIn: boolean }) {
   return (
-    <section className="overflow-hidden bg-base-200 py-16 sm:py-20">
-      <div className="kiwi-page grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-        <div>
-          <p className="kiwi-stat-label">Impact Passport</p>
-          <h2 className="mt-2 max-w-xl text-4xl">
-            A lasting record of the action you can stand behind
-          </h2>
-          <p className="mt-4 max-w-xl text-lg leading-relaxed text-base-content/65">
-            Verified completions, XP, rank, achievements, and community
-            participation share one truthful history. Self-reported activity
-            stays clearly labelled and never earns verified rewards.
-          </p>
-          <Link className="btn btn-primary mt-7 rounded-full" to={signedIn ? '/passport' : '/register'}>
-            {signedIn ? 'Open your Passport' : 'Create your Passport'}
-            <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
-        </div>
-        <div className="kiwi-panel kiwi-topography relative overflow-hidden p-6 sm:p-8">
-          <div className="flex items-center gap-4 border-b border-base-300 pb-5">
-            <RankCrest rankTitle="Explorer" size={68} />
-            <div>
-              <p className="kiwi-stat-label">Passport preview</p>
-              <p className="mt-1 text-2xl font-extrabold">Your local impact identity</p>
-            </div>
+    <section className="kiwi-topography overflow-hidden bg-primary py-14 text-primary-content sm:py-16">
+      <div className="kiwi-page">
+        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-[0.14em] opacity-70">
+              Your impact identity
+            </p>
+            <h2 className="mt-2 max-w-xl text-4xl">Build your Impact Passport</h2>
+            <p className="mt-4 max-w-xl text-lg leading-relaxed opacity-78">
+              Keep your verified completions, XP, rank, achievements, and
+              community contribution in one living record.
+            </p>
+            <Link
+              className="btn mt-7 rounded-full border-0 bg-primary-content text-primary hover:bg-primary-content/90"
+              to={signedIn ? '/passport' : '/register'}
+            >
+              {signedIn ? 'Open your Passport' : 'Create your Passport'}
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </Link>
           </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            {[
-              [ShieldCheck, 'Verified history', 'Only trusted completions earn XP'],
-              [Sparkles, 'Achievement trail', 'Milestones stay visible over time'],
-              [Users, 'Community context', 'Privacy thresholds remain authoritative'],
-            ].map(([Icon, title, description]) => {
-              const PassportIcon = Icon as typeof ShieldCheck;
-              return (
-                <article className="rounded-2xl border border-base-300 bg-base-100/88 p-4" key={title as string}>
-                  <PassportIcon aria-hidden="true" className="size-5 text-primary" />
-                  <h3 className="mt-3 text-base">{title as string}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-base-content/58">
-                    {description as string}
-                  </p>
-                </article>
-              );
-            })}
+          <div className="overflow-hidden rounded-[1.25rem] border border-primary-content/20 bg-base-100 text-base-content shadow-xl">
+            <div className="flex items-center gap-4 border-b border-base-300 p-5">
+              <span className="grid size-[4.125rem] place-items-center rounded-[1.35rem] bg-primary/12 text-primary">
+                <IdCard aria-hidden="true" className="size-8" />
+              </span>
+              <div>
+                <p className="kiwi-stat-label">Passport preview</p>
+                <p className="mt-1 text-2xl font-extrabold">A record you can stand behind</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 border-b border-base-300 sm:grid-cols-4">
+              {[
+                ['Quest log', 'Verified'],
+                ['XP ledger', 'Authoritative'],
+                ['Rank path', 'Progressive'],
+                ['Badge case', 'Earned'],
+              ].map(([value, label], index) => (
+                <div
+                  className={`p-4 text-center ${
+                    index < 3 ? 'border-r border-base-300' : ''
+                  } ${index < 2 ? 'max-sm:border-b' : ''}`}
+                  key={label}
+                >
+                  <span className="kiwi-display block text-xl text-primary">{value}</span>
+                  <span className="mt-1 block text-xs font-bold text-base-content/55">{label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-3 p-5 sm:grid-cols-3">
+              {[
+                [ShieldCheck, 'Verified history'],
+                [Sparkles, 'Achievement trail'],
+                [Users, 'Community context'],
+              ].map(([Icon, title]) => {
+                const PassportIcon = Icon as typeof ShieldCheck;
+                return (
+                  <div className="flex items-center gap-2 rounded-xl bg-secondary/60 p-3" key={title as string}>
+                    <PassportIcon aria-hidden="true" className="size-5 text-primary" />
+                    <span className="text-xs font-extrabold">{title as string}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -433,31 +460,34 @@ function CompactCommunityGoal({
   const percentage = challenge ? Math.min(100, Math.max(0, challenge.progressPercentage)) : 0;
 
   return (
-    <article className="kiwi-panel relative h-full overflow-hidden bg-primary text-primary-content">
-      <div className="absolute -right-16 -top-16 size-56 rounded-full border-[36px] border-primary-content/5" />
-      <div className="relative flex h-full flex-col p-6 sm:p-8">
-        <div className="flex items-start justify-between gap-4">
+    <article className="h-full overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100 shadow-sm">
+      <div className="relative h-28 overflow-hidden">
+        <RepositoryQuestScene category="RestoreNature" title="Auckland community goal" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
+        <div className="absolute inset-x-5 bottom-4 flex items-end justify-between gap-4 text-white">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.14em] opacity-70">
-              Community challenge
+            <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-white/75">
+              Community Goal
             </p>
-            <h2 className="mt-2 text-3xl">
+            <h2 className="mt-1 text-2xl text-white">
               {challenge ? `${challenge.localArea.name} moves together` : 'A shared local goal'}
             </h2>
           </div>
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary-content/12">
-            <Trophy aria-hidden="true" className="size-6" />
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-white/30 bg-white/15 backdrop-blur">
+            <Trophy aria-hidden="true" className="size-5" />
           </span>
         </div>
+      </div>
+      <div className="flex min-h-[18rem] flex-col p-6">
 
         {loading ? (
-          <div className="mt-8 h-24 animate-pulse rounded-2xl bg-primary-content/10" />
+          <div className="h-24 animate-pulse rounded-2xl bg-base-200" />
         ) : challenge ? (
           <>
-            <div className="mt-8 flex items-end justify-between gap-5">
+            <div className="flex items-end justify-between gap-5">
               <div>
-                <span className="kiwi-display text-4xl">{challenge.currentProgress}</span>
-                <span className="ml-2 text-sm font-bold opacity-72">
+                <span className="kiwi-display text-4xl text-primary">{challenge.currentProgress}</span>
+                <span className="ml-2 text-sm font-bold text-base-content/62">
                   of {challenge.targetValue} verified actions
                 </span>
               </div>
@@ -465,24 +495,31 @@ function CompactCommunityGoal({
             </div>
             <progress
               aria-label={`${challenge.localArea.name} community challenge progress`}
-              className="progress progress-accent mt-3 h-3 bg-primary-content/15"
+              className="progress progress-primary mt-3 h-3"
               max="100"
               value={percentage}
             />
-            <p className="mt-4 text-sm leading-relaxed opacity-75">
+            <p className="mt-4 text-sm leading-relaxed text-base-content/65">
               {challenge.isPrivacyProtected
                 ? 'Contributor details stay private until the community threshold is met.'
                 : `${challenge.activeContributors ?? 0} local contributors are taking part.`}
             </p>
+            <div className="mt-4 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+              <span>
+                <span className="block text-xs font-extrabold uppercase tracking-wide text-amber-700">Community reward</span>
+                <span className="mt-1 block text-sm font-bold">Unlock the shared milestone badge</span>
+              </span>
+              <Award aria-hidden="true" className="size-7 text-amber-600" />
+            </div>
           </>
         ) : (
-          <p className="mt-8 max-w-md text-sm leading-relaxed opacity-75">
+          <p className="max-w-md text-sm leading-relaxed text-base-content/65">
             {error
               ? 'Community progress is temporarily unavailable.'
               : 'The next community challenge will appear here when it begins.'}
           </p>
         )}
-        <Link className="btn mt-auto self-start border-0 bg-primary-content text-primary hover:bg-primary-content/90" to="/leaderboard">
+        <Link className="btn btn-outline btn-sm mt-auto self-start rounded-full border-primary/45 text-primary hover:bg-primary hover:text-primary-content" to="/leaderboard">
           View community impact <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </div>

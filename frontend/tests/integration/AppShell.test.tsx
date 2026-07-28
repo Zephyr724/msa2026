@@ -92,6 +92,13 @@ describe('App shell', () => {
 
       const signOut = screen.getByRole('button', { name: 'Sign out' });
       expect(signOut).toHaveClass('btn-square');
+
+      if (role === 'Admin') {
+        const reviewLink = screen.getByRole('link', { name: 'Review evidence' });
+        expect(reviewLink).toHaveAttribute('href', '/admin/reviews');
+        expect(reviewLink).toHaveClass('btn-square');
+        expect(within(reviewLink).getByText('Review')).toHaveClass('hidden sm:inline');
+      }
     },
   );
 

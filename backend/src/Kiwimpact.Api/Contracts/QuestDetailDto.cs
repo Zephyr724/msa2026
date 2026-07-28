@@ -10,6 +10,7 @@ public sealed record QuestDetailDto(
     string Difficulty,
     int XpAward,
     int? Capacity,
+    int? AvailableSpots,
     string? StartAtUtc,
     string? EndAtUtc,
     QuestLocationRegionDto? LocationRegion,

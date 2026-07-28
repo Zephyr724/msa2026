@@ -97,12 +97,28 @@ export function QuestMap({
               onCloseClick={() => selectQuest(null)}
               position={{ lat: selected.latitude!, lng: selected.longitude! }}
             >
-              <div className="max-w-56 text-slate-900">
-                <p className="font-bold">{selected.title}</p>
-                <p className="mt-1 text-sm">
-                  {selected.locationDescription ?? selected.locationRegion?.name}
+              <div className="w-72 overflow-hidden pr-3 text-slate-900 sm:w-80">
+                <img
+                  alt={selected.coverImage?.altText ?? ''}
+                  className="h-20 w-full rounded-xl bg-slate-100 object-cover"
+                  height="80"
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = '/images/quests/quest-fallback.svg';
+                  }}
+                  src={selected.coverImage?.imageUrl ?? '/images/quests/quest-fallback.svg'}
+                  width="320"
+                />
+                <p className="mt-2.5 pr-2 text-base font-bold leading-snug">{selected.title}</p>
+                <p className="mt-1 line-clamp-2 pr-2 text-sm leading-relaxed text-slate-600">
+                  {selected.locationDescription
+                    ?? selected.locationRegion?.name
+                    ?? 'Location to be confirmed'}
                 </p>
-                <Link className="mt-2 inline-block font-semibold text-emerald-700" to={`/quests/${selected.id}`}>
+                <Link
+                  className="mt-2 inline-flex rounded-full bg-emerald-700 px-4 py-1.5 text-sm font-bold text-white"
+                  to={`/quests/${selected.id}`}
+                >
                   View Quest
                 </Link>
               </div>

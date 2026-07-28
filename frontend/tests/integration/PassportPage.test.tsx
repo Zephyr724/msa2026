@@ -525,7 +525,7 @@ describe('PassportPage', () => {
       .toHaveAttribute('dateTime', '2026-07-20T09:00:00.0000000Z');
   });
 
-  it('F22: uses stacked regions and a responsive one-to-three-column achievement grid', async () => {
+  it('F22: uses stacked regions and the Figma responsive achievement grid', async () => {
     stubPassportApi({});
     const { container } = renderPassport();
     await screen.findByText('First Steps');
@@ -537,9 +537,9 @@ describe('PassportPage', () => {
     expect(historyRegion().className).not.toContain('md:col-span-2');
     const achievementGrid = screen.getByRole('region', { name: 'Achievements' })
       .querySelector('ul');
-    expect(achievementGrid?.className).toContain('grid-cols-1');
-    expect(achievementGrid?.className).toContain('sm:grid-cols-2');
-    expect(achievementGrid?.className).toContain('lg:grid-cols-3');
+    expect(achievementGrid?.className).toContain('grid-cols-2');
+    expect(achievementGrid?.className).toContain('sm:grid-cols-3');
+    expect(achievementGrid?.className).toContain('lg:grid-cols-4');
   });
 
   it('F23: places Achievements between Progress and Completion history', async () => {

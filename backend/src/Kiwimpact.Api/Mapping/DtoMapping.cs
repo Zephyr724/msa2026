@@ -1,5 +1,6 @@
 using Kiwimpact.Api.Contracts;
 using Kiwimpact.Core.Entities;
+using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Progression;
 using Kiwimpact.Core.Services;
 
@@ -31,10 +32,36 @@ internal static class DtoMapping
 
     private static QuestLocationRegionDto ToQuestLocation(this Region region)
     {
+        var administrativeAreaName = region.Type switch
+        {
+            RegionType.AdministrativeArea => region.Name,
+            RegionType.LocalArea => region.ParentRegion?.Name,
+            _ => null,
+        };
+        var countryName = region.Type switch
+        {
+            RegionType.Country => region.Name,
+            RegionType.AdministrativeArea => region.ParentRegion?.Name,
+            RegionType.LocalArea => region.ParentRegion?.ParentRegion?.Name,
+            _ => null,
+        };
+
         return new QuestLocationRegionDto(
             region.Id,
             region.Name,
-            region.Type.ToString());
+            region.Type.ToString(),
+            administrativeAreaName,
+            countryName);
+    }
+
+    private static int? AvailableSpots(this Quest quest)
+    {
+        if (!quest.Capacity.HasValue)
+            return null;
+
+        var activeParticipants = quest.Participations.Count(
+            participation => !participation.CancelledAt.HasValue);
+        return Math.Max(quest.Capacity.Value - activeParticipants, 0);
     }
 
     private static QuestCoverImageDto ToCoverDto(this QuestImage image)
@@ -60,6 +87,7 @@ internal static class DtoMapping
             quest.Difficulty.ToString(),
             ProgressionRules.XpForDifficulty(quest.Difficulty),
             quest.Capacity,
+            quest.AvailableSpots(),
             quest.StartAtUtc?.ToString("O"),
             quest.EndAtUtc?.ToString("O"),
             quest.LocationRegion is { IsActive: true }
@@ -86,6 +114,7 @@ internal static class DtoMapping
             quest.Difficulty.ToString(),
             ProgressionRules.XpForDifficulty(quest.Difficulty),
             quest.Capacity,
+            quest.AvailableSpots(),
             quest.StartAtUtc?.ToString("O"),
             quest.EndAtUtc?.ToString("O"),
             quest.LocationRegion is { IsActive: true }

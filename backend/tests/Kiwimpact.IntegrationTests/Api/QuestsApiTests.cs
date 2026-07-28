@@ -195,11 +195,12 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
 
         // ── Must exclude ──────────────────────────────────────────────
         Guid nullRegionQuestId = new("11111111-1111-4111-8111-11111111110C");
-        // This Published Quest is assigned to NewZealand Country, not Auckland.
-        Guid nzCountryQuestId = new("11111111-1111-4111-8111-11111111110F");
+        // The Mount Roskill seed is correctly classified under Puketāpapa,
+        // which is an Auckland descendant.
+        Guid puketapapaQuestId = new("11111111-1111-4111-8111-11111111110F");
 
         Assert.DoesNotContain(nullRegionQuestId, resultIds);
-        Assert.DoesNotContain(nzCountryQuestId, resultIds);
+        Assert.Contains(puketapapaQuestId, resultIds);
 
         // All returned items must have a non-null locationRegion.
         Assert.All(page.Items, q => Assert.NotNull(q.LocationRegion));
@@ -509,7 +510,7 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
         var expectedProperties = new HashSet<string>(StringComparer.Ordinal)
         {
             "id", "title", "description", "category", "sourceType",
-            "registrationMode", "difficulty", "xpAward", "capacity",
+            "registrationMode", "difficulty", "xpAward", "capacity", "availableSpots",
             "startAtUtc", "endAtUtc", "locationRegion", "locationDescription",
             "latitude", "longitude", "coverImage"
         };
@@ -530,6 +531,8 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal(JsonValueKind.Number, firstQuest.GetProperty("xpAward").ValueKind);
         Assert.Equal(50, firstQuest.GetProperty("xpAward").GetInt32());
         Assert.True(firstQuest.GetProperty("capacity").ValueKind is JsonValueKind.Null or JsonValueKind.Number);
+        Assert.Equal(JsonValueKind.Number, firstQuest.GetProperty("availableSpots").ValueKind);
+        Assert.Equal(30, firstQuest.GetProperty("availableSpots").GetInt32());
         Assert.True(firstQuest.GetProperty("startAtUtc").ValueKind is JsonValueKind.Null or JsonValueKind.String);
         Assert.True(firstQuest.GetProperty("endAtUtc").ValueKind is JsonValueKind.Null or JsonValueKind.String);
         Assert.True(firstQuest.GetProperty("locationDescription").ValueKind is JsonValueKind.Null or JsonValueKind.String);
@@ -541,13 +544,18 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal(JsonValueKind.Object, locRegion.ValueKind);
         var locProps = new HashSet<string>(StringComparer.Ordinal);
         foreach (var p in locRegion.EnumerateObject()) locProps.Add(p.Name);
-        var expectedLocProps = new HashSet<string>(StringComparer.Ordinal) { "id", "name", "type" };
+        var expectedLocProps = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "id", "name", "type", "administrativeAreaName", "countryName"
+        };
         Assert.Equal(expectedLocProps.Count, locProps.Count);
         Assert.Subset(expectedLocProps, locProps);
         Assert.Subset(locProps, expectedLocProps);
         Assert.Equal(JsonValueKind.String, locRegion.GetProperty("id").ValueKind);
         Assert.Equal(JsonValueKind.String, locRegion.GetProperty("name").ValueKind);
         Assert.Equal(JsonValueKind.String, locRegion.GetProperty("type").ValueKind);
+        Assert.Equal("Auckland", locRegion.GetProperty("administrativeAreaName").GetString());
+        Assert.Equal("New Zealand", locRegion.GetProperty("countryName").GetString());
 
         // ── Nested coverImage shape ──────────────────────────────────
         var cover = firstQuest.GetProperty("coverImage");
@@ -584,7 +592,7 @@ public sealed class QuestsApiTests : IClassFixture<CustomWebApplicationFactory>
         var expectedProperties = new HashSet<string>(StringComparer.Ordinal)
         {
             "id", "title", "description", "category", "sourceType",
-            "registrationMode", "difficulty", "xpAward", "capacity",
+            "registrationMode", "difficulty", "xpAward", "capacity", "availableSpots",
             "startAtUtc", "endAtUtc", "locationRegion", "locationDescription",
             "latitude", "longitude", "coverImage", "externalSourceUrl",
             "sourceCheckedAt"

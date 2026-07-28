@@ -386,6 +386,53 @@ public sealed class QuestParticipationApiTests
     }
 
     [Fact]
+    public async Task MyParticipations_ReturnsLoadedCapacityAndLocationHierarchy()
+    {
+        var creator = await CreateAuthenticatedClientAsync(AppRoles.Organizer);
+        var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var otherActive = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var otherCancelled = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var quest = await SeedQuestAsync(
+            creator.UserId,
+            capacity: 5,
+            locationRegionId: RegionSeed.PuketapapaId,
+            locationDescription:
+                "Mount Roskill War Memorial Park, 13 May Road, Mount Roskill, Auckland 1041, New Zealand");
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            (await PostWithCsrfAsync(actor.Client, JoinPath(quest.Id))).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Created,
+            (await PostWithCsrfAsync(otherActive.Client, JoinPath(quest.Id))).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Created,
+            (await PostWithCsrfAsync(otherCancelled.Client, JoinPath(quest.Id))).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.OK,
+            (await PostWithCsrfAsync(otherCancelled.Client, CancelPath(quest.Id))).StatusCode);
+
+        var response = await actor.Client.GetAsync(
+            "/api/v1/users/me/participations?status=active",
+            TestContext.Current.CancellationToken);
+        var responseBody = await response.Content.ReadAsStringAsync(
+            TestContext.Current.CancellationToken);
+        Assert.True(
+            response.IsSuccessStatusCode,
+            $"Expected a successful My Quests response, received {(int)response.StatusCode}: {responseBody}");
+        var result = JsonSerializer.Deserialize<MyQuestParticipationListItemDto[]>(
+            responseBody,
+            JsonOptions);
+
+        var item = Assert.Single(result!);
+        Assert.Equal(3, item.Quest.AvailableSpots);
+        Assert.NotNull(item.Quest.LocationRegion);
+        Assert.Equal("Puketāpapa", item.Quest.LocationRegion.Name);
+        Assert.Equal("Auckland", item.Quest.LocationRegion.AdministrativeAreaName);
+        Assert.Equal("New Zealand", item.Quest.LocationRegion.CountryName);
+    }
+
+    [Fact]
     public async Task MyParticipations_RejectsUnknownStatusWithoutLeakingRows()
     {
         var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
@@ -564,7 +611,9 @@ public sealed class QuestParticipationApiTests
         QuestStatus status = QuestStatus.Published,
         RegistrationMode registrationMode = RegistrationMode.Native,
         int? capacity = 10,
-        DateTimeOffset? endAt = null)
+        DateTimeOffset? endAt = null,
+        Guid? locationRegionId = null,
+        string? locationDescription = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
@@ -581,8 +630,8 @@ public sealed class QuestParticipationApiTests
                 capacity,
                 now.AddDays(-1),
                 effectiveEnd,
-                null,
-                null,
+                locationRegionId,
+                locationDescription,
                 registrationMode == RegistrationMode.External
                     ? "https://example.test/participation"
                     : null),

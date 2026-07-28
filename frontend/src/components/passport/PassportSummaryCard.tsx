@@ -21,11 +21,9 @@ export default function PassportSummaryCard({
   streakWeeks?: number;
 }) {
   return (
-    <div className="kiwi-topography overflow-hidden rounded-[1.25rem] bg-primary p-5 text-primary-content shadow-sm sm:p-6">
-      <div className="grid gap-5 sm:grid-cols-[auto_1fr] sm:items-center">
-        <span className="grid size-16 place-items-center rounded-[1rem] border border-white/20 bg-white/12">
-          <RankCrest rankTitle={progression.rankTitle} size={50} />
-        </span>
+    <div className="kiwi-topography overflow-hidden rounded-[1.5rem] bg-primary p-5 text-primary-content shadow-sm sm:p-6">
+      <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)_minmax(12rem,auto)] sm:items-center">
+        <RankCrest rankTitle={progression.rankTitle} size={64} />
         <div>
           {displayName && <p className="kiwi-display text-2xl text-white">{displayName}</p>}
           <div className="mt-1 flex flex-wrap items-center gap-2 text-base">
@@ -60,11 +58,11 @@ export default function PassportSummaryCard({
             )}
           </div>
         </div>
-      </div>
-      <div className="mt-5 rounded-xl border border-white/15 bg-white/10 p-3 [&_.progress]:bg-white/20 [&_.progress::-webkit-progress-value]:bg-accent">
-        <p className="kiwi-stat-label !text-primary-content/65">Level progress</p>
-        <div className="mt-3 text-primary-content/85">
-          <LevelProgress progression={progression} />
+        <div className="rounded-xl border border-white/15 bg-white/10 p-3 [&_.progress]:bg-white/20 [&_.progress::-webkit-progress-value]:bg-accent">
+          <p className="kiwi-stat-label !text-primary-content/65">XP progress</p>
+          <div className="mt-3 text-primary-content/85">
+            <LevelProgress progression={progression} />
+          </div>
         </div>
       </div>
       {passport?.homeCommunity && (

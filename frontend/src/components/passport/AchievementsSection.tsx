@@ -104,7 +104,7 @@ export default function AchievementsSection() {
       earned.data.map((item) => [item.achievementId, item]),
     );
     content = (
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {catalog.data.map((catalogItem) => {
           const earnedItem = earnedById.get(catalogItem.id);
           return earnedItem === undefined ? (

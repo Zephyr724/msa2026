@@ -4,6 +4,7 @@ import {
   IdCard,
   LogIn,
   LogOut,
+  ShieldCheck,
   Target,
   Trophy,
   type LucideIcon,
@@ -121,8 +122,17 @@ export default function AppShell() {
                   </NavLink>
                 )}
                 {isAdmin && (
-                  <NavLink className="btn btn-ghost btn-sm" to="/admin/reviews">
-                    Review
+                  <NavLink
+                    aria-label="Review evidence"
+                    className={({ isActive }) =>
+                      `btn btn-ghost btn-sm btn-square sm:w-auto sm:gap-2 sm:px-3 ${
+                        isActive ? 'btn-active' : ''
+                      }`
+                    }
+                    to="/admin/reviews"
+                  >
+                    <ShieldCheck aria-hidden="true" className="size-4" />
+                    <span className="hidden sm:inline">Review</span>
                   </NavLink>
                 )}
                 <span

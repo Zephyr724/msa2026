@@ -115,6 +115,31 @@ The API starts on `http://localhost:5091` with the `http` launch profile. Port
 `5091` avoids the macOS Control Center/AirPlay service that commonly reserves
 port `5000`.
 
+#### Development test personas
+
+To enable the nine confirmed local test accounts, copy the ignored local
+configuration template and choose a development-only password:
+
+```bash
+cp src/Kiwimpact.Api/appsettings.Development.local.example.json \
+  src/Kiwimpact.Api/appsettings.Development.local.json
+```
+
+Set `DemoAccounts:Password` in the copied file, then restart the API. The file
+is ignored by Git, the seed is Development-only and idempotent, and environment
+variables remain authoritative. The seeded identities are:
+
+| Persona | Accounts | Accepted roles |
+|---------|----------|----------------|
+| Member | `member1@kiwimpact.test` through `member3@kiwimpact.test` | Member |
+| External organizer | `external1@kiwimpact.test` through `external3@kiwimpact.test` | Member + Organizer |
+| Admin | `admin1@kiwimpact.test` through `admin3@kiwimpact.test` | Member + Admin |
+
+“External” is a testing persona for externally sourced event management; it
+uses the accepted Organizer role rather than introducing a fourth
+authorization role. Never use these identities or their shared local password
+in production.
+
 **Selected public endpoints:**
 
 | Endpoint | URL |

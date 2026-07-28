@@ -109,11 +109,18 @@ function isNullableTimestamp(value: unknown): value is string | null {
 }
 
 function isLocationRegion(value: unknown): value is QuestLocationRegionDto {
+  const legacyKeys = ['id', 'name', 'type'];
+  const currentKeys = [
+    'id', 'name', 'type', 'administrativeAreaName', 'countryName',
+  ];
   return isRecord(value)
-    && hasExactKeys(value, ['id', 'name', 'type'])
+    && (hasExactKeys(value, legacyKeys) || hasExactKeys(value, currentKeys))
     && isUuid(value.id)
     && isString(value.name)
-    && isEnum(value.type, ['Country', 'AdministrativeArea', 'LocalArea']);
+    && isEnum(value.type, ['Country', 'AdministrativeArea', 'LocalArea'])
+    && (value.administrativeAreaName === undefined
+      || isNullableString(value.administrativeAreaName))
+    && (value.countryName === undefined || isNullableString(value.countryName));
 }
 
 function isNullableLocationRegion(value: unknown) {
