@@ -9,6 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:e2e": "cypress run",
+    "test:e2e:member": "cypress run --spec cypress/e2e/member-mission-passport.cy.ts",
+    "test:e2e:public": "cypress run --spec cypress/e2e/public-discovery.cy.ts",
     "type-check": "tsc -b"
   },
   "dependencies": {
@@ -31,6 +34,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "cypress": "^15.19.0",
     "jsdom": "^29.1.1",
     "oxlint": "^1.71.0",
     "tailwindcss": "^4.3.3",

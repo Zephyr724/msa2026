@@ -140,6 +140,20 @@ uses the accepted Organizer role rather than introducing a fourth
 authorization role. Never use these identities or their shared local password
 in production.
 
+With the frontend and API running, the authenticated Cypress journey accepts
+the same ignored Development-only credentials through process environment
+variables:
+
+```bash
+cd frontend
+CYPRESS_E2E_MEMBER_EMAIL=member1@kiwimpact.test \
+  CYPRESS_E2E_MEMBER_PASSWORD='<your local DemoAccounts password>' \
+  npm run test:e2e:member
+```
+
+The command signs in through the real UI. It does not bypass authentication or
+place the password in tracked Cypress source.
+
 **Selected public endpoints:**
 
 | Endpoint | URL |
