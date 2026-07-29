@@ -19,6 +19,8 @@ public static class WeeklyStreakCalculator
                 DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(item, zone).DateTime)))
             .ToHashSet();
         var hasCurrent = activeWeeks.Contains(currentWeek);
+        // A member can retain the streak from the immediately preceding week
+        // while the current week is still in progress.
         var cursor = hasCurrent ? currentWeek : currentWeek.AddDays(-7);
         var count = 0;
         while (activeWeeks.Contains(cursor))

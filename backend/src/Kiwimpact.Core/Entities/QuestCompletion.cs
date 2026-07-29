@@ -17,6 +17,7 @@ public sealed class QuestCompletion
     public DateTimeOffset CompletedAt { get; internal set; }
     public DateTimeOffset? VerifiedAtUtc { get; internal set; }
     public QuestDifficulty RewardDifficultySnapshot { get; internal set; }
+    // Community attribution is immutable history, independent of later profile changes.
     public Guid? CommunityRegionIdAtCompletion { get; internal set; }
     public DateTimeOffset CreatedAt { get; internal set; }
     public DateTimeOffset UpdatedAt { get; internal set; }
@@ -127,6 +128,8 @@ public sealed class QuestCompletion
 
     public void ApproveEvidenceClaim(DateTimeOffset now)
     {
+        // Approval marks verification only; the repository awards XP in the
+        // same transaction so progression cannot diverge from this state.
         EnsurePendingClaim();
         var timestamp = now.ToUniversalTime();
         Status = QuestCompletionStatus.Verified;

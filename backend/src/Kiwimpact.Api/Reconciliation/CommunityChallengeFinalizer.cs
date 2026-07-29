@@ -28,6 +28,8 @@ public sealed class CommunityChallengeFinalizer
                 item.Status == ChallengeStatus.Active &&
                 item.PeriodEnd <= now)
             .OrderBy(item => item.PeriodEnd)
+            // Bound each pass so one delayed deployment cannot monopolize the
+            // hosted service scope while catching up.
             .Take(100)
             .ToListAsync(ct);
         var finalized = 0;
@@ -53,6 +55,8 @@ public sealed class CommunityChallengeFinalizer
                         item.AchievementId == challenge.RewardAchievementId.Value)
                     .Select(item => item.UserId)
                     .ToListAsync(ct);
+                // Repeated finalizer passes are safe: only contributors without
+                // an existing award receive a staged row.
                 foreach (var userId in userIds.Except(alreadyAwarded))
                 {
                     db.UserAchievements.Add(

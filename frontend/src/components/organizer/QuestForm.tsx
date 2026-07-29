@@ -169,6 +169,8 @@ export default function QuestForm({
   onSubmitted,
 }: QuestFormProps) {
   const [fields, setFields] = useState(initialValues);
+  // Serialized values provide a deterministic dirty check for this flat form
+  // model without maintaining a second flag for every field.
   const [baseline, setBaseline] = useState(() => JSON.stringify(initialValues));
   const [errors, setErrors] = useState<FieldErrors>({});
   const dirty = !readOnly && JSON.stringify(fields) !== baseline;
@@ -181,6 +183,8 @@ export default function QuestForm({
 
   useEffect(() => {
     const nextBaseline = JSON.stringify(initialValues);
+    // Accept a refreshed server version only while the form is pristine;
+    // silently replacing dirty fields would discard the organizer's work.
     if (!dirtyRef.current && nextBaseline !== baseline) {
       setFields(initialValues);
       setBaseline(nextBaseline);
@@ -204,6 +208,8 @@ export default function QuestForm({
   const regionOptions = useMemo(() => {
     const active = regionsQuery.data ?? [];
     const preserved = fields.locationRegion;
+    // Keep an inactive historical region visible on an existing Quest even
+    // though it is no longer available for new selections.
     return preserved && !active.some((region) => region.id === preserved.id)
       ? [...active, preserved]
       : active;
@@ -236,7 +242,8 @@ export default function QuestForm({
       setBaseline(nextBaseline);
       onSubmitted?.(quest);
     } catch {
-      // The owning page maps the typed API error into the form summary.
+      // The owning page maps typed API and concurrency errors into the shared
+      // form summary, so field state remains available for correction.
     }
   }
 

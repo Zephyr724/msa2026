@@ -63,6 +63,8 @@ export default function LeaderboardPage() {
   const appliedProfileDefault = useRef(false);
 
   useEffect(() => {
+    // Apply the member's community once profile data arrives, but never
+    // override a scope supplied explicitly in a shared URL.
     if (
       !appliedProfileDefault.current
       && profile.isSuccess

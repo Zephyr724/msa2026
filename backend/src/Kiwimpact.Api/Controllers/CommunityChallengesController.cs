@@ -102,6 +102,8 @@ public sealed class CommunityChallengesController : ControllerBase
         CancellationToken ct)
     {
         var progress = await ReadProgressAsync(challenge, ct);
+        // Use the same privacy threshold as leaderboards so related community
+        // surfaces cannot reveal a protected contributor count indirectly.
         var protectedCount =
             progress.Contributors < LeaderboardService.PrivacyThreshold;
         return new CommunityChallengeDto(
@@ -124,6 +126,8 @@ public sealed class CommunityChallengesController : ControllerBase
         CommunityChallenge challenge,
         CancellationToken ct)
     {
+        // Community attribution is the immutable award-time snapshot, and the
+        // half-open period prevents a boundary award counting twice.
         var query = _db.XpTransactions.AsNoTracking().Where(item =>
             item.CommunityRegionIdAtAward == challenge.LocalAreaRegionId &&
             item.CreatedAt >= challenge.PeriodStart &&
@@ -189,6 +193,8 @@ public sealed class AdminCommunityChallengesController : ControllerBase
         }
         catch (DbUpdateException)
         {
+            // The database constraint remains authoritative if concurrent
+            // create requests both pass the friendly preflight check.
             return ConflictProblem("The challenge conflicts with an existing Active challenge.");
         }
     }

@@ -126,6 +126,8 @@ function ChallengeAdminPanel({ challenges }: { challenges: CommunityChallenge[] 
     event.preventDefault();
     setMessage(null);
     const input = {
+      // datetime-local has no zone. The Date conversion interprets the
+      // organizer's local value and serializes an unambiguous UTC instant.
       localAreaRegionId: regionId,
       periodStartUtc: new Date(start).toISOString(),
       periodEndUtc: new Date(end).toISOString(),
@@ -210,6 +212,8 @@ function ChallengeAdminPanel({ challenges }: { challenges: CommunityChallenge[] 
 
 function toLocalInput(value: string) {
   const date = new Date(value);
+  // Offset the UTC value before slicing because datetime-local expects a
+  // zone-less wall-clock string rather than an ISO `Z` timestamp.
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
 }

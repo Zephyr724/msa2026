@@ -67,6 +67,8 @@ public sealed class QuestManagementService : IQuestManagementService
         await using var transaction = await _repository.BeginTransactionAsync(ct);
         try
         {
+            // Serialize edits to the same Quest so the version check and any
+            // completion-code revocation are based on one consistent row.
             if (!await _repository.LockQuestAsync(id, ct))
                 throw Error(QuestManagementError.NotFound, "Quest not found.");
 
@@ -81,6 +83,9 @@ public sealed class QuestManagementService : IQuestManagementService
                 command.CoverImage is null ? null : ToCoverDetails(command.CoverImage),
                 DateTimeOffset.UtcNow);
 
+            // A code's validity window is derived from the Quest schedule.
+            // Keeping an old code after a schedule change could extend access
+            // beyond the newly accepted dates.
             if (quest.StartAtUtc != originalStartAtUtc || quest.EndAtUtc != originalEndAtUtc)
                 await _repository.RevokeActiveCompletionCodesAsync(quest.Id, ct);
 
@@ -140,6 +145,8 @@ public sealed class QuestManagementService : IQuestManagementService
         bool confirmActiveParticipants,
         CancellationToken ct = default)
     {
+        // Confirmation is currently an API acknowledgement rather than a
+        // domain rule; the entity transition remains the source of truth.
         _ = confirmActiveParticipants;
         return ChangeStatusAsync(
             actorId, isAdmin, id, version, quest => quest.Cancel(DateTimeOffset.UtcNow), ct);
@@ -235,6 +242,8 @@ public sealed class QuestManagementService : IQuestManagementService
 
     private static T ParseEnum<T>(string? value, string field) where T : struct, Enum
     {
+        // Accept stable enum names only. Numeric strings would bind to enum
+        // ordinals and make the public contract depend on internal numbering.
         if (string.IsNullOrWhiteSpace(value) ||
             long.TryParse(value, out _) ||
             ulong.TryParse(value, out _) ||

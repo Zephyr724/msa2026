@@ -101,6 +101,8 @@ public sealed class AuthController : ControllerBase
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         try
         {
+            // Identity, role membership, and the domain profile form one
+            // account boundary and must either all commit or all roll back.
             var createResult = await _userManager.CreateAsync(user, request.Password);
             if (!createResult.Succeeded)
             {
@@ -163,6 +165,8 @@ public sealed class AuthController : ControllerBase
         [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken,
         CancellationToken ct)
     {
+        // Always return the same response so this endpoint cannot be used to
+        // discover whether an email address has an account.
         var user = await _userManager.FindByEmailAsync(request.Email.Trim());
         if (user is not null && !await _userManager.IsEmailConfirmedAsync(user))
             await SendConfirmationAsync(user, ct);
@@ -178,6 +182,8 @@ public sealed class AuthController : ControllerBase
         [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken,
         CancellationToken ct)
     {
+        // Eligibility affects email delivery only; the HTTP response remains
+        // indistinguishable for unknown, unconfirmed, and confirmed accounts.
         var user = await _userManager.FindByEmailAsync(request.Email.Trim());
         if (user is not null && await _userManager.IsEmailConfirmedAsync(user))
         {
@@ -358,6 +364,8 @@ public sealed class AuthController : ControllerBase
         }
         catch (Exception exception)
         {
+            // Registration remains successful even when delivery is
+            // temporarily unavailable; the member can request another email.
             _logger.LogError(
                 exception,
                 "Confirmation email delivery failed for account {UserId}.",

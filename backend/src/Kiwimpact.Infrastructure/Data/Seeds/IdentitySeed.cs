@@ -95,6 +95,8 @@ public static class IdentitySeed
         if (!AppRoles.All.Contains(account.Role, StringComparer.Ordinal))
             throw new InvalidOperationException("Configured demo account role is invalid.");
 
+        // Seeding reconciles existing demo identities as well as creating new
+        // ones, keeping repeated development starts deterministic.
         var normalizedEmail = account.Email.Trim();
         var user = await userManager.FindByEmailAsync(normalizedEmail);
 
@@ -141,6 +143,8 @@ public static class IdentitySeed
 
             IReadOnlyList<string> desiredRoles = account.Role == AppRoles.Member
                 ? [AppRoles.Member]
+                // Organizer and Admin personas retain the baseline Member
+                // capabilities in addition to their elevated role.
                 : [AppRoles.Member, account.Role];
             var currentRoles = await userManager.GetRolesAsync(user);
             var rolesToRemove = currentRoles

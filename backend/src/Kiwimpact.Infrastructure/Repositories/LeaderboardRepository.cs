@@ -38,6 +38,8 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
             transactions = transactions.Where(item => item.CreatedAt >= fromUtc.Value);
         if (communityRegionId.HasValue)
         {
+            // Community identity is captured when XP is awarded so later
+            // profile changes do not rewrite historical leaderboard credit.
             transactions = transactions.Where(
                 item => item.CommunityRegionIdAtAward == communityRegionId.Value);
         }
@@ -76,6 +78,7 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
                 })
             .OrderByDescending(row => row.TotalXp)
             .ThenByDescending(row => row.CompletionCount)
+            // Stable tie-breakers keep pagination deterministic across reads.
             .ThenBy(row => row.DisplayName.ToLower())
             .ThenBy(row => row.UserId)
             .Skip(skip)
@@ -110,6 +113,7 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
             .Where(region => region.IsActive && region.Type == RegionType.LocalArea);
         if (aucklandOnly)
         {
+            // The Auckland view ranks Local Areas directly.
             localAreas = localAreas.Where(
                 region => region.ParentRegionId == RegionSeed.AucklandId);
 
@@ -135,6 +139,8 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
                 region.Type == RegionType.AdministrativeArea &&
                 region.ParentRegionId == RegionSeed.NewZealandId);
 
+        // The nationwide view rolls Local Area contributions up to their
+        // parent administrative area before ranking communities.
         return await transactions
             .Join(
                 localAreas,

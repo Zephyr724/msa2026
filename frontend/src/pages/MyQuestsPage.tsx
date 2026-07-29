@@ -67,6 +67,7 @@ function readView(value: string | null, legacy: string | null): MissionView {
     || value === 'completed'
     || value === 'cancelled'
   ) return value;
+  // Preserve links created before the Mission Board adopted the `view` key.
   if (legacy === 'cancelled') return 'cancelled';
   return 'active';
 }
@@ -101,6 +102,8 @@ export default function MyQuestsPage() {
   const cancelledParticipations = participations.data?.filter(
     (item) => item.status === 'Cancelled',
   ) ?? [];
+  // A participation is classified from authoritative completion and claim
+  // state first, then split by whether its scheduled start has arrived.
   const active = activeParticipations.filter((item) => {
     const completion = completionByQuest.get(item.quest.id);
     const claim = claimByQuest.get(item.quest.id);
@@ -138,6 +141,8 @@ export default function MyQuestsPage() {
     (challenge) => challenge.localArea.id === profile.data?.homeCommunity?.id,
   ) ?? challenges.data?.[0];
   const priorityAction = ready[0]
+    // Prefer the action closest to verified impact, followed by work already
+    // in progress, before suggesting a new Quest.
     ? {
         eyebrow: 'Ready to complete',
         title: ready[0].quest.title,

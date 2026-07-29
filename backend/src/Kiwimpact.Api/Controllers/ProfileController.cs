@@ -73,6 +73,8 @@ public sealed class ProfileController : ControllerBase
 
         try
         {
+            // The domain entity applies the cooldown only when community
+            // identity changes; the visibility preference remains editable.
             profile.UpdateCommunity(
                 request.HomeCommunityRegionId,
                 request.ShowCommunityOnPassport,
@@ -91,6 +93,8 @@ public sealed class ProfileController : ControllerBase
 
     private static MyProfileDto ToDto(Kiwimpact.Core.Entities.UserProfile profile)
     {
+        // Expose the next permitted instant so the client can explain the
+        // cooldown without reproducing its enforcement logic.
         var changeAvailableAt = profile.HomeCommunityRegionId.HasValue &&
             profile.LastCommunityChangeAt.HasValue
                 ? profile.LastCommunityChangeAt.Value

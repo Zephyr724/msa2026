@@ -63,6 +63,8 @@ public sealed class CommunityChallenge
         if (Status != ChallengeStatus.Active)
             throw new InvalidOperationException("Only an Active challenge can be edited.");
         if (timestamp >= PeriodStart || currentProgress > 0)
+            // Freezing competitive terms after launch keeps existing
+            // contributions measured against the rules members first saw.
             throw new InvalidOperationException(
                 "A started or contributed challenge can only be cancelled.");
         if (targetValue < currentProgress)

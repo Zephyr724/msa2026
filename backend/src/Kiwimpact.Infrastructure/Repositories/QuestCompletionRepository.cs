@@ -45,6 +45,8 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
 
         try
         {
+            // Rotation is atomic: consumers can never observe two active codes
+            // for the same Quest, even under concurrent organizer requests.
             var quest = await LockQuestAsync(questId, ct)
                 ?? throw Error(QuestCompletionError.NotFound, "Quest not found.");
             EnsureManagementAccess(quest, actorId, isAdmin);
@@ -149,6 +151,8 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
 
         try
         {
+            // The Quest and member profile locks serialize both the one-award
+            // rule and progression updates for concurrent redemption attempts.
             var quest = await LockQuestAsync(questId, ct)
                 ?? throw Error(QuestCompletionError.NotFound, "Quest not found.");
             QuestCompletionEligibility.EnsureRedemptionQuest(quest, actorId);
@@ -264,6 +268,8 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
             .Where(item =>
                 item.UserId == actorId &&
                 item.QuestId == questId)
+            // Surface the most consequential state when multiple historical
+            // attempts exist for the same Quest.
             .OrderBy(item => item.Status == QuestCompletionStatus.Verified ? 0 :
                 item.Status == QuestCompletionStatus.Pending ? 1 :
                 item.Status == QuestCompletionStatus.SelfReported ? 2 : 3)
@@ -391,6 +397,8 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
                 item.Method == CompletionMethod.EvidenceClaim, ct)
             ?? throw Error(QuestCompletionError.NotFound, "Claim not found.");
         if (!isAdmin && completion.UserId != actorId)
+            // Hide ownership information by returning the same result as a
+            // genuinely missing claim.
             throw Error(QuestCompletionError.NotFound, "Claim not found.");
         return ToClaimRecord(
             completion,
@@ -487,6 +495,8 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
         await using var transaction = await _db.Database.BeginTransactionAsync(ct);
         try
         {
+            // Locking the claim makes review single-use and keeps approval,
+            // evidence retention, XP, and achievement awards atomic.
             var completion = await _db.QuestCompletions
                 .FromSqlInterpolated($$"""
                     SELECT c.*, c.xmin
@@ -577,6 +587,7 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
             throw Error(QuestCompletionError.CancelledOrArchived,
                 "Only a published Quest can be completed.");
         if (quest.RegistrationMode != RegistrationMode.Native)
+            // External registration has no local participation row to require.
             return null;
         var participationId = await _db.QuestParticipations
             .Where(item => item.UserId == actorId &&

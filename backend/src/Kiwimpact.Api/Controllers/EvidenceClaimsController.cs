@@ -154,6 +154,8 @@ public sealed class AdminEvidenceClaimsController : ControllerBase
                 claimId, actorId, request.Approve, request.ReviewNote, ct);
             if (request.Approve)
             {
+                // Approval commits XP before this event is emitted; clients can
+                // safely invalidate and read the new leaderboard projection.
                 await _hub.Clients.All.SendAsync(
                     LeaderboardHub.ImpactChangedEvent,
                     ct);

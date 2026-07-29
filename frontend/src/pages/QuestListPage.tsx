@@ -36,6 +36,8 @@ const SORT_OPTIONS = [
 const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
 
 function parseFiltersFromParams(sp: URLSearchParams): QuestFilters {
+  // Discovery filters live in the URL so a filtered result can be refreshed,
+  // bookmarked, or shared without a second client-side source of truth.
   const filters: QuestFilters = {};
   const page = sp.get('page');
   if (page) filters.page = Number(page);
@@ -60,6 +62,7 @@ function parseFiltersFromParams(sp: URLSearchParams): QuestFilters {
 
 function filtersToParams(filters: QuestFilters): URLSearchParams {
   const params = new URLSearchParams();
+  // Defaults are omitted to keep shared discovery links compact and stable.
   if (filters.page && filters.page > 1) params.set('page', String(filters.page));
   if (filters.pageSize && filters.pageSize !== 12) {
     params.set('pageSize', String(filters.pageSize));
@@ -105,6 +108,8 @@ export default function QuestListPage() {
       selectedMapQuestId !== null
       && !data?.items.some((quest) => quest.id === selectedMapQuestId)
     ) {
+      // A page or filter change can remove the selected marker; clear it so
+      // the map and adjacent result list cannot point at different Quests.
       setSelectedMapQuestId(null);
     }
   }, [data?.items, selectedMapQuestId]);
@@ -113,6 +118,8 @@ export default function QuestListPage() {
     const next = {
       ...parseFiltersFromParams(searchParams),
       ...patch,
+      // Any filter or sort change starts from the first page unless the caller
+      // is explicitly performing pagination.
       page: patch.page ?? 1,
     };
     setSearchParams(filtersToParams(next));

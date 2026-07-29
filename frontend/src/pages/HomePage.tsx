@@ -77,6 +77,8 @@ export default function HomePage() {
   const featured = useQuestList({ page: 1, pageSize: 3, sortBy: 'startAt' });
   const challenges = useCommunityChallenges();
   const profile = useMyProfile(Boolean(auth.data));
+  // Prefer the signed-in member's community goal; guests and members without
+  // a Home Community receive the first active public challenge.
   const primaryChallenge = challenges.data?.find(
     (challenge) => challenge.localArea.id === profile.data?.homeCommunity?.id,
   ) ?? challenges.data?.[0];

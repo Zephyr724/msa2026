@@ -63,6 +63,8 @@ export function useUpdateQuestMutation() {
 function useLifecycleInvalidation() {
   const queryClient = useQueryClient();
   const onSuccess = (quest: { id: string }) => {
+    // Lifecycle changes affect organizer views and public discovery, so update
+    // the returned detail immediately and refresh every dependent projection.
     queryClient.setQueryData(organizerQuestKeys.detail(quest.id), quest);
     void queryClient.invalidateQueries({ queryKey: organizerQuestKeys.all, exact: true });
     void queryClient.invalidateQueries({ queryKey: ['quests'] });
@@ -70,6 +72,8 @@ function useLifecycleInvalidation() {
   };
   const onError = (error: Error) => {
     if (error instanceof ApiError && error.status === 409) {
+      // A version conflict means the cached list is stale even though this
+      // mutation did not succeed.
       void queryClient.invalidateQueries({ queryKey: organizerQuestKeys.all, exact: true });
     }
   };

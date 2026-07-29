@@ -34,6 +34,8 @@ public sealed class LeaderboardService : ILeaderboardService
         if (resolvedPageSize > MaximumPageSize)
             throw Invalid($"pageSize must be between 1 and {MaximumPageSize}.");
 
+        // Publishing while verified completions are still awaiting XP would
+        // expose a leaderboard that is known to be internally inconsistent.
         if (await _xpLedgerRepository.HasRewardPendingCompletionsAsync(ct))
             throw new LeaderboardException(
                 LeaderboardError.NotReady,
@@ -48,6 +50,8 @@ public sealed class LeaderboardService : ILeaderboardService
                     "Sign in to view your community leaderboard.");
             communityId = await _leaderboardRepository
                 .GetHomeCommunityIdAsync(actorId.Value, ct);
+            // Members without a selected community still receive a useful,
+            // non-personal default instead of an empty community response.
             if (!communityId.HasValue)
                 resolvedScope = "auckland";
         }
@@ -63,6 +67,8 @@ public sealed class LeaderboardService : ILeaderboardService
             resolvedScope == "myCommunity" &&
             result.ParticipantCount < PrivacyThreshold;
 
+        // Suppress the complete local result, including its participant count,
+        // because even aggregate values can identify members in small groups.
         var rows = privacyProtected
             ? []
             : result.Rows
@@ -108,6 +114,8 @@ public sealed class LeaderboardService : ILeaderboardService
             .Select(row => new
             {
                 Row = row,
+                // Community ranking rewards participation density rather than
+                // allowing the largest population to dominate by raw volume.
                 Ratio = row.ActiveContributors == 0
                     ? 0m
                     : decimal.Divide(
@@ -119,6 +127,8 @@ public sealed class LeaderboardService : ILeaderboardService
             .ThenBy(item => item.Row.RegionName)
             .Select((item, index) =>
             {
+                // The community may retain its rank and completion total, but
+                // contributor counts and ratios remain private below threshold.
                 var protectedRow =
                     item.Row.ActiveContributors < PrivacyThreshold;
                 return new RankedCommunityLeaderboardRow(
@@ -168,6 +178,8 @@ public sealed class LeaderboardService : ILeaderboardService
     {
         if (period == "allTime")
             return null;
+        // Product periods follow Auckland calendar boundaries. Converting the
+        // local midnight to UTC also preserves daylight-saving transitions.
         var zone = TimeZoneInfo.FindSystemTimeZoneById("Pacific/Auckland");
         var localNow = TimeZoneInfo.ConvertTime(now ?? DateTimeOffset.UtcNow, zone);
         var localDate = DateOnly.FromDateTime(localNow.DateTime);

@@ -70,12 +70,15 @@ export default function QuestCompletionPanel({
     setCodeInput('');
     setValidationError(null);
     setSubmitError(null);
+    // Restore focus after React removes the dialog from the tree.
     queueMicrotask(() => triggerRef.current?.focus());
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (pending) return;
+    // Normalize the display-friendly form before applying the same alphabet
+    // and length constraint enforced by the server.
     const normalized = codeInput.trim().toUpperCase().replace(/[-\s]/g, '');
     if (!NORMALIZED_COMPLETION_CODE_PATTERN.test(normalized)) {
       setValidationError('Enter the 10-character code from your Quest organizer.');
@@ -89,6 +92,8 @@ export default function QuestCompletionPanel({
       await redeem(normalized);
       setCodeInput('');
       setDialogOpen(false);
+      // The reward overlay opens only after the mutation has refreshed the
+      // authoritative completion and progression queries.
       setRewardOpen(true);
     } catch (error) {
       setSubmitError(redeemErrorMessage(error));

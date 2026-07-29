@@ -64,6 +64,8 @@ public sealed class AchievementRepository : IAchievementRepository
             return false;
 
         var activeDefinitions = activeCatalogRows
+            // A seeded row is eligible only when both its stable identifier and
+            // code still match the in-process definition catalog.
             .Select(row => AchievementCatalog.FindByCode(row.Code))
             .Where(definition => definition is not null)
             .Select(definition => definition!)

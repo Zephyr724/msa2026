@@ -27,6 +27,8 @@ public sealed class QuestParticipationRepository : IQuestParticipationRepository
 
         try
         {
+            // Lock the Quest before counting active participants. This makes
+            // concurrent joins serialize around the capacity decision.
             var quest = await _db.Quests
                 .FromSqlInterpolated($$"""
                     SELECT q.*, q.xmin
@@ -92,6 +94,8 @@ public sealed class QuestParticipationRepository : IQuestParticipationRepository
             })
         {
             await transaction.RollbackAsync(ct);
+            // The filtered unique index is the final guard when two requests
+            // race before either can observe the other's active participation.
             throw Error(
                 QuestParticipationError.AlreadyParticipating,
                 "You are already participating in this Quest.");
@@ -199,6 +203,9 @@ public sealed class QuestParticipationRepository : IQuestParticipationRepository
         MyQuestParticipationFilter filter,
         CancellationToken ct = default)
     {
+        // Identity resolution keeps the repeated Quest graph coherent without
+        // tracking it, while split queries avoid a large cartesian join across
+        // images, regions, and participation history.
         var history = await _db.QuestParticipations
             .AsNoTrackingWithIdentityResolution()
             .Where(item => item.UserId == actorId)
@@ -215,6 +222,8 @@ public sealed class QuestParticipationRepository : IQuestParticipationRepository
             .ThenByDescending(item => item.Id)
             .ToListAsync(ct);
 
+        // Rejoining creates a new history row, so the latest row represents
+        // the current lifecycle state for each Quest.
         var latestByQuest = history
             .GroupBy(item => item.QuestId)
             .Select(group => group

@@ -84,6 +84,8 @@ export default function QuestLifecycleActions({
     if (!action) return;
     try {
       if (action === 'publish') {
+        // Every mutation carries the displayed version; stale tabs receive a
+        // conflict instead of overwriting a newer lifecycle decision.
         await publish.mutateAsync({ id: quest.id, version: quest.version });
       } else if (action === 'cancel') {
         await cancel.mutateAsync({
@@ -127,6 +129,8 @@ export default function QuestLifecycleActions({
   }
 
   const availableActions: Action[] = quest.status === 'Draft'
+    // This mirrors valid server transitions for discoverability; the backend
+    // remains authoritative if dates or concurrent changes make one invalid.
     ? ['publish', 'delete']
     : quest.status === 'Published'
       ? ['cancel', 'archive']

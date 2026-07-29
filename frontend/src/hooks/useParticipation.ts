@@ -42,6 +42,8 @@ function useAuthoritativeParticipationSync(questId: string) {
   const queryClient = useQueryClient();
 
   const sync = () => Promise.all([
+    // Joining changes the member's history, eligibility, and public capacity
+    // projection, so all three query families must move together.
     queryClient.invalidateQueries({
       queryKey: participationKeys.all,
     }),
@@ -57,6 +59,8 @@ function useAuthoritativeParticipationSync(questId: string) {
 
   const onError = (error: Error) => {
     if (error instanceof ApiError && error.status === 409) {
+      // Capacity and active participation may have changed concurrently;
+      // replace the optimistic screen state with fresh server decisions.
       return sync();
     }
     return undefined;
