@@ -1,7 +1,15 @@
-import { CheckCircle2, Clock3, NotebookPen, XCircle, Zap } from 'lucide-react';
+import {
+  Award,
+  Check,
+  Info,
+  Share2,
+  Zap,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { CATEGORY_PRESENTATION } from '../../lib/questPresentation.ts';
 import CategoryEmblem from '../quest/CategoryEmblem.tsx';
 import type { PassportCompletionItem as PassportCompletionItemData } from '../../types/passport.ts';
+import QuestImage from '../quest/QuestImage.tsx';
 
 /**
  * One Verified completion-history row. XP renders only from the
@@ -17,39 +25,95 @@ export default function CompletionHistoryItem({
   item: PassportCompletionItemData;
 }) {
   const status = {
-    Verified: { Icon: CheckCircle2, label: 'Verified', className: 'text-success' },
-    Pending: { Icon: Clock3, label: 'Under review', className: 'text-warning' },
-    Rejected: { Icon: XCircle, label: 'Not verified', className: 'text-error' },
-    SelfReported: { Icon: NotebookPen, label: 'Self-reported', className: 'text-info' },
+    Verified: { label: 'Verified' },
+    Pending: { label: 'Under review' },
+    Rejected: { label: 'Not verified' },
+    SelfReported: { label: 'Self-reported' },
   }[item.status];
-  const StatusIcon = status.Icon;
+  const category = CATEGORY_PRESENTATION[item.questCategory];
+
   return (
-    <li className="kiwi-panel grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center">
-      <CategoryEmblem category={item.questCategory} size="md" />
-      <div className="min-w-0">
-        <p className="text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-primary">
-          {CATEGORY_PRESENTATION[item.questCategory].label}
-        </p>
-        <h3 className="mt-1 truncate text-lg">{item.questTitle}</h3>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-base-content/60">
-          {item.questStatus !== 'Published' && (
-            <span className="badge badge-outline">{item.questStatus}</span>
-          )}
-          <span className={`inline-flex items-center gap-1 font-bold ${status.className}`}>
-            <StatusIcon aria-hidden="true" className="size-3.5" />
-            {status.label}
+    <li className="overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100">
+      <article className="flex min-h-40">
+        <figure className="relative w-24 shrink-0 overflow-hidden bg-base-200 sm:w-28">
+          <QuestImage
+            alt={item.coverImage?.altText}
+            category={item.questCategory}
+            className="h-full w-full object-cover"
+            height={480}
+            loading="lazy"
+            source={item.coverImage?.imageUrl}
+            title={item.questTitle}
+            width={320}
+          />
+          <span
+            aria-label={status.label}
+            className={`absolute inset-0 m-auto grid size-8 place-items-center rounded-full text-white shadow-md ${
+              item.status === 'Verified' ? 'bg-primary/90' : 'bg-zinc-700/85'
+            }`}
+            role="img"
+          >
+            {item.status === 'Verified'
+              ? <Check aria-hidden="true" className="size-4" strokeWidth={2.5} />
+              : <Info aria-hidden="true" className="size-4" strokeWidth={2.5} />}
           </span>
-          <time dateTime={item.completedAtUtc}>
-            {new Date(item.completedAtUtc).toLocaleDateString()}
-          </time>
+        </figure>
+
+        <div className="flex min-w-0 flex-1 flex-col p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-sm leading-snug">{item.questTitle}</h3>
+              <time
+                className="mt-0.5 block text-xs text-muted-content"
+                dateTime={item.completedAtUtc}
+              >
+                {new Date(item.completedAtUtc).toLocaleDateString()}
+              </time>
+            </div>
+            {item.status === 'Verified' ? (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                <Zap aria-hidden="true" className="size-3" />
+                {item.xpAmount === null ? 'XP pending' : `${item.xpAmount} XP`}
+              </span>
+            ) : (
+              <span className="shrink-0 rounded-full border border-base-300 bg-base-200 px-2 py-0.5 text-xs font-semibold text-muted-content">
+                {item.status === 'SelfReported' ? 'Passport only' : status.label}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-bold ${category.softTone}`}>
+              <CategoryEmblem category={item.questCategory} size="xs" />
+              {category.label}
+            </span>
+            {item.questStatus !== 'Published' && (
+              <span className="rounded-full border border-base-300 bg-base-200 px-2 py-0.5 text-[0.68rem] font-semibold">
+                {item.questStatus}
+              </span>
+            )}
+            {item.achievementNames.map((name) => (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[0.68rem] font-semibold text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                key={name}
+              >
+                <Award aria-hidden="true" className="size-2.5" />
+                {name}
+              </span>
+            ))}
+          </div>
+
+          {item.status === 'Verified' && (
+            <Link
+              className="btn btn-outline btn-xs mt-auto w-fit rounded-full"
+              to={`/passport/share?completionId=${encodeURIComponent(item.completionId)}`}
+            >
+              <Share2 aria-hidden="true" className="size-3" />
+              Share
+            </Link>
+          )}
         </div>
-      </div>
-      {item.status === 'Verified' ? (
-        <span className="inline-flex items-center gap-1.5 text-sm font-extrabold">
-          <Zap aria-hidden="true" className="size-4 text-warning" />
-          {item.xpAmount === null ? 'XP pending' : `${item.xpAmount} XP`}
-        </span>
-      ) : <span className="text-xs font-bold text-base-content/50">No XP awarded</span>}
+      </article>
     </li>
   );
 }

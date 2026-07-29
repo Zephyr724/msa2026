@@ -107,7 +107,7 @@ describe('LeaderboardPage', () => {
     renderPage();
     await screen.findAllByText('Aroha');
     await user.click(screen.getByRole('tab', { name: 'Communities' }));
-    expect(await screen.findByText('Albert-Eden')).toBeInTheDocument();
+    expect((await screen.findAllByText('Albert-Eden')).length).toBeGreaterThanOrEqual(2);
   });
 
   it('contains server errors and retries', async () => {

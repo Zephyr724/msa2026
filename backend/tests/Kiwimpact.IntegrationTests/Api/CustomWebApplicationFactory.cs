@@ -71,6 +71,9 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 ["CommunityChallenges:FinalizerEnabled"] = "false",
                 ["Email:Enabled"] = "false",
                 ["Auth:RequireConfirmedEmail"] = "false",
+                // A developer's untracked Development.local settings must not
+                // inject demo personas/activity into isolated API fixtures.
+                ["Seed:DemoAccounts"] = "false",
             });
         });
 

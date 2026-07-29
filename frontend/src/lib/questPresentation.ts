@@ -26,38 +26,38 @@ export const CATEGORY_PRESENTATION: Record<QuestCategory, CategoryPresentation> 
   RestoreNature: {
     label: 'Restore Nature',
     Icon: Leaf,
-    tone: 'bg-emerald-600 text-white',
-    softTone: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+    tone: 'border-[#2F8F5B] bg-[#2F8F5B] text-white',
+    softTone: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   },
   ProtectWildlife: {
     label: 'Protect Wildlife',
     Icon: Bird,
-    tone: 'bg-blue-600 text-white',
-    softTone: 'border-sky-300 bg-sky-50 text-sky-800',
+    tone: 'border-[#3C72C9] bg-[#3C72C9] text-white',
+    softTone: 'border-sky-200 bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
   },
   CleanReduceWaste: {
     label: 'Clean & Reduce Waste',
     Icon: Recycle,
-    tone: 'bg-red-500 text-white',
-    softTone: 'border-orange-300 bg-orange-50 text-orange-800',
+    tone: 'border-[#C74444] bg-[#C74444] text-white',
+    softTone: 'border-orange-200 bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
   },
   GrowCompost: {
     label: 'Grow & Compost',
     Icon: Sprout,
-    tone: 'bg-lime-600 text-white',
-    softTone: 'border-lime-300 bg-lime-50 text-lime-800',
+    tone: 'border-[#6C8F2F] bg-[#6C8F2F] text-white',
+    softTone: 'border-lime-200 bg-lime-50 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300',
   },
   ObserveMeasure: {
     label: 'Observe & Measure',
     Icon: Binoculars,
-    tone: 'bg-violet-600 text-white',
-    softTone: 'border-violet-300 bg-violet-50 text-violet-800',
+    tone: 'border-[#6C63D9] bg-[#6C63D9] text-white',
+    softTone: 'border-violet-200 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
   },
   LearnShare: {
     label: 'Learn & Share',
     Icon: BookOpen,
-    tone: 'bg-fuchsia-600 text-white',
-    softTone: 'border-fuchsia-300 bg-fuchsia-50 text-fuchsia-800',
+    tone: 'border-[#C963D9] bg-[#C963D9] text-white',
+    softTone: 'border-pink-200 bg-pink-50 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
   },
 };
 
@@ -68,9 +68,9 @@ export const DIFFICULTY_LABELS: Record<QuestDifficulty, string> = {
 };
 
 export const DIFFICULTY_TONES: Record<QuestDifficulty, string> = {
-  Easy: 'border-emerald-300 bg-emerald-50 text-emerald-800',
-  Medium: 'border-amber-300 bg-amber-50 text-amber-800',
-  Hard: 'border-rose-300 bg-rose-50 text-rose-800',
+  Easy: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  Medium: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  Hard: 'border-red-200 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 export const SOURCE_LABELS: Record<QuestSourceType, string> = {
@@ -80,9 +80,9 @@ export const SOURCE_LABELS: Record<QuestSourceType, string> = {
 };
 
 export const SOURCE_TONES: Record<QuestSourceType, string> = {
-  OrganizerOwned: 'border-base-300 bg-base-200 text-base-content/75',
-  AdminCuratedExternal: 'border-violet-300 bg-violet-50 text-violet-800',
-  PlatformEcoChallenge: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+  OrganizerOwned: 'border-base-300 bg-secondary text-muted-content',
+  AdminCuratedExternal: 'border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  PlatformEcoChallenge: 'border-emerald-200 bg-emerald-50 text-primary dark:border-primary/40 dark:bg-emerald-900/30',
 };
 
 export const REGISTRATION_LABELS: Record<QuestRegistrationMode, string> = {
@@ -92,22 +92,34 @@ export const REGISTRATION_LABELS: Record<QuestRegistrationMode, string> = {
 };
 
 export const REGISTRATION_TONES: Record<QuestRegistrationMode, string> = {
-  Native: 'border-emerald-300 bg-emerald-50 text-emerald-800',
-  External: 'border-violet-300 bg-violet-50 text-violet-800',
-  NoneRequired: 'border-sky-300 bg-sky-50 text-sky-800',
+  Native: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+  External: 'border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  NoneRequired: 'border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400',
 };
 
 export function questHighlightTone(label: string): string {
   if (label.toLowerCase().includes('almost full')) {
-    return 'border-amber-300 bg-amber-50 text-amber-900';
+    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
   }
   if (label.toLowerCase().includes('recommend')) {
-    return 'border-violet-300 bg-violet-50 text-violet-900';
+    return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-700 dark:bg-violet-900/30 dark:text-violet-300';
   }
   if (label.toLowerCase().includes('first')) {
-    return 'border-emerald-300 bg-emerald-50 text-emerald-900';
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
   }
-  return 'border-emerald-300 bg-base-100/95 text-primary';
+  if (
+    label.toLowerCase().includes('ready')
+    || label.toLowerCase().includes('completion available')
+  ) {
+    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+  }
+  if (label.toLowerCase().includes('not verified')) {
+    return 'border-red-200 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-400';
+  }
+  if (label.toLowerCase().includes('cancelled')) {
+    return 'border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400';
+  }
+  return 'border-primary/30 bg-primary/10 text-primary';
 }
 
 export function questDiscoveryHighlight(

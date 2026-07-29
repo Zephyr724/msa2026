@@ -105,19 +105,48 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
         if (fromUtc.HasValue)
             transactions = transactions.Where(item => item.CreatedAt >= fromUtc.Value);
 
-        var regions = _db.Regions
+        var localAreas = _db.Regions
             .AsNoTracking()
             .Where(region => region.IsActive && region.Type == RegionType.LocalArea);
         if (aucklandOnly)
-            regions = regions.Where(region => region.ParentRegionId == RegionSeed.AucklandId);
+        {
+            localAreas = localAreas.Where(
+                region => region.ParentRegionId == RegionSeed.AucklandId);
+
+            return await transactions
+                .Join(
+                    localAreas,
+                    transaction => transaction.CommunityRegionIdAtAward,
+                    region => region.Id,
+                    (transaction, region) => new { transaction, region })
+                .GroupBy(item => new { item.region.Id, item.region.Name })
+                .Select(group => new CommunityLeaderboardRepositoryRow(
+                    group.Key.Id,
+                    group.Key.Name,
+                    group.LongCount(),
+                    group.Select(item => item.transaction.UserId).Distinct().Count()))
+                .ToListAsync(ct);
+        }
+
+        var cities = _db.Regions
+            .AsNoTracking()
+            .Where(region =>
+                region.IsActive &&
+                region.Type == RegionType.AdministrativeArea &&
+                region.ParentRegionId == RegionSeed.NewZealandId);
 
         return await transactions
             .Join(
-                regions,
+                localAreas,
                 transaction => transaction.CommunityRegionIdAtAward,
-                region => region.Id,
-                (transaction, region) => new { transaction, region })
-            .GroupBy(item => new { item.region.Id, item.region.Name })
+                localArea => localArea.Id,
+                (transaction, localArea) => new { transaction, localArea })
+            .Join(
+                cities,
+                item => item.localArea.ParentRegionId,
+                city => city.Id,
+                (item, city) => new { item.transaction, city })
+            .GroupBy(item => new { item.city.Id, item.city.Name })
             .Select(group => new CommunityLeaderboardRepositoryRow(
                 group.Key.Id,
                 group.Key.Name,

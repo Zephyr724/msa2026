@@ -241,6 +241,13 @@ public class QuestDiscoveryValidationTests
             return Task.FromResult<IReadOnlyList<Region>>(Array.Empty<Region>());
         }
 
+        public Task<IReadOnlyList<Region>> GetActiveAdministrativeAreasAsync(
+            string? search,
+            CancellationToken ct = default)
+        {
+            return Task.FromResult<IReadOnlyList<Region>>(Array.Empty<Region>());
+        }
+
         public Task<IReadOnlyList<Region>> GetActiveChildrenAsync(Guid parentId, CancellationToken ct = default)
         {
             return Task.FromResult<IReadOnlyList<Region>>(Array.Empty<Region>());

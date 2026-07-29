@@ -18,7 +18,7 @@ import {
   questDiscoveryHighlight,
 } from '../lib/questPresentation.ts';
 import { useQuestList } from '../hooks/useQuests.ts';
-import { useRegions } from '../hooks/useRegions.ts';
+import { useCities, useRegions } from '../hooks/useRegions.ts';
 import type { QuestFilters } from '../lib/api/quests.ts';
 import {
   QUEST_CATEGORIES,
@@ -90,6 +90,15 @@ export default function QuestListPage() {
 
   const { data, isLoading, isError, refetch } = useQuestList(filters);
   const { data: regions } = useRegions();
+  const { data: cities } = useCities();
+  const selectedCommunity = regions?.find((region) => region.id === filters.regionId);
+  const selectedCityId = cities?.some((city) => city.id === filters.regionId)
+    ? filters.regionId
+    : selectedCommunity?.parentRegionId ?? '';
+  const selectedCommunityId = selectedCommunity?.id ?? '';
+  const visibleCommunities = selectedCityId
+    ? regions?.filter((region) => region.parentRegionId === selectedCityId)
+    : regions;
 
   useEffect(() => {
     if (
@@ -139,7 +148,7 @@ export default function QuestListPage() {
         <section aria-label="Quest discovery controls" className="mt-7">
           <form className="grid grid-cols-[1fr_auto] gap-3 sm:grid-cols-[1fr_auto_auto_auto]" onSubmit={handleSearch}>
             <label className="input input-bordered flex h-11 w-full items-center gap-3 rounded-[0.875rem] bg-base-100">
-              <Search aria-hidden="true" className="size-5 text-base-content/45" />
+              <Search aria-hidden="true" className="size-5 text-muted-content" />
               <span className="sr-only">Search quests</span>
               <input
                 aria-label="Search quests"
@@ -243,7 +252,7 @@ export default function QuestListPage() {
           </div>
 
           {showFilters && (
-            <div className="kiwi-panel mt-3 grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="kiwi-panel mt-3 grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-6">
               <FilterSelect
                 label="Source type"
                 onChange={(value) => updateFilters({ sourceType: value || undefined })}
@@ -265,12 +274,26 @@ export default function QuestListPage() {
                 ))}
               </FilterSelect>
               <FilterSelect
-                label="Region"
+                label="City"
                 onChange={(value) => updateFilters({ regionId: value || undefined })}
-                value={filters.regionId ?? ''}
+                value={selectedCityId ?? ''}
               >
-                <option value="">All regions</option>
-                {regions?.map((region) => (
+                <option value="">All cities</option>
+                {cities?.map((city) => (
+                  <option key={city.id} value={city.id}>{city.name}</option>
+                ))}
+              </FilterSelect>
+              <FilterSelect
+                label="Community"
+                onChange={(value) => updateFilters({
+                  regionId: value || selectedCityId || undefined,
+                })}
+                value={selectedCommunityId}
+              >
+                <option value="">
+                  {selectedCityId ? 'All communities in city' : 'All communities'}
+                </option>
+                {visibleCommunities?.map((region) => (
                   <option key={region.id} value={region.id}>{region.name}</option>
                 ))}
               </FilterSelect>
@@ -294,7 +317,7 @@ export default function QuestListPage() {
               </FilterSelect>
               {activeFilterCount > 0 && (
                 <button
-                  className="btn btn-ghost btn-sm justify-self-start sm:col-span-2 lg:col-span-5"
+                  className="btn btn-ghost btn-sm justify-self-start sm:col-span-2 lg:col-span-6"
                   onClick={clearFilters}
                   type="button"
                 >
@@ -307,7 +330,7 @@ export default function QuestListPage() {
         </section>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-base-content/62" aria-live="polite">
+          <p className="text-sm font-semibold text-muted-content" aria-live="polite">
             {data ? `${data.totalCount} quest${data.totalCount === 1 ? '' : 's'} found` : 'Finding quests…'}
           </p>
         </div>
@@ -324,7 +347,7 @@ export default function QuestListPage() {
           <div className="kiwi-panel mt-5 flex flex-col items-start gap-4 p-6" role="alert">
             <div>
               <h2 className="text-xl">We could not load the quests</h2>
-              <p className="mt-1 text-sm text-base-content/62">
+              <p className="mt-1 text-sm text-muted-content">
                 Check your connection and try again.
               </p>
             </div>
@@ -340,7 +363,7 @@ export default function QuestListPage() {
               <Search aria-hidden="true" className="size-6" />
             </span>
             <h2 className="mt-5 text-2xl">No quests match those filters</h2>
-            <p className="mt-2 text-base-content/60">Try a broader search or clear the filters.</p>
+            <p className="mt-2 text-muted-content">Try a broader search or clear the filters.</p>
             <button className="btn btn-primary btn-sm mt-5" onClick={clearFilters} type="button">
               Clear all filters
             </button>
@@ -430,7 +453,7 @@ function QuestMapResultList({
             Quests in this search
           </h3>
         </div>
-        <span className="text-xs font-semibold text-base-content/55">
+        <span className="text-xs font-semibold text-muted-content">
           {quests.length} shown
         </span>
       </div>
@@ -458,7 +481,7 @@ function QuestMapResultList({
                   <CategoryEmblem category={quest.category} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-bold">{quest.title}</span>
-                    <span className="mt-1 flex items-center gap-1.5 truncate text-xs text-base-content/58">
+                    <span className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-content">
                       <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
                       {quest.locationDescription
                         ?? quest.locationRegion?.name
@@ -466,8 +489,8 @@ function QuestMapResultList({
                     </span>
                   </span>
                 </button>
-                <span className="hidden items-center gap-1 text-xs font-extrabold text-base-content sm:inline-flex">
-                  <Zap aria-hidden="true" className="size-3.5 text-warning" />
+                <span className="hidden items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300 sm:inline-flex">
+                  <Zap aria-hidden="true" className="size-3.5" />
                   {quest.xpAward} XP
                 </span>
                 {!hasCoordinates && (

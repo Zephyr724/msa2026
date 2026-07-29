@@ -74,7 +74,7 @@ export default function QuestCompletionMethods({
         <h2 className="mt-1 text-xl" id="completion-method-heading">
           Choose a completion method
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-base-content/60">
+        <p className="mt-2 text-sm leading-relaxed text-muted-content">
           Only methods supported by this Quest type are shown. Kiwimpact
           validates eligibility and status again when you submit.
         </p>
@@ -101,7 +101,7 @@ export default function QuestCompletionMethods({
               </span>
               <span className="min-w-0">
                 <span className="block text-sm font-extrabold">{presentation.label}</span>
-                <span className="block text-xs text-base-content/55">{presentation.supporting}</span>
+                <span className="block text-xs text-muted-content">{presentation.supporting}</span>
               </span>
             </button>
           );

@@ -394,6 +394,25 @@ if (seedRoles || (app.Environment.IsDevelopment() &&
                 seedDemoAccounts,
                 builder.Configuration["DemoAccounts:Password"],
                 DemoAccountSeedOptions.StandardPersonas));
+        // Activity depends on both the configured personas and demo Quests.
+        // Accounts remain independently seedable for authentication testing.
+        if (seedDemoAccounts && seedDemoQuests)
+        {
+            await using var demoActivityTransaction =
+                await db.Database.BeginTransactionAsync();
+            try
+            {
+                await DemoActivitySeed.SeedAsync(
+                    db,
+                    DemoAccountSeedOptions.StandardPersonas);
+                await demoActivityTransaction.CommitAsync();
+            }
+            catch
+            {
+                await demoActivityTransaction.RollbackAsync();
+                throw;
+            }
+        }
     }
 }
 

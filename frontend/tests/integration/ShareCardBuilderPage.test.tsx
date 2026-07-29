@@ -16,11 +16,13 @@ const verified = {
   questTitle: 'Harbour restoration day',
   questCategory: 'RestoreNature',
   questStatus: 'Published',
+  coverImage: null,
   status: 'Verified',
   method: 'CompletionCode',
   completedAtUtc: '2026-07-20T09:00:00.0000000Z',
   verifiedAtUtc: '2026-07-21T09:00:00.0000000Z',
   xpAmount: 50,
+  achievementNames: ['First Step'],
 };
 
 const selfReported = {
@@ -32,6 +34,7 @@ const selfReported = {
   method: 'SelfReported',
   verifiedAtUtc: null,
   xpAmount: null,
+  achievementNames: [],
 };
 
 function installCanvasMock() {
@@ -53,7 +56,10 @@ function installCanvasMock() {
     .mockImplementation(() => context);
 }
 
-function renderPage(items: unknown[]) {
+function renderPage(
+  items: unknown[],
+  initialEntry = '/passport/share',
+) {
   installCanvasMock();
   vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
@@ -65,14 +71,22 @@ function renderPage(items: unknown[]) {
       }));
     }
     if (url.includes('/v1/users/me/passport/completions')) {
+      const requestUrl = new URL(url, 'http://localhost');
+      const page = Number(requestUrl.searchParams.get('page') ?? '1');
+      const pageSize = Number(requestUrl.searchParams.get('pageSize') ?? '50');
+      const start = (page - 1) * pageSize;
+      const pageItems = items.slice(start, start + pageSize);
+      const totalPages = items.length === 0
+        ? 0
+        : Math.ceil(items.length / pageSize);
       return Promise.resolve(jsonResponse({
-        items,
-        page: 1,
-        pageSize: 50,
+        items: pageItems,
+        page,
+        pageSize,
         totalCount: items.length,
-        totalPages: items.length === 0 ? 0 : 1,
-        hasNextPage: false,
-        hasPreviousPage: false,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
       }));
     }
     return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
@@ -86,7 +100,7 @@ function renderPage(items: unknown[]) {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <ShareCardBuilderPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -132,5 +146,33 @@ describe('ShareCardBuilderPage', () => {
       .toHaveAttribute('href', '/my-quests');
     expect(screen.queryByRole('button', { name: 'Download PNG' }))
       .not.toBeInTheDocument();
+  });
+
+  it('opens on the verified completion selected by the Passport deep link', async () => {
+    const selected = {
+      ...verified,
+      completionId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      questId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+      questTitle: 'Selected stream restoration',
+    };
+
+    const firstPage = Array.from({ length: 50 }, (_, index) => ({
+      ...verified,
+      completionId: `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      questId: `20000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      questTitle: `Earlier verified completion ${index + 1}`,
+    }));
+
+    renderPage(
+      [...firstPage, selected],
+      `/passport/share?completionId=${selected.completionId}`,
+    );
+
+    expect(await screen.findByRole('radio', {
+      name: 'Selected stream restoration',
+    })).toBeChecked();
+    expect(screen.getByRole('img', {
+      name: 'Share Card preview for Selected stream restoration',
+    })).toBeInTheDocument();
   });
 });

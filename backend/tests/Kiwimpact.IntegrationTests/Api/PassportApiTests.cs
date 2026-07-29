@@ -158,8 +158,10 @@ public sealed class PassportApiTests
         var item = Assert.Single(json.GetProperty("items").EnumerateArray());
         AssertExactKeys(
             item,
+            "achievementNames",
             "completedAtUtc",
             "completionId",
+            "coverImage",
             "method",
             "questCategory",
             "questId",
@@ -168,6 +170,14 @@ public sealed class PassportApiTests
             "status",
             "verifiedAtUtc",
             "xpAmount");
+        var coverImage = item.GetProperty("coverImage");
+        AssertExactKeys(coverImage, "altText", "id", "imageUrl");
+        Assert.Equal(
+            "/images/quests/xp-ledger.svg",
+            coverImage.GetProperty("imageUrl").GetString());
+        Assert.Equal(
+            "XP ledger test cover",
+            coverImage.GetProperty("altText").GetString());
         Assert.Equal("Verified", item.GetProperty("status").GetString());
         Assert.Equal("CompletionCode", item.GetProperty("method").GetString());
         Assert.Equal("RestoreNature", item.GetProperty("questCategory").GetString());
@@ -179,6 +189,11 @@ public sealed class PassportApiTests
             RoundTripUtcTimestamp,
             item.GetProperty("verifiedAtUtc").GetString());
         Assert.Equal(50, item.GetProperty("xpAmount").GetInt32());
+        Assert.Equal(
+            ["First Steps"],
+            item.GetProperty("achievementNames")
+                .EnumerateArray()
+                .Select(name => name.GetString()));
     }
 
     [Fact]

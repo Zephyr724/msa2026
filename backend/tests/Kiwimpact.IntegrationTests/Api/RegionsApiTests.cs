@@ -61,6 +61,40 @@ public sealed class RegionsApiTests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal("Henderson-Massey", regions[0].Name);
     }
 
+    [Fact]
+    public async Task GetRegions_AdministrativeAreaType_ReturnsCities()
+    {
+        await _factory.SeedRegionsAsync();
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/v1/regions?type=AdministrativeArea",
+            TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var regions = await response.Content.ReadFromJsonAsync<List<RegionSummaryDto>>(
+            TestContext.Current.CancellationToken);
+        Assert.NotNull(regions);
+        var city = Assert.Single(regions);
+        Assert.Equal("Auckland", city.Name);
+        Assert.Equal("AdministrativeArea", city.Type);
+        Assert.Equal(RegionSeed.NewZealandId, city.ParentRegionId);
+    }
+
+    [Fact]
+    public async Task GetRegions_UnsupportedType_ReturnsBadRequest()
+    {
+        await _factory.SeedRegionsAsync();
+        var response = await _factory.CreateClient().GetAsync(
+            "/api/v1/regions?type=Country",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(
+            "application/problem+json",
+            response.Content.Headers.ContentType?.MediaType);
+    }
+
     // ── GET /api/v1/regions/{id} ────────────────────────────────────
 
     [Fact]

@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <h1 className="text-3xl text-error">
               Something went wrong
             </h1>
-            <p className="text-base-content/70">
+            <p className="text-muted-content">
               Please try refreshing the page.
             </p>
           </div>

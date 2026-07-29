@@ -102,10 +102,10 @@ export function AuthCard({ title, intro, children }: AuthCardProps) {
         <aside className="relative hidden overflow-hidden bg-primary p-10 text-primary-content lg:flex lg:flex-col lg:justify-between">
           <div className="absolute inset-0 kiwi-topography opacity-60" />
           <div className="relative">
-            <span className="grid size-12 place-items-center rounded-2xl border border-white/20 bg-white/12">
+            <span className="grid size-12 place-items-center rounded-2xl border border-primary-content/20 bg-primary-content/12">
               <Leaf aria-hidden="true" className="size-6" />
             </span>
-            <h2 className="mt-8 text-4xl text-white">Local action becomes visible progress.</h2>
+            <h2 className="mt-8 text-4xl">Local action becomes visible progress.</h2>
             <p className="mt-4 leading-relaxed text-primary-content/75">
               Join verified eco quests, earn XP, and keep your participation in
               a Personal Impact Passport.
@@ -120,7 +120,7 @@ export function AuthCard({ title, intro, children }: AuthCardProps) {
             ].map(([Icon, label]) => {
               const FeatureIcon = Icon as typeof Leaf;
               return (
-                <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-3" key={String(label)}>
+                <div className="flex items-center gap-3 rounded-2xl border border-primary-content/15 bg-primary-content/10 p-3" key={String(label)}>
                   <FeatureIcon aria-hidden="true" className="size-4" />
                   <span className="text-sm font-semibold">{String(label)}</span>
                 </div>
@@ -132,7 +132,7 @@ export function AuthCard({ title, intro, children }: AuthCardProps) {
         <section className="p-6 sm:p-10 lg:p-12">
           <p className="kiwi-stat-label">Kiwimpact member access</p>
           <h1 className="mt-2 text-4xl">{title}</h1>
-          <p className="mt-2 text-base-content/65">{intro}</p>
+          <p className="mt-2 text-muted-content">{intro}</p>
           <div className="mt-7 space-y-5">
             {children}
           </div>

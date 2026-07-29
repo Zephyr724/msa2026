@@ -13,7 +13,7 @@ export default function WeeklyStreakCard() {
       <div>
         <p className="kiwi-stat-label">Verified weekly streak</p>
         <p className="mt-1 text-3xl font-extrabold">{streak.data.currentWeeks} weeks</p>
-        <p className="mt-1 text-sm text-base-content/60">
+        <p className="mt-1 text-sm text-muted-content">
           {streak.data.hasVerifiedImpactThisWeek
             ? 'This week is secured.'
             : 'Complete one verified Quest this week to keep it going.'}

@@ -56,13 +56,13 @@ export function CoordinatePicker({
               )}
             </Map>
           </div>
-          <p className="text-sm text-base-content/60">
+          <p className="text-sm text-muted-content">
             Click the map to choose a location, then fine-tune it with the
             keyboard-accessible fields below.
           </p>
         </APIProvider>
       ) : (
-        <p className="rounded-2xl border border-dashed border-base-300 p-4 text-sm text-base-content/60">
+        <p className="rounded-2xl border border-dashed border-base-300 p-4 text-sm text-muted-content">
           Map selection is unavailable, but coordinates can still be entered below.
         </p>
       )}

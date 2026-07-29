@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { googleMapsConfig } from '../../lib/googleMapsConfig';
 import type { QuestListItemDto } from '../../types/quest';
+import QuestImage from '../quest/QuestImage.tsx';
 
 const AUCKLAND_CENTER = { lat: -36.8509, lng: 174.7645 };
 
@@ -48,7 +49,7 @@ export function QuestMap({
       <div className="grid min-h-64 place-items-center rounded-3xl border border-dashed border-base-300 bg-base-100 p-8 text-center">
         <div>
           <p className="font-bold">Quest map is temporarily unavailable</p>
-          <p className="mt-2 max-w-md text-sm text-base-content/60">
+          <p className="mt-2 max-w-md text-sm text-muted-content">
             Use the complete Quest list below to discover and open every Quest.
           </p>
         </div>
@@ -82,10 +83,10 @@ export function QuestMap({
             >
               <span
                 aria-hidden="true"
-                className={`grid size-10 place-items-center rounded-full border-2 border-white text-white shadow-lg transition-transform ${
+                className={`grid size-10 place-items-center rounded-full border-2 border-base-100 text-primary-content shadow-lg transition-transform ${
                   quest.id === activeSelectedQuestId
-                    ? 'scale-110 bg-emerald-800'
-                    : 'bg-emerald-600'
+                    ? 'scale-110 bg-primary'
+                    : 'bg-primary/80'
                 }`}
               >
                 <MapPin className="size-5" strokeWidth={2.5} />
@@ -98,16 +99,14 @@ export function QuestMap({
               position={{ lat: selected.latitude!, lng: selected.longitude! }}
             >
               <div className="w-72 overflow-hidden pr-3 text-slate-900 sm:w-80">
-                <img
-                  alt={selected.coverImage?.altText ?? ''}
+                <QuestImage
+                  alt={selected.coverImage?.altText}
+                  category={selected.category}
                   className="h-20 w-full rounded-xl bg-slate-100 object-cover"
-                  height="80"
-                  onError={(event) => {
-                    event.currentTarget.onerror = null;
-                    event.currentTarget.src = '/images/quests/quest-fallback.svg';
-                  }}
-                  src={selected.coverImage?.imageUrl ?? '/images/quests/quest-fallback.svg'}
-                  width="320"
+                  height={80}
+                  source={selected.coverImage?.imageUrl}
+                  title={selected.title}
+                  width={320}
                 />
                 <p className="mt-2.5 pr-2 text-base font-bold leading-snug">{selected.title}</p>
                 <p className="mt-1 line-clamp-2 pr-2 text-sm leading-relaxed text-slate-600">
@@ -116,7 +115,7 @@ export function QuestMap({
                     ?? 'Location to be confirmed'}
                 </p>
                 <Link
-                  className="mt-2 inline-flex rounded-full bg-emerald-700 px-4 py-1.5 text-sm font-bold text-white"
+                  className="mt-2 inline-flex rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-content"
                   to={`/quests/${selected.id}`}
                 >
                   View Quest
@@ -126,7 +125,7 @@ export function QuestMap({
           )}
         </Map>
       </div>
-      <p className="mt-2 text-sm text-base-content/55">
+      <p className="mt-2 text-sm text-muted-content">
         {mapped.length} of {quests.length} visible Quests include map coordinates.
       </p>
     </APIProvider>

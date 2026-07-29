@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   Target,
   Trophy,
+  UserRoundCog,
   type LucideIcon,
 } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
@@ -63,7 +64,7 @@ export default function AppShell() {
         Skip to content
       </a>
 
-      <header className="sticky top-0 z-40 border-b border-base-300/85 bg-base-200/92 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-base-300 bg-base-200/90 backdrop-blur-xl">
         <nav
           aria-label="Primary navigation"
           className="kiwi-page flex h-16 items-center gap-3"
@@ -74,10 +75,10 @@ export default function AppShell() {
             {navigation.map(({ label, to, Icon }) => (
               <NavLink
                 className={({ isActive }) =>
-                  `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                  `kiwi-primary-nav-item inline-flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 font-semibold transition-colors lg:px-4 ${
                     isActive
                       ? 'bg-primary text-primary-content shadow-sm'
-                      : 'text-base-content/65 hover:bg-secondary hover:text-base-content'
+                      : 'text-muted-content hover:bg-secondary hover:text-base-content'
                   }`
                 }
                 key={to}
@@ -89,7 +90,7 @@ export default function AppShell() {
             ))}
             {!auth.data && (
               <Link
-                className="rounded-full px-4 py-2 text-sm font-semibold text-base-content/65 transition-colors hover:bg-secondary hover:text-base-content"
+                className="whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold text-muted-content transition-colors hover:bg-secondary hover:text-base-content lg:px-4 lg:text-sm"
                 to="/#how-it-works"
               >
                 How it works
@@ -102,7 +103,7 @@ export default function AppShell() {
             <ThemeSwitcher />
 
             {auth.isPending ? (
-              <span aria-live="polite" className="hidden text-xs text-base-content/55 sm:inline">
+              <span aria-live="polite" className="hidden text-xs text-muted-content sm:inline">
                 Checking session…
               </span>
             ) : auth.data ? (
@@ -136,11 +137,19 @@ export default function AppShell() {
                   </NavLink>
                 )}
                 <span
-                  className="hidden max-w-28 truncate text-sm font-semibold sm:inline"
-                  title={auth.data.displayName}
+                  className="hidden"
                 >
-                  {auth.data.displayName}
+                  Signed in as {auth.data.displayName}
                 </span>
+                <Link
+                  aria-label="Profile settings"
+                  className="btn btn-ghost btn-sm btn-square sm:w-auto sm:gap-2 sm:px-3"
+                  title={`Profile settings for ${auth.data.displayName}`}
+                  to="/settings/profile"
+                >
+                  <UserRoundCog aria-hidden="true" className="size-4" />
+                  <span className="hidden sm:inline">{auth.data.displayName}</span>
+                </Link>
                 <button
                   aria-label="Sign out"
                   className="btn btn-ghost btn-sm btn-square"
@@ -193,7 +202,7 @@ export default function AppShell() {
       {!auth.isPending && (
         <nav
           aria-label={auth.data ? 'Member navigation' : 'Public navigation'}
-          className={`fixed inset-x-0 bottom-0 z-40 grid border-t border-base-300 bg-base-100/95 px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-12px_35px_rgba(24,48,38,0.08)] backdrop-blur-xl md:hidden ${
+          className={`fixed inset-x-0 bottom-0 z-40 grid border-t border-base-300 bg-base-100 px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-12px_35px_rgba(24,48,38,0.08)] md:hidden ${
             auth.data ? 'grid-cols-4' : 'grid-cols-2'
           }`}
         >
@@ -201,7 +210,7 @@ export default function AppShell() {
             <NavLink
               className={({ isActive }) =>
                 `flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[0.65rem] font-bold ${
-                  isActive ? 'bg-primary/10 text-primary' : 'text-base-content/55'
+                  isActive ? 'bg-primary/10 text-primary' : 'text-muted-content'
                 }`
               }
               key={to}

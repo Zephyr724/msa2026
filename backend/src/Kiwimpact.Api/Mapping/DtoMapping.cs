@@ -262,11 +262,18 @@ internal static class DtoMapping
             item.QuestTitle,
             item.QuestCategory.ToString(),
             item.QuestStatus.ToString(),
+            item.CoverImage is null
+                ? null
+                : new QuestCoverImageDto(
+                    item.CoverImage.Id,
+                    item.CoverImage.ImageUrl,
+                    item.CoverImage.AltText),
             item.Status.ToString(),
             item.Method.ToString(),
             item.CompletedAtUtc.ToString("O"),
             item.VerifiedAtUtc?.ToString("O"),
-            item.XpAmount);
+            item.XpAmount,
+            item.AchievementNames);
     }
 
     public static AchievementCatalogItemDto ToDto(this AchievementCatalogItem item)

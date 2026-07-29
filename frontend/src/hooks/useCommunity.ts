@@ -15,10 +15,11 @@ export const communityKeys = {
   challenges: ['community', 'challenges'] as const,
 };
 
-export function useMyProfile() {
+export function useMyProfile(enabled = true) {
   return useQuery({
     queryKey: communityKeys.profile,
     queryFn: fetchMyProfile,
+    enabled,
     retry: false,
   });
 }

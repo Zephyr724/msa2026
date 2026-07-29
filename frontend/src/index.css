@@ -1,6 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@500&family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 @plugin "daisyui";
+@custom-variant dark (&:is(.dark *));
 
 @plugin "daisyui/theme" {
   name: "light";
@@ -14,15 +15,17 @@
   --color-primary-content: #ffffff;
   --color-secondary: #eef5ec;
   --color-secondary-content: #183026;
+  --kiwi-color-muted: #eef5ec;
+  --kiwi-color-muted-content: #5a7a65;
   --color-accent: #f4b740;
   --color-accent-content: #183026;
-  --color-neutral: #315244;
-  --color-neutral-content: #ffffff;
+  --color-neutral: #183026;
+  --color-neutral-content: #f8fbf4;
   --color-info: #3c72c9;
   --color-info-content: #ffffff;
   --color-success: #2f8f5b;
   --color-success-content: #ffffff;
-  --color-warning: #e7a92f;
+  --color-warning: #f4b740;
   --color-warning-content: #183026;
   --color-error: #c74444;
   --color-error-content: #ffffff;
@@ -45,9 +48,11 @@
   --color-primary-content: #13211b;
   --color-secondary: #22372d;
   --color-secondary-content: #f2f7f3;
+  --kiwi-color-muted: #22372d;
+  --kiwi-color-muted-content: #9db5a4;
   --color-accent: #ffd166;
   --color-accent-content: #13211b;
-  --color-neutral: #9db5a4;
+  --color-neutral: #f2f7f3;
   --color-neutral-content: #13211b;
   --color-info: #8db7ff;
   --color-info-content: #13211b;
@@ -63,6 +68,11 @@
   --border: 1px;
   --depth: 1;
   --noise: 0;
+}
+
+@theme inline {
+  --color-muted: var(--kiwi-color-muted);
+  --color-muted-content: var(--kiwi-color-muted-content);
 }
 
 @layer base {
@@ -142,10 +152,14 @@
 
   .kiwi-segmented > button,
   .kiwi-segmented > a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     min-height: 2.5rem;
     border-radius: 0.75rem;
     padding-inline: 0.85rem;
-    color: color-mix(in oklab, var(--color-base-content) 66%, transparent);
+    color: var(--kiwi-color-muted-content);
     font-size: 0.82rem;
     font-weight: 700;
     transition:
@@ -161,6 +175,24 @@
     box-shadow: 0 5px 12px color-mix(in oklab, #183026 12%, transparent);
   }
 
+  .kiwi-primary-nav-item {
+    font-size: 0.75rem;
+  }
+
+  .kiwi-primary-nav-item > svg {
+    display: none;
+  }
+
+  @media (min-width: 64rem) {
+    .kiwi-primary-nav-item {
+      font-size: 0.875rem;
+    }
+
+    .kiwi-primary-nav-item > svg {
+      display: block;
+    }
+  }
+
   .kiwi-meta-chip {
     display: inline-flex;
     align-items: center;
@@ -170,7 +202,7 @@
     border-radius: 999px;
     background: var(--color-base-100);
     padding-inline: 0.6rem;
-    color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+    color: var(--kiwi-color-muted-content);
     font-size: 0.7rem;
     font-weight: 700;
   }
@@ -188,7 +220,7 @@
   }
 
   .kiwi-page-intro {
-    color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+    color: var(--kiwi-color-muted-content);
     font-size: 1rem;
     line-height: 1.6;
   }
@@ -229,7 +261,7 @@
   }
 
   .kiwi-stat-label {
-    color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+    color: var(--kiwi-color-muted-content);
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.1em;

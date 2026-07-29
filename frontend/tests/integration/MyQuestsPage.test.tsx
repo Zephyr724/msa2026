@@ -104,7 +104,16 @@ describe('MyQuestsPage', () => {
       .toBeInTheDocument();
     expect((await screen.findAllByText('Dated Stream Cleanup')).length).toBeGreaterThan(0);
     expect(screen.getByText(/Active · starts/)).toBeInTheDocument();
-    expect(screen.getByText('Level 3 · Novice')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Level 3' })).toHaveClass('text-primary');
+    expect(screen.getByText('Novice')).toBeInTheDocument();
+    expect(screen.getByText('50 XP')).toHaveClass(
+      'border-amber-200',
+      'bg-amber-50',
+      'text-amber-700',
+      'dark:border-amber-700',
+      'dark:bg-amber-900/30',
+      'dark:text-amber-300',
+    );
     expect(screen.getByText('Next milestone')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Recent achievements' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Passport preview' })).toBeInTheDocument();
@@ -231,11 +240,13 @@ describe('MyQuestsPage', () => {
       questTitle: `Other completed Quest ${index}`,
       questCategory: 'RestoreNature',
       questStatus: 'Published',
+      coverImage: null,
       status: 'Verified',
       method: 'CompletionCode',
       completedAtUtc: '2026-07-20T09:00:00.0000000Z',
       verifiedAtUtc: '2026-07-20T09:00:00.0000000Z',
       xpAmount: 50,
+      achievementNames: [],
     }));
     const olderCompletedItem = {
       completionId: '30000000-0000-4000-8000-000000000000',
@@ -243,11 +254,13 @@ describe('MyQuestsPage', () => {
       questTitle: activeQuest.quest.title,
       questCategory: 'CleanReduceWaste',
       questStatus: 'Published',
+      coverImage: null,
       status: 'Verified',
       method: 'CompletionCode',
       completedAtUtc: '2025-01-01T09:00:00.0000000Z',
       verifiedAtUtc: '2025-01-01T09:00:00.0000000Z',
       xpAmount: 50,
+      achievementNames: [],
     };
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);

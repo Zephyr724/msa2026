@@ -133,7 +133,7 @@ export default function OrganizerQuestEditPage() {
             </h1>
             <QuestStatusBadge status={quest.status} />
           </div>
-          <p className="mt-2 text-base-content/65">{quest.title}</p>
+          <p className="mt-2 text-muted-content">{quest.title}</p>
         </div>
         {!archived && (
           <QuestLifecycleActions

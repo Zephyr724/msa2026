@@ -112,9 +112,15 @@ export function AchievementBadgeArt({
           <path d="M16 31c0-5 3-8 8-8s8 3 8 8" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
         </>
       ) : (
-        <Lock x="14" y="14" size={20} color="#8A9790" aria-hidden="true" />
+        <Lock x="14" y="14" size={20} color="#9BA5A0" aria-hidden="true" />
       )}
-      <path d="M24 4 41 13v18L24 44 7 31V13Z" fill="none" stroke="#fff" strokeWidth="1.2" opacity=".4" />
+      <path
+        d="M24 4 41 13v18L24 44 7 31V13Z"
+        fill="none"
+        opacity=".4"
+        stroke={unlocked ? '#fff' : '#B0BBB5'}
+        strokeWidth="1.2"
+      />
     </svg>
   );
 }

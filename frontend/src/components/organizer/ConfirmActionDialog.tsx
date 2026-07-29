@@ -75,7 +75,7 @@ export default function ConfirmActionDialog({
         <h2 className="text-2xl" id="confirm-action-title">
           {title}
         </h2>
-        <p className="mt-3 text-base-content/75">{description}</p>
+        <p className="mt-3 text-muted-content">{description}</p>
         {children}
         {error && (
           <div className="alert alert-error mt-4" role="alert">

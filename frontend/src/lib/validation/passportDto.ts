@@ -13,7 +13,8 @@ const MAX_PAGE_SIZE = 50;
 
 const ITEM_KEYS = [
   'completionId', 'questId', 'questTitle', 'questCategory', 'questStatus',
-  'status', 'method', 'completedAtUtc', 'verifiedAtUtc', 'xpAmount',
+  'coverImage', 'status', 'method', 'completedAtUtc', 'verifiedAtUtc', 'xpAmount',
+  'achievementNames',
 ] as const;
 
 const categories = new Set<string>(QUEST_CATEGORIES);
@@ -53,6 +54,18 @@ function isXpAmount(value: unknown): value is number | null {
   return value === null || (isSafeInteger(value) && value > 0);
 }
 
+function isCoverImage(value: unknown): boolean {
+  return value === null || (
+    isRecord(value)
+    && hasExactKeys(value, ['id', 'imageUrl', 'altText'])
+    && isUuidString(value.id)
+    && isString(value.imageUrl)
+    && value.imageUrl.length > 0
+    && isString(value.altText)
+    && value.altText.length > 0
+  );
+}
+
 function isValidItem(value: unknown): value is PassportCompletionItem {
   return isRecord(value)
     && hasExactKeys(value, ITEM_KEYS)
@@ -63,6 +76,7 @@ function isValidItem(value: unknown): value is PassportCompletionItem {
     && categories.has(value.questCategory)
     && isString(value.questStatus)
     && questStatuses.has(value.questStatus)
+    && isCoverImage(value.coverImage)
     && typeof value.status === 'string'
     && ['Pending', 'Verified', 'Rejected', 'SelfReported'].includes(value.status)
     && typeof value.method === 'string'
@@ -70,6 +84,14 @@ function isValidItem(value: unknown): value is PassportCompletionItem {
     && isUtcTimestamp(value.completedAtUtc)
     && (value.verifiedAtUtc === null || isUtcTimestamp(value.verifiedAtUtc))
     && isXpAmount(value.xpAmount)
+    && Array.isArray(value.achievementNames)
+    && value.achievementNames.every(
+      (name) => isString(name) && name.trim().length > 0,
+    )
+    && (
+      value.achievementNames.length === 0
+      || (value.status === 'Verified' && value.xpAmount !== null)
+    )
     && (value.status === 'Verified'
       ? value.verifiedAtUtc !== null
       : value.verifiedAtUtc === null && value.xpAmount === null);

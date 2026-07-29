@@ -20,6 +20,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import PlayerStatusSummary from '../components/PlayerStatusSummary.tsx';
 import { AchievementBadgeArt } from '../components/game/GameArtwork.tsx';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
+import QuestImage from '../components/quest/QuestImage.tsx';
 import { useMyAchievements } from '../hooks/useAchievements.ts';
 import { useMyClaims } from '../hooks/useCompletion.ts';
 import {
@@ -35,8 +36,6 @@ import {
   CATEGORY_PRESENTATION,
   DIFFICULTY_LABELS,
   DIFFICULTY_TONES,
-  SOURCE_LABELS,
-  SOURCE_TONES,
   formatQuestDate,
   questHighlightTone,
 } from '../lib/questPresentation.ts';
@@ -135,6 +134,9 @@ export default function MyQuestsPage() {
       new Date(right.awardedAt).getTime() - new Date(left.awardedAt).getTime()
     ))
     .slice(0, 3);
+  const primaryChallenge = challenges.data?.find(
+    (challenge) => challenge.localArea.id === profile.data?.homeCommunity?.id,
+  ) ?? challenges.data?.[0];
   const priorityAction = ready[0]
     ? {
         eyebrow: 'Ready to complete',
@@ -201,7 +203,7 @@ export default function MyQuestsPage() {
               <div>
                 <p className="kiwi-stat-label">Next milestone</p>
                 <h2 className="mt-1 text-lg">Keep building verified progress</h2>
-                <p className="mt-1 text-sm leading-relaxed text-base-content/62">
+                <p className="mt-1 text-sm leading-relaxed text-muted-content">
                   Your next verified action advances your Passport. Your
                   current weekly streak is{' '}
                   <strong>{streak.isPending ? 'loading' : streak.isError
@@ -215,7 +217,10 @@ export default function MyQuestsPage() {
             </div>
           </article>
 
-          <article className="rounded-[1.25rem] border border-primary/20 bg-primary/8 p-4">
+          <article
+            className="rounded-[1.25rem] border border-primary/20 bg-primary/5 p-4"
+            id="community-challenge"
+          >
             <div className="flex items-start gap-4">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-content">
                 <Flag aria-hidden="true" className="size-5" />
@@ -223,22 +228,45 @@ export default function MyQuestsPage() {
               <div className="min-w-0 flex-1">
                 <p className="kiwi-stat-label">Community challenge</p>
                 <h2 className="mt-1 truncate text-lg">
-                  {challenges.data?.[0]
-                    ? `${challenges.data[0].localArea.name} community goal`
+                  {primaryChallenge
+                    ? `${primaryChallenge.localArea.name} Challenge`
                     : 'Your local community goal'}
                 </h2>
-                <p className="mt-1 text-sm leading-relaxed text-base-content/62">
+                <p className="mt-1 text-sm leading-relaxed text-muted-content">
                   {challenges.isPending
                     ? 'Loading verified community progress…'
-                    : challenges.data?.[0]
-                      ? `${challenges.data[0].currentProgress} of ${challenges.data[0].targetValue} verified actions · ${Math.round(challenges.data[0].progressPercentage)}%`
+                    : primaryChallenge
+                      ? `${primaryChallenge.currentProgress} of ${primaryChallenge.targetValue} verified actions · ${Math.round(primaryChallenge.progressPercentage)}%`
                       : challenges.isError ? 'Community progress unavailable.' : 'No active challenge.'}
                 </p>
-                <p className="mt-2 text-xs font-semibold text-base-content/55">
+                {primaryChallenge && (
+                  <>
+                    <progress
+                      aria-label={`${primaryChallenge.localArea.name} challenge progress`}
+                      className="progress progress-primary mt-3 h-2.5 w-full"
+                      max="100"
+                      value={primaryChallenge.progressPercentage}
+                    />
+                    <p className="mt-2 text-xs leading-relaxed text-muted-content">
+                      Any verified Quest attributed to this community during
+                      the challenge counts automatically. Self-reports do not.
+                    </p>
+                    <p className="mt-2 text-xs font-bold text-primary">
+                      Reward: community milestone badge for contributors
+                    </p>
+                  </>
+                )}
+                <p className="mt-2 text-xs font-semibold text-muted-content">
                   Home community: {profile.isPending
                     ? 'Loading…'
                     : profile.data?.homeCommunity?.name ?? 'Not set'}
                 </p>
+                <Link
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                  to="/settings/profile"
+                >
+                  Change in Profile Settings <ChevronRight aria-hidden="true" className="size-3" />
+                </Link>
               </div>
             </div>
           </article>
@@ -252,7 +280,7 @@ export default function MyQuestsPage() {
             <div className="min-w-0 flex-1">
               <p className="kiwi-stat-label">{priorityAction.eyebrow}</p>
               <h2 className="mt-1 truncate text-lg">{priorityAction.title}</h2>
-              <p className="mt-1 text-sm leading-relaxed text-base-content/62">
+              <p className="mt-1 text-sm leading-relaxed text-muted-content">
                 {priorityAction.description}
               </p>
             </div>
@@ -290,7 +318,7 @@ export default function MyQuestsPage() {
                   className={`min-h-11 border-b-2 px-3 py-2 text-sm font-bold transition-colors ${
                     view === tab.value
                       ? 'border-primary text-primary'
-                      : 'border-transparent text-base-content/60 hover:border-primary/30 hover:text-primary'
+                      : 'border-transparent text-muted-content hover:border-primary/30 hover:text-primary'
                   }`}
                   key={tab.value}
                   onClick={() => setView(tab.value)}
@@ -321,7 +349,7 @@ export default function MyQuestsPage() {
           {dataError && (
             <div className="kiwi-panel mt-5 p-6" role="alert">
               <h3 className="text-xl">We could not classify your Mission Board</h3>
-              <p className="mt-2 text-sm text-base-content/62">
+              <p className="mt-2 text-sm text-muted-content">
                 No state is guessed when a participation, claim, or Passport read fails.
               </p>
               <button
@@ -403,7 +431,7 @@ export default function MyQuestsPage() {
             {achievements.isPending ? (
               <div className="skeleton h-36 rounded-[1.35rem]" aria-label="Loading recent achievements" />
             ) : achievements.isError ? (
-              <div className="kiwi-panel p-5 text-sm text-base-content/62">
+              <div className="kiwi-panel p-5 text-sm text-muted-content">
                 Recent achievements are unavailable. Your verified mission
                 state has not been guessed.
               </div>
@@ -419,18 +447,18 @@ export default function MyQuestsPage() {
                     />
                     <div className="min-w-0 flex-1">
                       <h3 className="font-extrabold">{achievement.name}</h3>
-                      <p className="mt-1 line-clamp-2 text-xs text-base-content/58">
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-content">
                         {achievement.description}
                       </p>
                     </div>
-                    <time className="text-xs text-base-content/50" dateTime={achievement.awardedAt}>
+                    <time className="text-xs text-muted-content" dateTime={achievement.awardedAt}>
                       {new Date(achievement.awardedAt).toLocaleDateString()}
                     </time>
                   </article>
                 ))}
               </div>
             ) : (
-              <div className="kiwi-panel p-5 text-sm text-base-content/62">
+              <div className="kiwi-panel p-5 text-sm text-muted-content">
                 Your first earned achievement will appear here after the
                 server confirms its criteria.
               </div>
@@ -460,11 +488,11 @@ export default function MyQuestsPage() {
                     <CategoryEmblem category={item.questCategory} size="sm" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-extrabold">{item.questTitle}</p>
-                      <p className="mt-0.5 text-xs text-base-content/55">
+                      <p className="mt-0.5 text-xs text-muted-content">
                         {new Date(item.completedAtUtc).toLocaleDateString()}
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-base-content/58">
+                    <span className="text-xs font-bold text-muted-content">
                       {item.status === 'Verified'
                         ? item.xpAmount === null ? 'XP pending' : `${item.xpAmount} XP`
                         : 'Passport only'}
@@ -473,7 +501,7 @@ export default function MyQuestsPage() {
                 ))}
               </div>
             ) : (
-              <div className="kiwi-panel flex items-start gap-3 p-5 text-sm text-base-content/62">
+              <div className="kiwi-panel flex items-start gap-3 p-5 text-sm text-muted-content">
                 <IdCard aria-hidden="true" className="size-5 shrink-0 text-primary" />
                 Completed Quest records will appear here without changing
                 their verified or self-reported status.
@@ -489,7 +517,7 @@ export default function MyQuestsPage() {
             </span>
             <div>
               <h2 className="text-xl">Ready for another local action?</h2>
-              <p className="mt-1 text-sm text-base-content/62">
+              <p className="mt-1 text-sm text-muted-content">
                 Browse the full Quest catalogue and find your next mission.
               </p>
             </div>
@@ -516,57 +544,84 @@ function QuestGrid({
       {items.map((item) => {
         const quest = item.quest;
         const statusText = status(item);
+        const category = CATEGORY_PRESENTATION[quest.category];
+        const nextStep = statusText.startsWith('Ready')
+          ? 'Next step: choose a completion method to finish this Quest'
+          : statusText.startsWith('Active')
+            ? 'Next step: attend the activity, then complete the Quest'
+            : statusText;
         return (
           <Link
             aria-label={`View ${quest.title}`}
-            className="group grid overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100 transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md sm:grid-cols-[11rem_minmax(0,1fr)_auto]"
+            className="group overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100 transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md"
             key={item.participationId}
             to={`/quests/${quest.id}`}
           >
-            <figure className="relative h-36 overflow-hidden bg-base-200 sm:h-full sm:min-h-40">
-              <img
-                alt={quest.coverImage?.altText ?? ''}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                onError={(event) => {
-                  event.currentTarget.onerror = null;
-                  event.currentTarget.src = '/images/quests/quest-fallback.svg';
-                }}
-                src={quest.coverImage?.imageUrl ?? '/images/quests/quest-fallback.svg'}
-              />
-              <span className="absolute bottom-3 left-3">
-                <CategoryEmblem category={quest.category} size="sm" />
-              </span>
-            </figure>
-            <div className="min-w-0 p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${questHighlightTone(statusText)}`}>
-                  {statusText}
+            <div className="flex flex-col sm:flex-row">
+              <figure className="relative h-36 shrink-0 overflow-hidden bg-base-200 sm:h-auto sm:min-h-44 sm:w-40">
+                <QuestImage
+                  alt={quest.coverImage?.altText}
+                  category={quest.category}
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  height={440}
+                  loading="lazy"
+                  source={quest.coverImage?.imageUrl}
+                  title={quest.title}
+                  width={400}
+                />
+                <span className="absolute left-2 top-2 rounded-xl border-2 border-base-100 bg-base-100 shadow-md">
+                  <CategoryEmblem category={quest.category} size="sm" />
                 </span>
-                <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${DIFFICULTY_TONES[quest.difficulty]}`}>
-                  {DIFFICULTY_LABELS[quest.difficulty]}
-                </span>
-              </div>
-              <h3 className="mt-2 text-xl transition-colors group-hover:text-primary">{quest.title}</h3>
-              <div className="mt-3 grid gap-1.5 text-xs text-base-content/62">
-                <span className="flex items-center gap-2">
-                  <CalendarDays aria-hidden="true" className="size-4 shrink-0 text-primary" />
-                  {formatQuestDate(quest.startAtUtc)}
-                </span>
-                <span className="flex min-w-0 items-start gap-2">
-                  <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
-                  <span className="line-clamp-2">
-                    {quest.locationDescription ?? quest.locationRegion?.name ?? 'Location to be confirmed'}
+              </figure>
+              <div className="flex min-w-0 flex-1 flex-col gap-4 p-5 sm:flex-row">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${category.softTone}`}>
+                      {category.label}
+                    </span>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${questHighlightTone(statusText)}`}>
+                      {statusText}
+                    </span>
+                  </div>
+                  <h3 className="mt-2 text-lg transition-colors group-hover:text-primary">
+                    {quest.title}
+                  </h3>
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-content">
+                    <span className="flex items-center gap-1.5">
+                      <CalendarDays aria-hidden="true" className="size-3.5 shrink-0" />
+                      {formatQuestDate(quest.startAtUtc)}
+                    </span>
+                    <span className="flex min-w-0 items-start gap-1.5">
+                      <MapPin aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                      <span className="line-clamp-2">
+                        {quest.locationDescription ?? quest.locationRegion?.name ?? 'Location to be confirmed'}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                      <Zap aria-hidden="true" className="size-3" />
+                      {quest.xpAward} XP
+                    </span>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${DIFFICULTY_TONES[quest.difficulty]}`}>
+                      {DIFFICULTY_LABELS[quest.difficulty]}
+                    </span>
+                  </div>
+                  <p className={`mt-3 text-xs font-bold ${
+                    statusText.startsWith('Ready') ? 'text-amber-700' : 'text-primary'
+                  }`}>
+                    {nextStep}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2 sm:flex-col sm:items-end">
+                  <span className="btn btn-primary btn-sm pointer-events-none">
+                    {statusText.startsWith('Ready') ? 'Complete Quest' : 'View details'}
                   </span>
-                </span>
+                  <span className="btn btn-outline btn-sm pointer-events-none">
+                    Details
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-between gap-3 border-t border-base-300 px-4 py-3 sm:flex-col sm:items-end sm:justify-center sm:border-l sm:border-t-0">
-              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${SOURCE_TONES[quest.sourceType]}`}>
-                {SOURCE_LABELS[quest.sourceType]}
-              </span>
-              <span className="inline-flex items-center gap-1 text-sm font-bold text-primary">
-                Open <ChevronRight aria-hidden="true" className="size-4" />
-              </span>
             </div>
           </Link>
         );
@@ -579,18 +634,20 @@ function ReviewCard({ claim }: { claim: EvidenceClaimSummary }) {
   return (
     <article className="kiwi-panel p-5">
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-info/12 text-info">
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
           <Clock3 aria-hidden="true" className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <span className="badge badge-warning">Under review</span>
+          <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+            Under review
+          </span>
           <h3 className="mt-3 text-xl">{claim.questTitle}</h3>
-          <p className="mt-2 text-sm text-base-content/60">
+          <p className="mt-2 text-sm text-muted-content">
             Submitted <time dateTime={claim.createdAtUtc}>
               {new Date(claim.createdAtUtc).toLocaleDateString()}
             </time>
           </p>
-          <p className="mt-3 text-sm text-base-content/65">
+          <p className="mt-3 text-sm text-muted-content">
             XP is awarded only if an Admin approves this evidence claim.
           </p>
           <Link className="btn btn-outline btn-sm mt-4" to={`/quests/${claim.questId}`}>
@@ -614,12 +671,16 @@ function CompletedCard({ item }: { item: PassportCompletionItem }) {
           </p>
           <h3 className="mt-1 text-xl">{item.questTitle}</h3>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className={`badge ${verified ? 'badge-success' : 'badge-info'}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold ${
+              verified
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                : 'border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
+            }`}>
               {verified ? (
                 <><ShieldCheck aria-hidden="true" className="size-3" /> Verified</>
               ) : 'Self-reported'}
             </span>
-            <span className="text-xs text-base-content/55">
+            <span className="text-xs text-muted-content">
               {new Date(item.completedAtUtc).toLocaleDateString()}
             </span>
             <span className="text-xs font-bold">
@@ -680,7 +741,7 @@ function MissionEmptyState({ view }: { view: MissionView }) {
         <Icon aria-hidden="true" className="size-6" />
       </span>
       <h3 className="mt-5 text-2xl">{state.title}</h3>
-      <p className="mx-auto mt-2 max-w-md text-base-content/60">{state.description}</p>
+      <p className="mx-auto mt-2 max-w-md text-muted-content">{state.description}</p>
       <Link className="btn btn-primary mt-5 rounded-full" to="/quests">
         Discover Quests <ArrowRight aria-hidden="true" className="size-4" />
       </Link>

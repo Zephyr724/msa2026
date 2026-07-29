@@ -17,18 +17,32 @@ public sealed class RegionsController : ControllerBase
     }
 
     /// <summary>
-    /// List active LocalArea regions with optional search.
+    /// List active LocalArea regions or AdministrativeArea cities with
+    /// optional search. The default remains LocalArea for API compatibility.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<RegionSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRegions(
+        [FromQuery] string? type,
         [FromQuery] string? search,
         CancellationToken ct)
     {
         if (search is { Length: > 100 })
             return ValidationProblem("Search must be at most 100 characters.");
 
-        var regions = await _regionService.GetActiveLocalAreasAsync(search, ct);
+        var regions = type switch
+        {
+            null or "LocalArea" =>
+                await _regionService.GetActiveLocalAreasAsync(search, ct),
+            "AdministrativeArea" =>
+                await _regionService.GetActiveAdministrativeAreasAsync(search, ct),
+            _ => null,
+        };
+        if (regions is null)
+        {
+            return ValidationProblem(
+                "Region type must be LocalArea or AdministrativeArea.");
+        }
         var dto = regions.Select(r => r.ToSummary()).ToList();
         return Ok(dto);
     }

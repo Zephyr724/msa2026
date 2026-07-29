@@ -56,6 +56,20 @@ public sealed class PassportRepository : IPassportRepository
             .SelectMany(
                 row => row.transactions.DefaultIfEmpty(),
                 (row, transaction) => new { row.completion, row.quest, transaction })
+            .GroupJoin(
+                _db.QuestImages.Where(image => image.IsCover),
+                row => row.quest.Id,
+                image => image.QuestId,
+                (row, images) => new
+                {
+                    row.completion,
+                    row.quest,
+                    row.transaction,
+                    coverImage = images
+                        .OrderBy(image => image.SortOrder)
+                        .ThenBy(image => image.Id)
+                        .FirstOrDefault(),
+                })
             .ToListAsync(ct);
 
         var primary = rows
@@ -71,20 +85,67 @@ public sealed class PassportRepository : IPassportRepository
             .ToList();
         var totalCount = primary.Count;
 
-        var items = primary
+        var pageRows = primary
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .ToList();
+        var transactionIds = pageRows
+            .Where(row => row.transaction is not null)
+            .Select(row => row.transaction!.Id)
+            .Distinct()
+            .ToList();
+        var achievementRows = await _db.UserAchievements
+            .AsNoTracking()
+            .Where(award =>
+                award.UserId == userId
+                && award.XpTransactionId != null
+                && transactionIds.Contains(award.XpTransactionId.Value))
+            .Join(
+                _db.Achievements.AsNoTracking(),
+                award => award.AchievementId,
+                achievement => achievement.Id,
+                (award, achievement) => new
+                {
+                    TransactionId = award.XpTransactionId!.Value,
+                    achievement.Name,
+                    award.AwardedAt,
+                    award.Id,
+                })
+            .ToListAsync(ct);
+        var achievementNamesByTransaction = achievementRows
+            .GroupBy(row => row.TransactionId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<string>)group
+                    .OrderBy(row => row.AwardedAt)
+                    .ThenBy(row => row.Id)
+                    .Select(row => row.Name)
+                    .ToList());
+
+        var items = pageRows
             .Select(row => new PassportCompletionItem(
                 row.completion.Id,
                 row.quest.Id,
                 row.quest.Title,
                 row.quest.Category,
                 row.quest.Status,
+                row.coverImage is null
+                    ? null
+                    : new PassportCoverImage(
+                        row.coverImage.Id,
+                        row.coverImage.ImageUrl,
+                        row.coverImage.AltText),
                 row.completion.Status,
                 row.completion.Method,
                 row.completion.CompletedAt,
                 row.completion.VerifiedAtUtc,
-                row.transaction == null ? null : row.transaction.XpAmount))
+                row.transaction == null ? null : row.transaction.XpAmount,
+                row.transaction is not null
+                    && achievementNamesByTransaction.TryGetValue(
+                        row.transaction.Id,
+                        out var achievementNames)
+                    ? achievementNames
+                    : []))
             .ToList();
 
         return (items, totalCount);

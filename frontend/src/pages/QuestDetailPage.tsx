@@ -30,17 +30,8 @@ import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
 import { QuestMap } from '../components/maps/QuestMap.tsx';
 import { useQuestDetail, useQuestImages, useQuestList } from '../hooks/useQuests.ts';
 import { ApiError } from '../lib/api/apiFetch.ts';
-import QuestCard, { RepositoryQuestScene } from '../components/quest/QuestCard.tsx';
-
-const QUEST_IMAGE_FALLBACK = '/images/quests/quest-fallback.svg';
-
-function isRepositoryQuestPlaceholder(imageUrl: string | null | undefined) {
-  return Boolean(
-    imageUrl?.startsWith('/images/quests/')
-      && imageUrl.endsWith('.svg')
-      && imageUrl !== QUEST_IMAGE_FALLBACK,
-  );
-}
+import QuestCard from '../components/quest/QuestCard.tsx';
+import QuestImage from '../components/quest/QuestImage.tsx';
 
 export default function QuestDetailPage() {
   const { questId } = useParams<{ questId: string }>();
@@ -88,13 +79,12 @@ export default function QuestDetailPage() {
 
   const quest = questQuery.data;
   const category = CATEGORY_PRESENTATION[quest.category];
-  const cover = quest.coverImage?.imageUrl ?? QUEST_IMAGE_FALLBACK;
-  const coverIsRepositoryPlaceholder = isRepositoryQuestPlaceholder(cover);
+  const cover = quest.coverImage?.imageUrl;
   const galleryItems = images.data?.length
     ? images.data
     : [{
         id: 'repository-placeholder',
-        imageUrl: cover,
+        imageUrl: cover ?? '',
         altText: quest.coverImage?.altText ?? `Illustration for ${quest.title}`,
         sortOrder: 0,
         isCover: true,
@@ -120,19 +110,15 @@ export default function QuestDetailPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-base-200">
       <section className="relative h-64 overflow-hidden bg-secondary md:h-[26.25rem]">
-        {coverIsRepositoryPlaceholder ? (
-          <RepositoryQuestScene category={quest.category} title={quest.title} />
-        ) : (
-          <img
-            alt={quest.coverImage?.altText ?? `Fallback illustration for ${quest.title}`}
-            className="h-full w-full object-cover"
-            onError={(event) => {
-              event.currentTarget.onerror = null;
-              event.currentTarget.src = QUEST_IMAGE_FALLBACK;
-            }}
-            src={cover}
-          />
-        )}
+        <QuestImage
+          alt={quest.coverImage?.altText}
+          category={quest.category}
+          className="h-full w-full object-cover"
+          height={840}
+          source={cover}
+          title={quest.title}
+          width={1600}
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-base-200" />
         <div className="kiwi-page absolute inset-x-0 top-5">
           <Link
@@ -202,17 +188,17 @@ export default function QuestDetailPage() {
             )}
           </section>
 
-          <section className="mt-5 rounded-[1.25rem] border border-accent/40 bg-accent/10 p-5">
-            <h2 className="flex items-center gap-2 text-xl">
-              <Sparkles aria-hidden="true" className="size-5 text-warning" />
+          <section className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-5 dark:border-amber-700 dark:bg-amber-900/20">
+            <h2 className="flex items-center gap-2 text-xl text-amber-800 dark:text-amber-200">
+              <Sparkles aria-hidden="true" className="size-5" />
               Rewards for completing
             </h2>
             <div className="mt-4 flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-accent/45 bg-base-100 px-3 py-2 text-sm font-extrabold">
-                <Zap aria-hidden="true" className="size-4 text-warning" />
+              <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-extrabold text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                <Zap aria-hidden="true" className="size-4" />
                 {quest.xpAward} verified XP
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-base-300 bg-base-100 px-3 py-2 text-sm font-semibold">
+              <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
                 <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
                 Progress saved to your Passport
               </span>
@@ -234,7 +220,7 @@ export default function QuestDetailPage() {
                   </span>
                   <div>
                     <h3 className="text-base">{title}</h3>
-                    <p className="mt-0.5 text-sm text-base-content/62">{description}</p>
+                    <p className="mt-0.5 text-sm text-muted-content">{description}</p>
                   </div>
                 </li>
               ))}
@@ -243,7 +229,7 @@ export default function QuestDetailPage() {
 
           <section className="mt-7">
             <h2 className="text-2xl">About this quest</h2>
-            <p className="mt-3 whitespace-pre-wrap text-base leading-7 text-base-content/72">
+            <p className="mt-3 whitespace-pre-wrap text-base leading-7 text-muted-content">
               {quest.description}
             </p>
           </section>
@@ -251,12 +237,12 @@ export default function QuestDetailPage() {
           {quest.externalSourceUrl && (
             <section className="kiwi-panel mt-8 p-5 sm:p-6">
               <h2 className="text-xl">Official source</h2>
-              <p className="mt-2 text-sm leading-relaxed text-base-content/65">
+              <p className="mt-2 text-sm leading-relaxed text-muted-content">
                 Registration is managed by the original event provider. Its
                 published information remains authoritative.
               </p>
               {quest.sourceCheckedAt && (
-                <p className="mt-3 text-xs font-semibold text-base-content/52">
+                <p className="mt-3 text-xs font-semibold text-muted-content">
                   Last checked {new Date(quest.sourceCheckedAt).toLocaleDateString()}
                 </p>
               )}
@@ -303,23 +289,17 @@ export default function QuestDetailPage() {
                 )}
               </div>
               <figure className="mt-4 overflow-hidden rounded-3xl border border-base-300 bg-base-100">
-                {isRepositoryQuestPlaceholder(selectedGalleryImage?.imageUrl) ? (
-                  <div className="h-[18rem] sm:h-[27rem]">
-                    <RepositoryQuestScene category={quest.category} title={quest.title} />
-                  </div>
-                ) : (
-                  <img
-                    alt={selectedGalleryImage?.altText}
-                    className="h-[18rem] w-full object-cover sm:h-[27rem]"
-                    onError={(event) => {
-                      event.currentTarget.onerror = null;
-                      event.currentTarget.src = QUEST_IMAGE_FALLBACK;
-                    }}
-                    src={selectedGalleryImage?.imageUrl}
-                  />
-                )}
+                <QuestImage
+                  alt={selectedGalleryImage?.altText}
+                  category={quest.category}
+                  className="h-[18rem] w-full object-cover sm:h-[27rem]"
+                  height={864}
+                  source={selectedGalleryImage?.imageUrl}
+                  title={`${quest.title} gallery image ${galleryIndex + 1}`}
+                  width={1440}
+                />
                 {(selectedGalleryImage?.creatorName || selectedGalleryImage?.licenceNote) && (
-                  <figcaption className="px-5 py-3 text-xs text-base-content/60">
+                  <figcaption className="px-5 py-3 text-xs text-muted-content">
                     {selectedGalleryImage?.creatorName}
                     {selectedGalleryImage?.licenceNote
                       && ` — ${selectedGalleryImage.licenceNote}`}
@@ -339,22 +319,16 @@ export default function QuestDetailPage() {
                       onClick={() => setGalleryIndex(index)}
                       type="button"
                     >
-                      {isRepositoryQuestPlaceholder(image.imageUrl) ? (
-                        <div className="h-16 w-24" aria-hidden="true">
-                          <RepositoryQuestScene category={quest.category} title={quest.title} />
-                        </div>
-                      ) : (
-                        <img
-                          alt=""
-                          aria-hidden="true"
-                          className="h-16 w-24 object-cover"
-                          onError={(event) => {
-                            event.currentTarget.onerror = null;
-                            event.currentTarget.src = QUEST_IMAGE_FALLBACK;
-                          }}
-                          src={image.imageUrl}
-                        />
-                      )}
+                      <QuestImage
+                        alt=""
+                        aria-hidden="true"
+                        category={quest.category}
+                        className="h-16 w-24 object-cover"
+                        height={160}
+                        source={image.imageUrl}
+                        title={`${quest.title} gallery thumbnail ${index + 1}`}
+                        width={240}
+                      />
                     </button>
                   ))}
                 </div>
@@ -365,7 +339,7 @@ export default function QuestDetailPage() {
             <section className="mt-9" aria-labelledby="quest-location-heading">
               <p className="kiwi-stat-label">Plan your visit</p>
               <h2 className="mt-1 text-2xl" id="quest-location-heading">Quest location</h2>
-              <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-base-content/68">
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-muted-content">
                 {quest.locationDescription ?? quest.locationRegion?.name ?? 'Location to be confirmed'}
               </p>
               <div className="mt-4">
@@ -459,7 +433,7 @@ function Detail({
 function Snapshot({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-base-300 pb-3 last:border-0 last:pb-0">
-      <dt className="text-base-content/55">{label}</dt>
+      <dt className="text-muted-content">{label}</dt>
       <dd className="text-right font-bold">{value}</dd>
     </div>
   );
@@ -496,7 +470,7 @@ function StatePage({
           <CheckCircle2 aria-hidden="true" className="size-6" />
         </span>
         <h1 className="mt-5 text-3xl">{title}</h1>
-        <p className="mt-3 text-base-content/62">{description}</p>
+        <p className="mt-3 text-muted-content">{description}</p>
         <div className="mt-6">{action}</div>
       </div>
     </main>

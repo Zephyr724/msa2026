@@ -34,11 +34,14 @@ public sealed class PassportMappingTests
         Assert.Equal("Cancelled", dto.QuestStatus);
         Assert.Equal("Verified", dto.Status);
         Assert.Equal("CompletionCode", dto.Method);
+        Assert.Equal("/images/quests/passport-test.svg", dto.CoverImage?.ImageUrl);
+        Assert.Equal("Passport test cover", dto.CoverImage?.AltText);
         Assert.Equal(CompletedAt.ToString("O"), dto.CompletedAtUtc);
         Assert.Equal(VerifiedAt.ToString("O"), dto.VerifiedAtUtc);
         Assert.Equal("2026-07-20T10:15:30.1230000+00:00", dto.CompletedAtUtc);
         Assert.Equal("2026-07-21T12:30:45.4560000+00:00", dto.VerifiedAtUtc);
         Assert.Equal(150, dto.XpAmount);
+        Assert.Equal(["First Step"], dto.AchievementNames);
     }
 
     [Fact]
@@ -56,9 +59,14 @@ public sealed class PassportMappingTests
             "Quest title",
             QuestCategory.RestoreNature,
             QuestStatus.Published,
+            new PassportCoverImage(
+                Guid.NewGuid(),
+                "/images/quests/passport-test.svg",
+                "Passport test cover"),
             QuestCompletionStatus.Verified,
             CompletionMethod.CompletionCode,
             CompletedAt,
             VerifiedAt,
-            50);
+            50,
+            ["First Step"]);
 }

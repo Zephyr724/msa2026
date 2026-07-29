@@ -31,11 +31,18 @@ public sealed record PassportCompletionItem(
     string QuestTitle,
     QuestCategory QuestCategory,
     QuestStatus QuestStatus,
+    PassportCoverImage? CoverImage,
     QuestCompletionStatus Status,
     CompletionMethod Method,
     DateTimeOffset CompletedAtUtc,
     DateTimeOffset? VerifiedAtUtc,
-    int? XpAmount);
+    int? XpAmount,
+    IReadOnlyList<string> AchievementNames);
+
+public sealed record PassportCoverImage(
+    Guid Id,
+    string ImageUrl,
+    string AltText);
 
 public sealed record PassportCategoryImpact(
     QuestCategory Category,

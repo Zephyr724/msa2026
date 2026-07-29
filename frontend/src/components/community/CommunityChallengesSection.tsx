@@ -85,17 +85,17 @@ function ChallengeCard({ challenge }: { challenge: CommunityChallenge }) {
         <span className="font-bold">{challenge.currentProgress} complete</span>
         <span>{challenge.progressPercentage}%</span>
       </div>
-      <p className="mt-3 text-sm text-base-content/58">
+      <p className="mt-3 text-sm text-muted-content">
         {new Date(challenge.periodStartUtc).toLocaleDateString()} –{' '}
         {new Date(challenge.periodEndUtc).toLocaleDateString()}
       </p>
       {challenge.isPrivacyProtected ? (
-        <p className="mt-3 flex items-center gap-2 text-sm text-base-content/60">
+        <p className="mt-3 flex items-center gap-2 text-sm text-muted-content">
           <LockKeyhole className="size-4" aria-hidden="true" />
           Contributor count is protected while this community grows.
         </p>
       ) : (
-        <p className="mt-3 text-sm text-base-content/60">
+        <p className="mt-3 text-sm text-muted-content">
           {challenge.activeContributors} active contributors
         </p>
       )}

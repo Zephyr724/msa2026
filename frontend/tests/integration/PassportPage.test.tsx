@@ -35,11 +35,17 @@ function completionItem(overrides: Record<string, unknown> = {}) {
     questTitle: 'Harbour restoration day',
     questCategory: 'RestoreNature',
     questStatus: 'Published',
+    coverImage: {
+      id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      imageUrl: '/images/quests/native-planting.svg',
+      altText: 'Volunteers planting native trees',
+    },
     status: 'Verified',
     method: 'CompletionCode',
     completedAtUtc: '2026-07-20T09:00:00.0000000Z',
     verifiedAtUtc: '2026-07-21T09:00:00.0000000Z',
     xpAmount: 50,
+    achievementNames: ['First Step'],
     ...overrides,
   };
 }
@@ -238,7 +244,33 @@ describe('PassportPage', () => {
 
     expect(screen.getAllByText('Restore Nature')).not.toHaveLength(0);
     expect(screen.getAllByText('Verified')).not.toHaveLength(0);
-    expect(screen.getByText('50 XP')).toBeInTheDocument();
+    expect(screen.getByText('50 XP')).toHaveClass(
+      'border-amber-200',
+      'bg-amber-50',
+      'text-amber-700',
+      'dark:border-amber-700',
+      'dark:bg-amber-900/30',
+      'dark:text-amber-300',
+    );
+    const xpProgress = screen.getByRole('progressbar', {
+      name: 'Progress toward Level 4',
+    });
+    expect(xpProgress).toHaveClass('bg-base-300');
+    expect(xpProgress.firstElementChild).toHaveClass(
+      'bg-gradient-to-r',
+      'from-primary',
+      'to-emerald-400',
+    );
+    expect(screen.getByText('First Step')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Volunteers planting native trees' }))
+      .toHaveAttribute('src', expect.stringContaining('images.unsplash.com'));
+    expect(screen.getByRole('link', { name: 'Share' }))
+      .toHaveAttribute(
+        'href',
+        '/passport/share?completionId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      );
+    expect(historyRegion().querySelector('ul')?.className)
+      .toContain('sm:grid-cols-2');
     const time = container.querySelector('time');
     expect(time).toHaveAttribute('dateTime', '2026-07-20T09:00:00.0000000Z');
   });
@@ -275,7 +307,10 @@ describe('PassportPage', () => {
   it('F16: labels an ordinary reward-pending row as XP pending, never an estimate', async () => {
     stubPassportApi({
       completions: () =>
-        Promise.resolve(jsonResponse(historyPage([completionItem({ xpAmount: null })]))),
+        Promise.resolve(jsonResponse(historyPage([completionItem({
+          achievementNames: [],
+          xpAmount: null,
+        })]))),
     });
     renderPassport();
 
@@ -554,12 +589,31 @@ describe('PassportPage', () => {
       'Building Momentum',
       'Quest category progress',
       'Achievements',
-      'Community participation',
+      'Community challenge participation',
       'Passport settings',
-      'Home Community',
       'Share Card',
       'Completion history',
     ]);
+  });
+
+  it('uses the exact Figma category colours for Passport progress bars', async () => {
+    stubPassportApi({});
+    renderPassport();
+    await screen.findByRole('heading', { name: 'Quest category progress' });
+
+    const expectedColours = [
+      ['Restore Nature', 'bg-[#2F8F5B]'],
+      ['Protect Wildlife', 'bg-[#3C72C9]'],
+      ['Clean & Reduce Waste', 'bg-[#C74444]'],
+      ['Grow & Compost', 'bg-[#6C8F2F]'],
+      ['Observe & Measure', 'bg-[#6C63D9]'],
+      ['Learn & Share', 'bg-[#C963D9]'],
+    ] as const;
+
+    for (const [label, colourClass] of expectedColours) {
+      expect(screen.getByRole('progressbar', { name: new RegExp(`^${label}:`) })
+        .querySelector('span')?.className).toContain(colourClass);
+    }
   });
 
   it('filters against the complete Passport history rather than only the visible page', async () => {
@@ -573,6 +627,7 @@ describe('PassportPage', () => {
       method: 'SelfReported',
       verifiedAtUtc: null,
       xpAmount: null,
+      achievementNames: [],
     });
     stubPassportApi({
       completions: (url) => Promise.resolve(jsonResponse(
@@ -593,13 +648,14 @@ describe('PassportPage', () => {
     renderPassport();
 
     await within(historyRegion()).findByText('Harbour restoration day');
-    await user.click(screen.getByRole('button', { name: 'Self-reported' }));
+    await user.click(screen.getByRole('button', { name: 'Self reported' }));
 
     expect(await within(historyRegion()).findByText('Waste-free habit')).toBeInTheDocument();
-    await user.selectOptions(
-      screen.getByLabelText('Filter completion history by category'),
-      'RestoreNature',
-    );
-    expect(await within(historyRegion()).findByText('No matching records.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', {
+      name: 'Filter completion history by Restore Nature',
+    }));
+    expect(await within(historyRegion()).findByText('No matching completions')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show all' }));
+    expect(await within(historyRegion()).findByText('Harbour restoration day')).toBeInTheDocument();
   });
 });

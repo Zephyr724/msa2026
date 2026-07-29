@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   Award,
+  CheckCircle2,
   Compass,
   IdCard,
   Leaf,
@@ -9,15 +10,15 @@ import {
   Map,
   MapPin,
   ShieldCheck,
-  Sparkles,
   Target,
   Trophy,
+  TrendingUp,
   Users,
   Zap,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import QuestCard from '../components/quest/QuestCard.tsx';
-import { RepositoryQuestScene } from '../components/quest/QuestCard.tsx';
+import QuestImage from '../components/quest/QuestImage.tsx';
 import { useAuthQuery } from '../hooks/useAuth.ts';
 import { useProgression } from '../hooks/useProgression.ts';
 import { useQuestList } from '../hooks/useQuests.ts';
@@ -75,6 +76,10 @@ export default function HomePage() {
   const auth = useAuthQuery();
   const featured = useQuestList({ page: 1, pageSize: 3, sortBy: 'startAt' });
   const challenges = useCommunityChallenges();
+  const profile = useMyProfile(Boolean(auth.data));
+  const primaryChallenge = challenges.data?.find(
+    (challenge) => challenge.localArea.id === profile.data?.homeCommunity?.id,
+  ) ?? challenges.data?.[0];
 
   return (
     <>
@@ -90,12 +95,12 @@ export default function HomePage() {
               Turn local action into{' '}
               <span className="text-primary">lasting progress.</span>
             </h1>
-            <p className="mt-5 max-w-lg text-lg leading-relaxed text-base-content/68">
+            <p className="mt-5 max-w-lg text-lg leading-relaxed text-muted-content">
               Discover eco quests near you, get verified, earn XP, and build
               your Impact Passport — together.
             </p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-bold text-base-content/58">
+            <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-bold text-muted-content">
               {['Discover', 'Join', 'Complete', 'Earn XP', 'Grow Passport'].map(
                 (step, index) => (
                   <span className="inline-flex items-center gap-2" key={step}>
@@ -136,7 +141,7 @@ export default function HomePage() {
             <GuestProgressPreview />
           )}
           <CompactCommunityGoal
-            challenge={challenges.data?.[0]}
+            challenge={primaryChallenge}
             error={challenges.isError}
             loading={challenges.isPending}
           />
@@ -149,7 +154,7 @@ export default function HomePage() {
             <div>
               <p className="kiwi-stat-label">Start nearby</p>
               <h2 className="mt-1 text-2xl">Featured quests</h2>
-              <p className="mt-2 text-base-content/62">
+              <p className="mt-2 text-muted-content">
                 Real opportunities from the current Kiwimpact quest catalogue.
               </p>
             </div>
@@ -188,7 +193,7 @@ export default function HomePage() {
           {featured.data?.items.length === 0 && (
             <div className="kiwi-panel p-8 text-center">
               <p className="font-semibold">New quests are being prepared.</p>
-              <p className="mt-1 text-sm text-base-content/60">Check Discover again soon.</p>
+              <p className="mt-1 text-sm text-muted-content">Check Discover again soon.</p>
             </div>
           )}
         </div>
@@ -199,7 +204,7 @@ export default function HomePage() {
           <div className="mx-auto mb-10 max-w-xl text-center">
             <p className="kiwi-stat-label">How it works</p>
             <h2 className="mt-2 text-2xl">One connected loop</h2>
-            <p className="mt-3 text-base-content/62">
+            <p className="mt-3 text-muted-content">
               Every verified step builds a clearer record of your participation.
             </p>
           </div>
@@ -213,7 +218,7 @@ export default function HomePage() {
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
                 <h3 className="mt-5 text-xl">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-base-content/62">{description}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-content">{description}</p>
               </article>
             ))}
           </div>
@@ -301,24 +306,55 @@ function HeroMapPreview() {
         className="group block overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100 shadow-sm transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
         to="/quests"
       >
-        <div className="relative h-[17rem] overflow-hidden bg-[#dcefdc] md:h-[18rem]">
-          <div
+        <div className="relative h-[17rem] overflow-hidden bg-[#e8f3e4] dark:bg-[#1B2C24] md:h-[18rem]">
+          <svg
             aria-hidden="true"
-            className="absolute inset-0 opacity-90"
-            style={{
-              backgroundImage:
-                'linear-gradient(34deg, transparent 44%, rgba(255,255,255,.8) 45%, rgba(255,255,255,.8) 50%, transparent 51%), linear-gradient(-32deg, transparent 36%, rgba(255,255,255,.65) 37%, rgba(255,255,255,.65) 41%, transparent 42%), radial-gradient(circle at 20% 18%, #bad9f3 0 13%, transparent 13.5%), radial-gradient(circle at 82% 80%, #b9d6f1 0 18%, transparent 18.5%)',
-              backgroundSize: '180px 150px, 210px 180px, auto, auto',
-            }}
-          />
-          <div aria-hidden="true" className="absolute -left-8 top-28 h-24 w-[125%] rotate-[-7deg] rounded-full border-[18px] border-[#a8d29f]/80" />
+            className="absolute inset-0 size-full"
+            fill="none"
+            preserveAspectRatio="none"
+            viewBox="0 0 800 400"
+          >
+            <path
+              className="dark:stroke-[#365144]"
+              d="M0 200 Q200 180 400 200 T800 200"
+              stroke="#c8dfc4"
+              strokeWidth="6"
+            />
+            <path
+              className="dark:stroke-[#365144]"
+              d="M400 0 Q380 200 400 400"
+              stroke="#c8dfc4"
+              strokeWidth="4"
+            />
+            <path
+              className="dark:stroke-[#2a4234]"
+              d="M100 100 Q300 120 500 80 Q650 60 800 100"
+              stroke="#d5e8d0"
+              strokeWidth="3"
+            />
+            <path
+              className="dark:stroke-[#2a4234]"
+              d="M0 300 Q250 320 500 300 Q700 280 800 310"
+              stroke="#d5e8d0"
+              strokeWidth="3"
+            />
+            <ellipse
+              className="dark:opacity-20"
+              cx="650"
+              cy="80"
+              fill="#b8d4e8"
+              opacity=".4"
+              rx="120"
+              ry="60"
+            />
+          </svg>
           <span className="absolute left-[18%] top-[35%] grid size-9 place-items-center rounded-full border-[3px] border-base-100 bg-primary text-primary-content shadow-lg">
             <Leaf className="size-4" />
           </span>
-          <span className="absolute right-[18%] top-[24%] grid size-9 place-items-center rounded-full border-[3px] border-base-100 bg-[#3c72c9] text-white shadow-lg">
+          <span className="absolute right-[18%] top-[24%] grid size-9 place-items-center rounded-full border-[3px] border-base-100 bg-primary/80 text-primary-content shadow-lg">
             <MapPin className="size-4" />
           </span>
-          <span className="absolute bottom-[21%] left-[48%] grid size-9 place-items-center rounded-full border-[3px] border-base-100 bg-[#d4a020] text-white shadow-lg">
+          <span className="absolute bottom-[21%] left-[48%] grid size-9 place-items-center rounded-full border-[3px] border-base-100 bg-primary/80 text-primary-content shadow-lg">
             <Trophy className="size-4" />
           </span>
           <div className="absolute inset-x-3 top-3 flex items-center justify-between rounded-xl bg-base-100/92 px-3 py-2 shadow-sm backdrop-blur">
@@ -350,7 +386,7 @@ function GuestProgressPreview() {
         <div>
           <p className="kiwi-stat-label">Personal progress</p>
           <h2 className="mt-2 text-3xl">Start with one real action</h2>
-          <p className="mt-3 max-w-lg text-sm leading-relaxed text-base-content/62">
+          <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-content">
             Your dashboard begins empty and grows only from verified Quest
             activity—no demo rank, streak, or impact is invented.
           </p>
@@ -365,7 +401,7 @@ function GuestProgressPreview() {
         ].map(([value, label]) => (
           <div className="rounded-2xl border border-base-300 bg-base-100/85 p-4 text-center" key={label}>
             <span className="kiwi-display text-2xl text-primary">{value}</span>
-            <span className="mt-1 block text-xs font-bold text-base-content/58">{label}</span>
+            <span className="mt-1 block text-xs font-bold text-muted-content">{label}</span>
           </div>
         ))}
       </div>
@@ -377,19 +413,71 @@ function GuestProgressPreview() {
 }
 
 function PassportShowcase({ signedIn }: { signedIn: boolean }) {
+  const passportFeatures = [
+    {
+      Icon: ShieldCheck,
+      title: 'Verified Quest history',
+      detail: 'A record backed by completion codes or approved evidence',
+      meta: 'Verified',
+    },
+    {
+      Icon: TrendingUp,
+      title: 'XP and level progress',
+      detail: 'Server-authoritative XP with a visible path to the next level',
+      meta: 'Levels 1–99',
+    },
+    {
+      Icon: Award,
+      title: 'Milestone achievements',
+      detail: 'Earned from rewarded, verified completion milestones',
+      meta: '3 live',
+    },
+    {
+      Icon: Flame,
+      title: 'Weekly streak',
+      detail: 'Keep momentum with at least one verified Quest each week',
+      meta: 'Weekly',
+    },
+    {
+      Icon: Users,
+      title: 'Community contribution',
+      detail: 'See how verified local action adds to a shared goal',
+      meta: 'Local',
+    },
+  ] as const;
+
   return (
-    <section className="kiwi-topography overflow-hidden bg-primary py-14 text-primary-content sm:py-16">
+    <section className="kiwi-topography overflow-hidden bg-primary py-16 text-primary-content sm:py-20">
       <div className="kiwi-page">
-        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <div className="relative grid gap-10 md:grid-cols-2 md:items-center">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.14em] opacity-70">
-              Your impact identity
+            <h2 className="max-w-xl text-3xl sm:text-4xl">Build your Impact Passport</h2>
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-primary-content/80">
+              Every verified Quest adds to your Passport — a personal record
+              that is yours to keep and share.
             </p>
-            <h2 className="mt-2 max-w-xl text-4xl">Build your Impact Passport</h2>
-            <p className="mt-4 max-w-xl text-lg leading-relaxed opacity-78">
-              Keep your verified completions, XP, rank, achievements, and
-              community contribution in one living record.
-            </p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {[
+                [TrendingUp, 'Levels 1–99', 'Level progression'],
+                [Award, '3 milestones', 'Achievement badges'],
+                [Flame, 'Weekly', 'Streak tracking'],
+                [Users, 'Local', 'Community progress'],
+              ].map(([Icon, value, label]) => {
+                const FeatureIcon = Icon as typeof TrendingUp;
+                return (
+                  <div
+                    className="flex items-center gap-3 rounded-2xl border border-primary-content/10 bg-primary-content/10 p-4"
+                    key={label as string}
+                  >
+                    <FeatureIcon aria-hidden="true" className="size-5 shrink-0 opacity-80" />
+                    <span>
+                      <strong className="block text-sm">{value as string}</strong>
+                      <span className="block text-xs opacity-70">{label as string}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
             <Link
               className="btn mt-7 rounded-full border-0 bg-primary-content text-primary hover:bg-primary-content/90"
               to={signedIn ? '/passport' : '/register'}
@@ -398,49 +486,36 @@ function PassportShowcase({ signedIn }: { signedIn: boolean }) {
               <ArrowRight aria-hidden="true" className="size-4" />
             </Link>
           </div>
-          <div className="overflow-hidden rounded-[1.25rem] border border-primary-content/20 bg-base-100 text-base-content shadow-xl">
-            <div className="flex items-center gap-4 border-b border-base-300 p-5">
-              <span className="grid size-[4.125rem] place-items-center rounded-[1.35rem] bg-primary/12 text-primary">
-                <IdCard aria-hidden="true" className="size-8" />
-              </span>
-              <div>
-                <p className="kiwi-stat-label">Passport preview</p>
-                <p className="mt-1 text-2xl font-extrabold">A record you can stand behind</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 border-b border-base-300 sm:grid-cols-4">
-              {[
-                ['Quest log', 'Verified'],
-                ['XP ledger', 'Authoritative'],
-                ['Rank path', 'Progressive'],
-                ['Badge case', 'Earned'],
-              ].map(([value, label], index) => (
-                <div
-                  className={`p-4 text-center ${
-                    index < 3 ? 'border-r border-base-300' : ''
-                  } ${index < 2 ? 'max-sm:border-b' : ''}`}
-                  key={label}
-                >
-                  <span className="kiwi-display block text-xl text-primary">{value}</span>
-                  <span className="mt-1 block text-xs font-bold text-base-content/55">{label}</span>
-                </div>
-              ))}
-            </div>
-            <div className="grid gap-3 p-5 sm:grid-cols-3">
-              {[
-                [ShieldCheck, 'Verified history'],
-                [Sparkles, 'Achievement trail'],
-                [Users, 'Community context'],
-              ].map(([Icon, title]) => {
-                const PassportIcon = Icon as typeof ShieldCheck;
-                return (
-                  <div className="flex items-center gap-2 rounded-xl bg-secondary/60 p-3" key={title as string}>
-                    <PassportIcon aria-hidden="true" className="size-5 text-primary" />
-                    <span className="text-xs font-extrabold">{title as string}</span>
+          <div className="space-y-3">
+            {passportFeatures.map(({ Icon, title, detail, meta }, index) => (
+              <div
+                className="flex items-center gap-3.5 rounded-2xl border border-primary-content/10 bg-primary-content/10 p-3.5"
+                key={title}
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-content/12 text-accent">
+                  <Icon aria-hidden="true" className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-extrabold">{title}</p>
+                    {index === 0 ? (
+                      <CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-accent" />
+                    ) : (
+                      <span className="shrink-0 text-xs text-primary-content/60">{meta}</span>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+                  <p className="mt-1 text-xs leading-relaxed text-primary-content/66">{detail}</p>
+                  {index > 0 && index < 3 && (
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-primary-content/15">
+                      <span
+                        className="block h-full rounded-full bg-accent/85"
+                        style={{ width: index === 1 ? '55%' : '35%' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -458,72 +533,110 @@ function CompactCommunityGoal({
   loading: boolean;
 }) {
   const percentage = challenge ? Math.min(100, Math.max(0, challenge.progressPercentage)) : 0;
+  const remaining = challenge
+    ? Math.max(0, challenge.targetValue - challenge.currentProgress)
+    : 0;
+  const daysRemaining = challenge
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(challenge.periodEndUtc).getTime() - Date.now())
+          / (24 * 60 * 60 * 1000),
+        ),
+      )
+    : 0;
 
   return (
-    <article className="h-full overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100 shadow-sm">
-      <div className="relative h-28 overflow-hidden">
-        <RepositoryQuestScene category="RestoreNature" title="Auckland community goal" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
-        <div className="absolute inset-x-5 bottom-4 flex items-end justify-between gap-4 text-white">
-          <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-white/75">
-              Community Goal
-            </p>
-            <h2 className="mt-1 text-2xl text-white">
-              {challenge ? `${challenge.localArea.name} moves together` : 'A shared local goal'}
-            </h2>
-          </div>
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-white/30 bg-white/15 backdrop-blur">
-            <Trophy aria-hidden="true" className="size-5" />
-          </span>
+    <div className="flex h-full flex-col">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <p className="kiwi-stat-label">Community Goal</p>
+          <h2 className="mt-1 text-xl">
+            {challenge
+              ? `${challenge.localArea.name} Challenge`
+              : 'Your local community challenge'}
+          </h2>
         </div>
+        {challenge && (
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+            {daysRemaining} days left
+          </span>
+        )}
       </div>
-      <div className="flex min-h-[18rem] flex-col p-6">
-
+      <article className="flex h-full flex-col overflow-hidden rounded-[1.25rem] border border-base-300 bg-base-100 shadow-sm">
+        <div className="h-28 overflow-hidden">
+          <QuestImage
+            alt=""
+            category="RestoreNature"
+            className="h-full w-full object-cover"
+            height={224}
+            source={null}
+            title={challenge
+              ? `${challenge.localArea.name} community challenge`
+              : 'Auckland community challenge'}
+            width={960}
+          />
+        </div>
+        <div className="flex flex-1 flex-col space-y-3 p-5">
         {loading ? (
           <div className="h-24 animate-pulse rounded-2xl bg-base-200" />
         ) : challenge ? (
           <>
-            <div className="flex items-end justify-between gap-5">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <span className="kiwi-display text-4xl text-primary">{challenge.currentProgress}</span>
-                <span className="ml-2 text-sm font-bold text-base-content/62">
-                  of {challenge.targetValue} verified actions
-                </span>
+                <p className="kiwi-stat-label">Community Challenge</p>
+                <h3 className="mt-1 text-lg">{challenge.localArea.name}</h3>
+                <p className="mt-1 text-sm text-muted-content">
+                  Complete {challenge.targetValue} verified Quests during this challenge
+                </p>
               </div>
-              <span className="text-sm font-extrabold">{Math.round(percentage)}%</span>
             </div>
             <progress
               aria-label={`${challenge.localArea.name} community challenge progress`}
-              className="progress progress-primary mt-3 h-3"
+              className="progress progress-primary h-3"
               max="100"
               value={percentage}
             />
-            <p className="mt-4 text-sm leading-relaxed text-base-content/65">
-              {challenge.isPrivacyProtected
-                ? 'Contributor details stay private until the community threshold is met.'
-                : `${challenge.activeContributors ?? 0} local contributors are taking part.`}
-            </p>
-            <div className="mt-4 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
-              <span>
-                <span className="block text-xs font-extrabold uppercase tracking-wide text-amber-700">Community reward</span>
-                <span className="mt-1 block text-sm font-bold">Unlock the shared milestone badge</span>
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-extrabold text-primary">
+                {challenge.currentProgress} / {challenge.targetValue}
               </span>
-              <Award aria-hidden="true" className="size-7 text-amber-600" />
+              <span className="text-xs text-muted-content">
+                {remaining} {remaining === 1 ? 'Quest' : 'Quests'} remaining
+              </span>
             </div>
+            <div className="flex items-center gap-3 rounded-xl border border-base-300 bg-secondary p-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent/18 text-warning">
+                <Award aria-hidden="true" className="size-5" />
+              </span>
+              <span>
+                <span className="block text-xs font-extrabold">Reward: community milestone badge</span>
+                <span className="mt-0.5 block text-xs text-muted-content">
+                  For contributors when the community reaches its goal
+                </span>
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-content">
+              Any verified Quest attributed to {challenge.localArea.name} during
+              the challenge automatically counts. Self-reported completions do not.
+            </p>
           </>
         ) : (
-          <p className="max-w-md text-sm leading-relaxed text-base-content/65">
+          <p className="max-w-md text-sm leading-relaxed text-muted-content">
             {error
               ? 'Community progress is temporarily unavailable.'
               : 'The next community challenge will appear here when it begins.'}
           </p>
         )}
-        <Link className="btn btn-outline btn-sm mt-auto self-start rounded-full border-primary/45 text-primary hover:bg-primary hover:text-primary-content" to="/leaderboard">
-          View community impact <ArrowRight aria-hidden="true" className="size-4" />
+        <Link
+          className="mt-auto inline-flex items-center gap-1 self-start text-sm font-bold text-primary hover:underline"
+          to="/my-quests#community-challenge"
+        >
+          View challenge details <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
-      </div>
-    </article>
+        </div>
+      </article>
+    </div>
   );
 }
 
@@ -545,13 +658,13 @@ function MemberProgress({ displayName }: { displayName: string }) {
           <p className="kiwi-stat-label">Welcome back</p>
           <h2 className="mt-1 text-3xl">{displayName}</h2>
           {progression.isPending && (
-            <p aria-live="polite" className="mt-2 text-sm text-base-content/60">
+            <p aria-live="polite" className="mt-2 text-sm text-muted-content">
               Loading your progress…
             </p>
           )}
           {progression.data && (
             <>
-              <p className="mt-2 font-semibold text-base-content/65">
+              <p className="mt-2 font-semibold text-muted-content">
                 Level {progression.data.level} · {progression.data.rankTitle} ·{' '}
                 {progression.data.totalXp} XP
               </p>
@@ -561,7 +674,7 @@ function MemberProgress({ displayName }: { displayName: string }) {
             </>
           )}
           {progression.isError && (
-            <p className="mt-2 text-sm text-base-content/60">
+            <p className="mt-2 text-sm text-muted-content">
               Your progress will appear when it is available.
             </p>
           )}

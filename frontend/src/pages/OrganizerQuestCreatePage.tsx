@@ -53,7 +53,7 @@ export default function OrganizerQuestCreatePage() {
         <FilePlus2 aria-hidden="true" className="size-8 text-primary" />
         Create quest
       </h1>
-      <p className="mb-8 mt-2 text-base-content/65">
+      <p className="mb-8 mt-2 text-muted-content">
         New quests are saved as drafts. You can review and publish after creation.
       </p>
       <QuestForm

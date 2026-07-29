@@ -18,9 +18,24 @@ public sealed class RegionReadRepository : IRegionReadRepository
     public async Task<IReadOnlyList<Region>> GetActiveLocalAreasAsync(
         string? search, CancellationToken ct = default)
     {
+        return await GetActiveByTypeAsync(RegionType.LocalArea, search, ct);
+    }
+
+    public async Task<IReadOnlyList<Region>> GetActiveAdministrativeAreasAsync(
+        string? search,
+        CancellationToken ct = default)
+    {
+        return await GetActiveByTypeAsync(RegionType.AdministrativeArea, search, ct);
+    }
+
+    private async Task<IReadOnlyList<Region>> GetActiveByTypeAsync(
+        RegionType type,
+        string? search,
+        CancellationToken ct)
+    {
         var query = _db.Regions
             .AsNoTracking()
-            .Where(r => r.IsActive && r.Type == RegionType.LocalArea);
+            .Where(r => r.IsActive && r.Type == type);
 
         if (!string.IsNullOrWhiteSpace(search))
         {

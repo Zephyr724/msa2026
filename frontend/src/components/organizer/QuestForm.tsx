@@ -375,7 +375,7 @@ export default function QuestForm({
                 type="number"
                 value={fields.capacity}
               />
-              <p className="text-sm text-base-content/60" id="capacity-hint">
+              <p className="text-sm text-muted-content" id="capacity-hint">
                 Zero is allowed. Select unlimited when no capacity applies.
               </p>
             </FormControl>
@@ -477,7 +477,7 @@ export default function QuestForm({
                 type="url"
                 value={fields.externalSourceUrl}
               />
-              <p className="text-sm text-base-content/60" id="external-source-hint">
+              <p className="text-sm text-muted-content" id="external-source-hint">
                 Optional. HTTPS links only.
               </p>
             </FormControl>
@@ -486,7 +486,7 @@ export default function QuestForm({
           <section className="kiwi-panel space-y-4 p-5 sm:p-6" aria-labelledby="cover-heading">
             <div>
               <h2 className="text-2xl" id="cover-heading">Cover image</h2>
-              <p className="text-sm text-base-content/60">
+              <p className="text-sm text-muted-content">
                 Add image metadata and a URL. File upload is not available here.
               </p>
             </div>

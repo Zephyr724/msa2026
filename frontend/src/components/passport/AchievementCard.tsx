@@ -92,7 +92,7 @@ export default function AchievementCard(props: AchievementCardProps) {
         </div>
         <div>
           <h3 className="text-lg">{achievement.name}</h3>
-          <p className="mt-1 text-sm text-base-content/70">
+          <p className="mt-1 text-sm text-muted-content">
             {achievement.description}
           </p>
         </div>

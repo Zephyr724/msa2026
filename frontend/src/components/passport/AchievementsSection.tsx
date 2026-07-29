@@ -96,7 +96,7 @@ export default function AchievementsSection() {
   } else if (catalog.data.length === 0) {
     content = (
       <div className="kiwi-panel p-8 text-center">
-        <p className="text-base-content/70">No achievements available yet.</p>
+        <p className="text-muted-content">No achievements available yet.</p>
       </div>
     );
   } else {

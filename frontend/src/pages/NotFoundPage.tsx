@@ -9,7 +9,7 @@ export default function NotFoundPage() {
           <MapPinOff className="size-8 text-warning" />
         </span>
         <h1 className="text-5xl text-base-content">404</h1>
-        <p className="text-lg text-base-content/70">
+        <p className="text-lg text-muted-content">
           This page could not be found.
         </p>
         <Link to="/" className="btn btn-primary rounded-full">

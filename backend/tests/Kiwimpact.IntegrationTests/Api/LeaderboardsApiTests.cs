@@ -3,6 +3,7 @@ using System.Text.Json;
 using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Infrastructure.Data;
+using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
 using Kiwimpact.Infrastructure.Reconciliation;
 using Kiwimpact.IntegrationTests.Persistence;
@@ -294,6 +295,83 @@ public sealed class LeaderboardsApiTests
         Assert.Empty((await ReadJsonAsync(response)).GetProperty("rows").EnumerateArray());
     }
 
+    [Fact]
+    public async Task CommunityScopeRanksLocalAreasButNzScopeRanksCities()
+    {
+        await ResetLeaderboardDataAsync();
+        var wellingtonId = new Guid("71000000-0000-4000-8000-000000000001");
+        var wellingtonCentralId =
+            new Guid("71000000-0000-4000-8000-000000000101");
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            if (!await db.Regions.AnyAsync(
+                region => region.Id == wellingtonId,
+                TestContext.Current.CancellationToken))
+            {
+                var now = DateTimeOffset.UtcNow;
+                db.Regions.Add(new Region
+                {
+                    Id = wellingtonId,
+                    Name = "Wellington",
+                    Type = RegionType.AdministrativeArea,
+                    ParentRegionId = RegionSeed.NewZealandId,
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+                db.Regions.Add(new Region
+                {
+                    Id = wellingtonCentralId,
+                    Name = "Wellington Central",
+                    Type = RegionType.LocalArea,
+                    ParentRegionId = wellingtonId,
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+                await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+        }
+
+        await SeedCommunityCompletionAsync("Albert member", RegionSeed.AlbertEdenId);
+        await SeedCommunityCompletionAsync(
+            "Henderson member",
+            RegionSeed.HendersonMasseyId);
+        await SeedCommunityCompletionAsync("Wellington member", wellingtonCentralId);
+
+        var client = _factory.CreateClient();
+        var auckland = await ReadJsonAsync(await client.GetAsync(
+            "/api/v1/leaderboards/communities?scope=auckland&period=allTime",
+            TestContext.Current.CancellationToken));
+        Assert.Equal(
+            ["Albert-Eden", "Henderson-Massey"],
+            auckland.GetProperty("rows")
+                .EnumerateArray()
+                .Select(row => row.GetProperty("regionName").GetString()!)
+                .Order(StringComparer.Ordinal)
+                .ToArray());
+
+        var nz = await ReadJsonAsync(await client.GetAsync(
+            "/api/v1/leaderboards/communities?scope=nz&period=allTime",
+            TestContext.Current.CancellationToken));
+        Assert.Equal(
+            ["Auckland", "Wellington"],
+            nz.GetProperty("rows")
+                .EnumerateArray()
+                .Select(row => row.GetProperty("regionName").GetString()!)
+                .Order(StringComparer.Ordinal)
+                .ToArray());
+        Assert.Equal(
+            2,
+            nz.GetProperty("rows")
+                .EnumerateArray()
+                .Single(row =>
+                    row.GetProperty("regionName").GetString() == "Auckland")
+                .GetProperty("verifiedCompletionCount")
+                .GetInt64());
+    }
+
     private async Task ResetLeaderboardDataAsync()
     {
         using var scope = _factory.Services.CreateScope();
@@ -361,6 +439,38 @@ public sealed class LeaderboardsApiTests
 
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         return user.Id;
+    }
+
+    private async Task SeedCommunityCompletionAsync(
+        string displayName,
+        Guid communityRegionId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var user = XpLedgerTestHelpers.NewUser("community-leaderboard-member");
+        var creator = XpLedgerTestHelpers.NewUser("community-leaderboard-creator");
+        var quest = XpLedgerTestHelpers.NewQuest(creator.Id, QuestDifficulty.Easy);
+        var participation = QuestParticipation.CreateActive(
+            user.Id,
+            quest.Id,
+            DateTimeOffset.UtcNow.AddMinutes(-5));
+        var completion = QuestCompletion.CreateVerifiedWithCode(
+            user.Id,
+            quest,
+            participation,
+            communityRegionId,
+            DateTimeOffset.UtcNow);
+        db.Set<ApplicationUser>().AddRange(user, creator);
+        db.UserProfiles.Add(UserProfile.Create(
+            user.Id,
+            displayName,
+            DateTimeOffset.UtcNow));
+        db.Quests.Add(quest);
+        db.QuestParticipations.Add(participation);
+        db.QuestCompletions.Add(completion);
+        db.XpTransactions.Add(
+            XpTransaction.CreateFromVerifiedCompletion(completion));
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private static async Task AssertNotReadyAsync(HttpResponseMessage response)

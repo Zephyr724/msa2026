@@ -55,7 +55,7 @@ export default function TrustedCompletionPanel({
     return (
       <section className="kiwi-panel p-5">
         <p className="font-bold text-warning">Evidence under review</p>
-        <p className="mt-2 text-sm text-base-content/65">
+        <p className="mt-2 text-sm text-muted-content">
           Your private evidence is waiting for an Admin decision.
         </p>
       </section>
@@ -105,7 +105,7 @@ export default function TrustedCompletionPanel({
           </>
         )}
         {selectedMode === 'self' && (
-          <p className="rounded-2xl bg-base-200 p-3 text-sm text-base-content/65">
+          <p className="rounded-2xl bg-base-200 p-3 text-sm text-muted-content">
             Self-reports appear in your Passport but do not award XP or leaderboard progress.
           </p>
         )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuthQuery } from '../hooks/useAuth.ts';
 import { useProgression } from '../hooks/useProgression.ts';
@@ -16,7 +17,6 @@ import AchievementsSection from '../components/passport/AchievementsSection.tsx'
 import CompletionHistoryList from '../components/passport/CompletionHistoryList.tsx';
 import PassportPagination from '../components/passport/PassportPagination.tsx';
 import { useMyClaims } from '../hooks/useCompletion.ts';
-import CommunityProfileCard from '../components/community/CommunityProfileCard.tsx';
 import ShareCard from '../components/passport/ShareCard.tsx';
 import NextMilestoneCard from '../components/passport/NextMilestoneCard.tsx';
 import CategoryImpactSection from '../components/passport/CategoryImpactSection.tsx';
@@ -24,6 +24,7 @@ import CommunityParticipationSection from '../components/passport/CommunityParti
 import { useWeeklyStreak } from '../hooks/useCommunity.ts';
 import { CATEGORY_PRESENTATION } from '../lib/questPresentation.ts';
 import { QUEST_CATEGORIES, type QuestCategory } from '../types/quest.ts';
+import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
@@ -211,7 +212,24 @@ export default function PassportPage() {
             Passport settings
           </h2>
           <div className="grid gap-6 md:grid-cols-2">
-            <CommunityProfileCard />
+            <Link
+              className="kiwi-panel mt-6 flex items-start gap-4 p-5 transition-colors hover:border-primary/35"
+              to="/settings/profile#community"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <span aria-hidden="true" className="text-lg">⌂</span>
+              </span>
+              <span>
+                <span className="kiwi-stat-label">Profile Settings</span>
+                <strong className="mt-1 block text-xl">Home Community</strong>
+                <span className="mt-1 block text-sm text-muted-content">
+                  Choose or change your community and Passport visibility.
+                </span>
+                <span className="mt-3 block text-sm font-bold text-primary">
+                  Open Community settings →
+                </span>
+              </span>
+            </Link>
             <div className="mt-6">
               <ShareCard
                 completion={history.data?.items.find(
@@ -230,13 +248,19 @@ export default function PassportPage() {
             <Link className="btn btn-ghost btn-sm" to="/settings/password">Account safety</Link>
           </div>
           {claims.isPending && <p className="mt-4">Loading claims…</p>}
-          {claims.data?.length === 0 && <p className="mt-4 text-sm text-base-content/60">No evidence claims yet.</p>}
+          {claims.data?.length === 0 && <p className="mt-4 text-sm text-muted-content">No evidence claims yet.</p>}
           <ul className="mt-4 grid gap-3">
             {claims.data?.map((claim) => (
               <li className="flex items-center justify-between gap-4 rounded-2xl bg-base-200 p-4" key={claim.claimId}>
                 <div><p className="font-bold">{claim.questTitle}</p>
-                  <p className="text-xs text-base-content/55">{new Date(claim.createdAtUtc).toLocaleDateString()}</p></div>
-                <span className={`badge ${claim.status === 'Verified' ? 'badge-success' : claim.status === 'Rejected' ? 'badge-error' : 'badge-warning'}`}>
+                  <p className="text-xs text-muted-content">{new Date(claim.createdAtUtc).toLocaleDateString()}</p></div>
+                <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${
+                  claim.status === 'Verified'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                    : claim.status === 'Rejected'
+                      ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
+                }`}>
                   {claim.status}
                 </span>
               </li>
@@ -244,47 +268,68 @@ export default function PassportPage() {
           </ul>
         </section>
         <section aria-labelledby="passport-history-heading" className="mt-6">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="kiwi-stat-label">Impact record</p>
-              <h2 className="mt-1 text-2xl" id="passport-history-heading">
+              <h2 className="text-2xl" id="passport-history-heading">
                 Completion history
               </h2>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div aria-label="Completion history filter" className="kiwi-segmented" role="group">
-                {([
-                  ['all', 'All'],
-                  ['verified', 'Verified'],
-                  ['selfReported', 'Self-reported'],
-                ] as const).map(([value, label]) => (
+            <Link className="btn btn-outline btn-sm rounded-full" to="/passport/share">
+              <Share2 aria-hidden="true" className="size-3.5" />
+              Create share card
+            </Link>
+          </div>
+          <p className="mb-4 text-xs text-muted-content">
+            Your personal verified and self-reported quest completions.
+          </p>
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <div aria-label="Completion history filter" className="flex flex-wrap gap-2" role="group">
+              {([
+                ['all', 'All'],
+                ['verified', 'Verified'],
+                ['selfReported', 'Self reported'],
+              ] as const).map(([value, label]) => (
+                <button
+                  aria-pressed={historyFilter === value}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    historyFilter === value
+                      ? 'border-primary bg-primary text-primary-content'
+                      : 'border-base-300 bg-base-100 text-base-content hover:bg-base-200'
+                  }`}
+                  key={value}
+                  onClick={() => setHistoryFilter(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div
+              aria-label="Completion history category filter"
+              className="flex flex-wrap gap-1"
+              role="group"
+            >
+              {QUEST_CATEGORIES.map((category) => {
+                const presentation = CATEGORY_PRESENTATION[category];
+                const selected = categoryFilter === category;
+                return (
                   <button
-                    aria-pressed={historyFilter === value}
-                    className={historyFilter === value ? 'active' : ''}
-                    key={value}
-                    onClick={() => setHistoryFilter(value)}
+                    aria-label={`Filter completion history by ${presentation.label}`}
+                    aria-pressed={selected}
+                    className={`grid size-8 place-items-center overflow-hidden rounded-full border transition-colors ${
+                      selected
+                        ? 'border-primary ring-2 ring-primary/30'
+                        : 'border-base-300 hover:bg-base-200'
+                    }`}
+                    key={category}
+                    onClick={() => setCategoryFilter(selected ? 'all' : category)}
+                    title={presentation.label}
                     type="button"
                   >
-                    {label}
+                    <CategoryEmblem category={category} size="xs" />
                   </button>
-                ))}
-              </div>
-              <select
-                aria-label="Filter completion history by category"
-                className="select select-bordered select-sm rounded-xl bg-base-100"
-                onChange={(event) => setCategoryFilter(event.target.value as 'all' | QuestCategory)}
-                value={categoryFilter}
-              >
-                <option value="all">All categories</option>
-                {QUEST_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {CATEGORY_PRESENTATION[category].label}
-                  </option>
-                ))}
-              </select>
-              <Link className="btn btn-outline btn-sm rounded-full" to="/passport/share">
-                Create Share Card
-              </Link>
+                );
+              })}
             </div>
           </div>
           <div>
@@ -303,7 +348,7 @@ export default function PassportPage() {
             )}
             {!historyPending && !historyError && historyItems.length === 0 && (
               <div className="kiwi-panel p-10 text-center">
-                <p className="text-base-content/70">No verified completions yet.</p>
+                <p className="text-muted-content">No verified completions yet.</p>
                 <Link className="btn btn-primary btn-sm mt-4 rounded-full" to="/quests">
                   Discover quests
                 </Link>
@@ -311,10 +356,20 @@ export default function PassportPage() {
             )}
             {!historyPending && !historyError && historyItems.length > 0 && visibleHistoryItems.length === 0 && (
               <div className="kiwi-panel p-8 text-center">
-                <p className="font-bold">No matching records.</p>
-                <p className="mt-1 text-sm text-base-content/60">
-                  Change the history filter to see other completion types.
+                <p className="font-bold">No matching completions</p>
+                <p className="mt-1 text-sm text-muted-content">
+                  Try a different filter.
                 </p>
+                <button
+                  className="btn btn-outline btn-sm mt-4 rounded-full"
+                  onClick={() => {
+                    setHistoryFilter('all');
+                    setCategoryFilter('all');
+                  }}
+                  type="button"
+                >
+                  Show all
+                </button>
               </div>
             )}
             {!historyPending && !historyError && visibleHistoryItems.length > 0 && (

@@ -10,9 +10,9 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuthQuery } from '../hooks/useAuth.ts';
-import { usePassportCompletions } from '../hooks/usePassportCompletions.ts';
+import { useAllPassportCompletions } from '../hooks/usePassportCompletions.ts';
 import { useProgression } from '../hooks/useProgression.ts';
 import {
   drawShareCard,
@@ -31,23 +31,31 @@ const THEME_LABELS: Record<ShareCardTheme, string> = {
 export default function ShareCardBuilderPage() {
   const auth = useAuthQuery();
   const progression = useProgression();
-  const history = usePassportCompletions(1, 50);
+  const history = useAllPassportCompletions();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [selectedId, setSelectedId] = useState('');
+  const [searchParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState(
+    () => searchParams.get('completionId') ?? '',
+  );
   const [theme, setTheme] = useState<ShareCardTheme>('forest');
   const [overlay, setOverlay] = useState<ShareCardOverlay>('dark');
   const [showName, setShowName] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const verified = useMemo(
-    () => history.data?.items.filter((item) => item.status === 'Verified') ?? [],
+    () => history.data?.filter((item) => item.status === 'Verified') ?? [],
     [history.data],
   );
   const selected = verified.find((item) => item.completionId === selectedId)
     ?? verified[0];
 
   useEffect(() => {
-    if (!selectedId && verified[0]) setSelectedId(verified[0].completionId);
+    if (
+      verified[0]
+      && !verified.some((item) => item.completionId === selectedId)
+    ) {
+      setSelectedId(verified[0].completionId);
+    }
   }, [selectedId, verified]);
 
   useEffect(() => {
@@ -137,7 +145,7 @@ export default function ShareCardBuilderPage() {
         {failed && (
           <section className="kiwi-panel mt-8 p-8" role="alert">
             <h2 className="text-2xl">Share Card data could not be loaded</h2>
-            <p className="mt-2 text-base-content/62">Your Passport data is safe. Try loading it again.</p>
+            <p className="mt-2 text-muted-content">Your Passport data is safe. Try loading it again.</p>
             <button
               className="btn btn-primary mt-5"
               onClick={() => void Promise.all([history.refetch(), progression.refetch()])}
@@ -154,7 +162,7 @@ export default function ShareCardBuilderPage() {
               <IdCard aria-hidden="true" className="size-7" />
             </span>
             <h2 className="mt-5 text-3xl">Complete a verified Quest first</h2>
-            <p className="mx-auto mt-3 max-w-lg text-base-content/62">
+            <p className="mx-auto mt-3 max-w-lg text-muted-content">
               Share Cards use verified Passport records only. Self-reported and
               pending completions are never presented as verified.
             </p>
@@ -183,6 +191,7 @@ export default function ShareCardBuilderPage() {
                       key={item.completionId}
                     >
                       <input
+                        aria-label={item.questTitle}
                         checked={selected.completionId === item.completionId}
                         className="radio radio-primary radio-sm mt-0.5"
                         name="completion"
@@ -191,7 +200,7 @@ export default function ShareCardBuilderPage() {
                       />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-bold">{item.questTitle}</span>
-                        <span className="mt-1 block text-xs text-base-content/58">
+                        <span className="mt-1 block text-xs text-muted-content">
                           {new Date(item.completedAtUtc).toLocaleDateString()} ·{' '}
                           {item.xpAmount === null ? 'XP pending' : `+${item.xpAmount} XP`}
                         </span>
@@ -251,7 +260,7 @@ export default function ShareCardBuilderPage() {
                 <label className="mt-3 flex cursor-pointer items-center justify-between gap-4">
                   <span>
                     <span className="block text-sm font-bold">Show display name</span>
-                    <span className="block text-xs text-base-content/58">
+                    <span className="block text-xs text-muted-content">
                       Adds “{auth.data.displayName}” to the card
                     </span>
                   </span>
@@ -272,9 +281,9 @@ export default function ShareCardBuilderPage() {
                   <Share2 aria-hidden="true" className="size-4" /> Share
                 </button>
               </div>
-              {message && <p className="text-sm text-base-content/70" role="status">{message}</p>}
+              {message && <p className="text-sm text-muted-content" role="status">{message}</p>}
 
-              <aside className="rounded-2xl border border-base-300 bg-secondary/65 p-4 text-xs text-base-content/65">
+              <aside className="rounded-2xl border border-base-300 bg-secondary/65 p-4 text-xs text-muted-content">
                 <p className="flex items-center gap-2 font-bold text-base-content">
                   <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
                   Privacy — never shown on card
@@ -300,7 +309,7 @@ export default function ShareCardBuilderPage() {
                     <Sparkles aria-hidden="true" className="size-4 text-warning" />
                     Live preview
                   </p>
-                  <p className="text-xs text-base-content/58">
+                  <p className="text-xs text-muted-content">
                     This is exactly what the downloaded card will contain.
                   </p>
                 </div>

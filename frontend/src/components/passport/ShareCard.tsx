@@ -16,13 +16,13 @@ export default function ShareCard({ completion }: ShareCardProps) {
         <div>
           <p className="kiwi-stat-label">Privacy-safe sharing</p>
           <h2 className="mt-1 text-2xl" id="share-card-heading">Share Card</h2>
-          <p className="mt-1 text-sm text-base-content/60">
+          <p className="mt-1 text-sm text-muted-content">
             Build a square card from your verified impact, with privacy-safe
             controls and a live preview.
           </p>
         </div>
       </div>
-      <p className="mt-4 rounded-2xl bg-secondary/65 p-3 text-sm text-base-content/65">
+      <p className="mt-4 rounded-2xl bg-secondary/65 p-3 text-sm text-muted-content">
         {completion
           ? `Ready to feature “${completion.questTitle}”.`
           : 'Complete a verified Quest to unlock your first card.'}

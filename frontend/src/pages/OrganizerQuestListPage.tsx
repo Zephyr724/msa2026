@@ -58,7 +58,7 @@ export default function OrganizerQuestListPage() {
         <div>
           <p className="kiwi-stat-label">Organizer workspace</p>
           <h1 className="mt-2 text-4xl sm:text-5xl">Manage quests</h1>
-          <p className="mt-2 text-base-content/65">Create, publish, and maintain quests you can manage.</p>
+          <p className="mt-2 text-muted-content">Create, publish, and maintain quests you can manage.</p>
         </div>
         <Link className="btn btn-primary rounded-full" to="/organizer/quests/new">
           <Plus aria-hidden="true" className="size-4" />
@@ -80,7 +80,7 @@ export default function OrganizerQuestListPage() {
         <section className="kiwi-panel mt-8 p-10 text-center">
           <Search aria-hidden="true" className="mx-auto size-8 text-primary" />
           <h2 className="mt-4 text-2xl">No quests yet</h2>
-          <p className="mt-2 text-base-content/65">Create a draft to start planning your first quest.</p>
+          <p className="mt-2 text-muted-content">Create a draft to start planning your first quest.</p>
           <Link className="btn btn-primary mt-5 rounded-full" to="/organizer/quests/new">Create quest</Link>
         </section>
       )}
@@ -126,7 +126,7 @@ function ManagedQuestCard({
           <span className="badge badge-outline">{quest.category}</span>
           <span className="badge badge-outline">{quest.difficulty}</span>
         </div>
-        <dl className="space-y-1 text-sm text-base-content/70">
+        <dl className="space-y-1 text-sm text-muted-content">
           <div><dt className="inline font-medium">Region: </dt><dd className="inline">{quest.locationRegion?.name ?? 'None'}</dd></div>
           <div><dt className="inline font-medium">Starts: </dt><dd className="inline">{formatDate(quest.startAtUtc)}</dd></div>
           <div><dt className="inline font-medium">Capacity: </dt><dd className="inline">{quest.capacity ?? 'Unlimited'}</dd></div>

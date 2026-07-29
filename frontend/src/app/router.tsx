@@ -20,6 +20,7 @@ import {
 } from '../pages/AccountLifecyclePages.tsx';
 import AdminReviewPage from '../pages/AdminReviewPage.tsx';
 import ShareCardBuilderPage from '../pages/ShareCardBuilderPage.tsx';
+import ProfileSettingsPage from '../pages/ProfileSettingsPage.tsx';
 
 export const router = createBrowserRouter([
   {
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/passport', element: <PassportPage /> },
           { path: '/passport/share', element: <ShareCardBuilderPage /> },
+          { path: '/settings/profile', element: <ProfileSettingsPage /> },
           { path: '/settings/password', element: <ChangePasswordPage /> },
           { path: '/admin/reviews', element: <AdminReviewPage /> },
         ],

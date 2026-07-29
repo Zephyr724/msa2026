@@ -6,11 +6,13 @@ public sealed record PassportCompletionItemDto(
     string QuestTitle,
     string QuestCategory,
     string QuestStatus,
+    QuestCoverImageDto? CoverImage,
     string Status,
     string Method,
     string CompletedAtUtc,
     string? VerifiedAtUtc,
-    int? XpAmount);
+    int? XpAmount,
+    IReadOnlyList<string> AchievementNames);
 
 public sealed record PassportCategoryImpactDto(
     string Category,

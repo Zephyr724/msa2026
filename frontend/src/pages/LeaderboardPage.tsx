@@ -1,14 +1,16 @@
 import {
+  Building2,
+  Globe2,
   Radio,
   RefreshCw,
   ShieldCheck,
-  Trophy,
   Users,
   WifiOff,
-  Zap,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuthQuery } from '../hooks/useAuth.ts';
+import { useMyProfile } from '../hooks/useCommunity.ts';
 import {
   useCommunitiesLeaderboard,
   usePeopleLeaderboard,
@@ -27,11 +29,23 @@ import { useUiStore } from '../stores/useUiStore.ts';
 
 export default function LeaderboardPage() {
   const auth = useAuthQuery();
+  const profile = useMyProfile(Boolean(auth.data));
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<'people' | 'communities'>('people');
   const [peopleScope, setPeopleScope] =
-    useState<PeopleLeaderboardScope>('auckland');
+    useState<PeopleLeaderboardScope>(() => {
+      const requested = searchParams.get('scope');
+      return requested === 'myCommunity' || requested === 'auckland' || requested === 'nz'
+        ? requested
+        : 'auckland';
+    });
   const [peoplePeriod, setPeoplePeriod] =
-    useState<PeopleLeaderboardPeriod>('weekly');
+    useState<PeopleLeaderboardPeriod>(() => {
+      const requested = searchParams.get('period');
+      return requested === 'weekly' || requested === 'monthly' || requested === 'allTime'
+        ? requested
+        : 'weekly';
+    });
   const [communityScope, setCommunityScope] =
     useState<CommunitiesLeaderboardScope>('auckland');
   const [communityPeriod, setCommunityPeriod] =
@@ -46,6 +60,18 @@ export default function LeaderboardPage() {
     communityPeriod,
     mode === 'communities',
   );
+  const appliedProfileDefault = useRef(false);
+
+  useEffect(() => {
+    if (
+      !appliedProfileDefault.current
+      && profile.isSuccess
+      && searchParams.get('scope') === null
+    ) {
+      appliedProfileDefault.current = true;
+      if (profile.data.homeCommunity) setPeopleScope('myCommunity');
+    }
+  }, [profile.data, profile.isSuccess, searchParams]);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] overflow-x-hidden bg-base-200 py-8">
@@ -61,7 +87,7 @@ export default function LeaderboardPage() {
         </header>
 
         <section className="mt-6" aria-label="Leaderboard view">
-          <div className="kiwi-segmented w-fit" role="tablist">
+          <div className="kiwi-segmented w-fit rounded-[0.875rem]" role="tablist">
             <button
               aria-selected={mode === 'people'}
               className={mode === 'people' ? 'active' : ''}
@@ -79,7 +105,7 @@ export default function LeaderboardPage() {
               role="tab"
               type="button"
             >
-              <Trophy aria-hidden="true" className="size-4" />
+              <Globe2 aria-hidden="true" className="size-4" />
               Communities
             </button>
           </div>
@@ -90,7 +116,17 @@ export default function LeaderboardPage() {
                 label="Scope"
                 onChange={(value) => setPeopleScope(value as PeopleLeaderboardScope)}
                 options={[
-                  ...(auth.data ? [{ label: 'My Community', value: 'myCommunity' }] : []),
+                  ...(profile.data?.homeCommunity
+                    ? [{
+                        label: (
+                          <span className="flex flex-col items-center leading-tight">
+                            <span>{profile.data.homeCommunity.name}</span>
+                            <span className="text-[0.62rem] font-medium opacity-60">My Community</span>
+                          </span>
+                        ),
+                        value: 'myCommunity',
+                      }]
+                    : []),
                   { label: 'Auckland', value: 'auckland' },
                   { label: 'New Zealand', value: 'nz' },
                 ]}
@@ -129,19 +165,28 @@ export default function LeaderboardPage() {
               />
             </div>
           )}
+          {mode === 'people' && auth.data && (
+            <p className="mt-3 rounded-xl border border-base-300 bg-secondary px-3 py-2 text-center text-xs text-muted-content">
+              Viewing a leaderboard does not change your Home Community.{' '}
+              <Link className="font-bold text-primary hover:underline" to="/settings/profile">
+                Change it in Profile Settings
+              </Link>
+              .
+            </p>
+          )}
         </section>
 
         <section className="mt-6" aria-live="polite">
           {mode === 'people' ? (
             <PeopleStandings query={people} />
           ) : (
-            <CommunityStandings query={communities} />
+            <CommunityStandings query={communities} scope={communityScope} />
           )}
         </section>
 
         <CommunityChallengesSection />
 
-        <aside className="mt-8 flex items-start gap-3 rounded-2xl border border-base-300 bg-secondary/55 p-4 text-sm text-base-content/65">
+        <aside className="mt-8 flex items-start gap-3 rounded-2xl border border-base-300 bg-secondary/55 p-4 text-sm text-muted-content">
           <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
           <p>
             Only verified XP contributes. Communities with fewer than 10
@@ -177,7 +222,7 @@ function LiveImpactStatus() {
     unavailable: {
       Icon: WifiOff,
       label: 'Live updates unavailable · REST data shown',
-      classes: 'border-base-300 bg-secondary text-base-content/60',
+      classes: 'border-base-300 bg-secondary text-muted-content',
       iconClasses: '',
     },
   }[status];
@@ -203,7 +248,7 @@ function PeopleStandings({
       <div className="kiwi-panel p-8 text-center">
         <ShieldCheck className="mx-auto size-9 text-primary" aria-hidden="true" />
         <h2 className="mt-4 text-2xl">Community progress is protected</h2>
-        <p className="mt-2 text-base-content/60">
+        <p className="mt-2 text-muted-content">
           This community is still growing, so member names, ranks, counts, and
           exact progress stay private.
         </p>
@@ -211,6 +256,9 @@ function PeopleStandings({
     );
   }
   if (query.data.rows.length === 0) return <EmptyState label="members" />;
+  const tableRows = query.data.rows.length > 3
+    ? query.data.rows.slice(3)
+    : query.data.rows;
   return (
     <>
       <Podium rows={query.data.rows.slice(0, 3)} />
@@ -218,7 +266,7 @@ function PeopleStandings({
         <table className="table">
           <thead><tr><th>Rank</th><th>Member</th><th className="text-right">XP</th><th className="text-right">Quests</th></tr></thead>
           <tbody>
-            {query.data.rows.map((row) => (
+            {tableRows.map((row) => (
               <tr
                 aria-current={row.isCurrentUser ? 'true' : undefined}
                 className={row.isCurrentUser ? 'bg-primary/8' : undefined}
@@ -246,67 +294,146 @@ function PeopleStandings({
 
 function CommunityStandings({
   query,
+  scope,
 }: {
   query: ReturnType<typeof useCommunitiesLeaderboard>;
+  scope: CommunitiesLeaderboardScope;
 }) {
   if (query.isPending) return <LoadingState />;
   if (query.isError) return <ErrorState onRetry={() => void query.refetch()} />;
   if (query.data.rows.length === 0) return <EmptyState label="communities" />;
   return (
-    <div className="grid gap-4">
-      {query.data.rows.map((row: CommunityLeaderboardRow) => (
-        <article className="kiwi-panel flex items-center gap-4 p-5" key={row.regionId}>
-          <RankMarker rank={row.rank} />
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-xl">{row.regionName}</h2>
-            <p className="mt-1 text-sm text-base-content/60">
-              {row.verifiedCompletionCount} verified completions
-            </p>
-          </div>
-          <div className="text-right text-sm">
-            {row.isPrivacyProtected ? (
-              <span className="badge badge-outline">Privacy protected</span>
-            ) : (
-              <>
-                <p className="font-bold">{row.completionsPerContributor} / contributor</p>
-                <p className="text-base-content/55">{row.activeContributors} contributors</p>
-              </>
-            )}
-          </div>
-        </article>
-      ))}
-    </div>
+    <>
+      <div className="mb-2">
+        <h2 className="text-lg">
+          {scope === 'auckland' ? 'Auckland community rankings' : 'New Zealand city rankings'}
+        </h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted-content">
+          {scope === 'auckland'
+            ? 'Communities within Auckland, ranked by verified quests per active contributor.'
+            : 'Cities across New Zealand, ranked by verified quests per active contributor.'}
+        </p>
+      </div>
+      <CommunityPodium rows={query.data.rows.slice(0, 3)} />
+      <div className="kiwi-panel mt-6 overflow-x-auto">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>{scope === 'auckland' ? 'Community' : 'City'}</th>
+              <th className="text-center">Quests</th>
+              <th className="text-center">Members</th>
+              <th className="text-right">Avg / member</th>
+            </tr>
+          </thead>
+          <tbody>
+            {query.data.rows.map((row: CommunityLeaderboardRow) => (
+              <tr key={row.regionId}>
+                <td><RankMarker rank={row.rank} /></td>
+                <td className="font-semibold">{row.regionName}</td>
+                <td className="text-center font-bold tabular-nums">
+                  {row.verifiedCompletionCount}
+                </td>
+                <td className="text-center tabular-nums">
+                  {row.activeContributors ?? '—'}
+                </td>
+                <td className="text-right font-bold tabular-nums text-primary">
+                  {row.completionsPerContributor ?? 'Protected'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
 function Podium({ rows }: { rows: LeaderboardRow[] }) {
   const displayRows = rows.length === 3 ? [rows[1], rows[0], rows[2]] : rows;
   return (
-    <div className="grid items-end gap-4 pt-4 sm:grid-cols-3">
+    <div className="flex items-end justify-center gap-3 overflow-x-auto pb-2 pt-5 sm:gap-5">
       {displayRows.map((row) => (
-        <article
-          className={`kiwi-panel relative p-5 text-center ${
-            row.rank === 1 ? 'border-accent/60 bg-accent/8 sm:pb-8 sm:pt-7' : ''
-          } ${row.isCurrentUser ? 'ring-2 ring-primary ring-offset-2 ring-offset-base-200' : ''}`}
+        <PodiumColumn
+          avatar={initials(row.displayName)}
+          isCurrent={row.isCurrentUser}
           key={row.rank}
-        >
-          <span className="mx-auto block w-fit">
-            <MedalArtwork position={Math.min(row.rank, 3) as 1 | 2 | 3} size={52} />
-          </span>
-          <p className="mt-4 truncate text-xl font-bold">
-            {row.displayName}
-            {row.isCurrentUser && (
-              <span className="badge badge-primary badge-sm ml-2 align-middle">You</span>
-            )}
-          </p>
-          <p className="mt-1 text-sm text-base-content/55">Rank {row.rank}</p>
-          <p className="mt-4 inline-flex items-center gap-1.5 font-extrabold">
-            <Zap className="size-4 text-warning" /> {row.totalXp} XP
-          </p>
-        </article>
+          metric={`${row.totalXp.toLocaleString()} XP`}
+          name={row.displayName}
+          rank={row.rank}
+        />
       ))}
     </div>
   );
+}
+
+function CommunityPodium({ rows }: { rows: CommunityLeaderboardRow[] }) {
+  const displayRows = rows.length === 3 ? [rows[1], rows[0], rows[2]] : rows;
+  return (
+    <div className="flex items-end justify-center gap-3 overflow-x-auto pb-2 pt-5 sm:gap-5">
+      {displayRows.map((row) => (
+        <PodiumColumn
+          avatar={<Building2 aria-hidden="true" className="size-5" />}
+          key={row.regionId}
+          metric={`${row.verifiedCompletionCount} verified`}
+          name={row.regionName}
+          rank={row.rank}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PodiumColumn({
+  avatar,
+  isCurrent = false,
+  metric,
+  name,
+  rank,
+}: {
+  avatar: ReactNode;
+  isCurrent?: boolean;
+  metric: string;
+  name: string;
+  rank: number;
+}) {
+  const height = rank === 1 ? 'h-36' : rank === 2 ? 'h-24' : 'h-20';
+  const stageColor = rank === 1
+    ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400'
+    : rank === 2
+      ? 'bg-zinc-200 text-zinc-500 dark:bg-zinc-700'
+      : 'bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400';
+
+  return (
+    <article
+      className={`flex w-28 shrink-0 flex-col items-center gap-2 text-center sm:w-32 ${
+        isCurrent ? 'rounded-2xl bg-primary/6 pt-2 ring-2 ring-primary/55' : ''
+      }`}
+    >
+      <MedalArtwork position={rank as 1 | 2 | 3} size={46} />
+      <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 font-bold text-primary">
+        {avatar}
+      </span>
+      <div className="min-h-14 w-full px-1">
+        <p className="line-clamp-2 break-words text-xs font-extrabold leading-snug" title={name}>
+          {name}
+        </p>
+        <p className="mt-0.5 truncate text-[0.65rem] text-muted-content">{metric}</p>
+      </div>
+      <div className={`flex w-24 items-start justify-center rounded-t-[0.75rem] pt-2 sm:w-28 ${height} ${stageColor}`}>
+        <span className="kiwi-display text-xl font-bold">{rank}</span>
+      </div>
+    </article>
+  );
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
 }
 
 function RankMarker({ rank }: { rank: number }) {
@@ -324,7 +451,7 @@ function SegmentedOptions(props: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: { label: string; value: string }[];
+  options: { label: ReactNode; value: string }[];
 }) {
   return (
     <div>
@@ -364,7 +491,7 @@ function EmptyState({ label }: { label: string }) {
     <div className="kiwi-panel py-14 text-center">
       <Users className="mx-auto size-9 text-primary" aria-hidden="true" />
       <h2 className="mt-4 text-2xl">{`No ranked ${label} yet.`}</h2>
-      <p className="mt-2 text-base-content/60">Verified impact will start these standings.</p>
+      <p className="mt-2 text-muted-content">Verified impact will start these standings.</p>
     </div>
   );
 }

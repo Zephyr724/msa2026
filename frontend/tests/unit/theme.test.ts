@@ -120,8 +120,10 @@ describe('theme helpers and UI store persistence', () => {
   it('applies the resolved theme to the supplied document root', () => {
     applyTheme('dark');
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(document.documentElement).toHaveClass('dark');
 
     applyTheme('light');
     expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    expect(document.documentElement).not.toHaveClass('dark');
   });
 });

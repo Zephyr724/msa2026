@@ -51,7 +51,7 @@ export default function CommunityProfileCard() {
         <div>
           <p className="kiwi-stat-label">Local identity</p>
           <h2 className="mt-1 text-2xl" id="home-community-heading">Home Community</h2>
-          <p className="mt-1 text-sm text-base-content/60">
+          <p className="mt-1 text-sm text-muted-content">
             Choose a coarse Local Area. Precise home location is never requested.
           </p>
         </div>

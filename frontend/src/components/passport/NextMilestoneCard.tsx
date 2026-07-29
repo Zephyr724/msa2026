@@ -30,7 +30,7 @@ export default function NextMilestoneCard({
           <div>
             <p className="kiwi-stat-label">Current milestone path</p>
             <h2 className="mt-1 text-xl">All current completion milestones reached</h2>
-            <p className="mt-1 text-sm text-base-content/62">
+            <p className="mt-1 text-sm text-muted-content">
               New achievement families remain deferred until their rules are approved.
             </p>
           </div>
@@ -55,7 +55,7 @@ export default function NextMilestoneCard({
             max={next.count}
             value={current}
           />
-          <p className="mt-2 text-sm text-base-content/62">
+          <p className="mt-2 text-sm text-muted-content">
             {current} / {next.count} rewarded Verified Quests
           </p>
         </div>

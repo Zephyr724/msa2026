@@ -110,7 +110,7 @@ export default function QuestCompletionPanel({
   if (!auth.data) {
     return (
       <CompletionShell>
-        <p className="text-sm text-base-content/65">Sign in to redeem a completion code.</p>
+        <p className="text-sm text-muted-content">Sign in to redeem a completion code.</p>
         <Link className="btn btn-primary btn-sm mt-4 w-full" to="/login">
           Sign in
         </Link>
@@ -194,7 +194,7 @@ export default function QuestCompletionPanel({
   if (participation.data.status !== 'Active') {
     return (
       <CompletionShell>
-        <p className="text-sm text-base-content/65">
+        <p className="text-sm text-muted-content">
           Join this Quest before redeeming a completion code.
         </p>
       </CompletionShell>
@@ -210,7 +210,7 @@ export default function QuestCompletionPanel({
           </span>
           <div>
             <p className="font-bold">Ready to complete?</p>
-            <p className="mt-1 text-sm leading-relaxed text-base-content/60">
+            <p className="mt-1 text-sm leading-relaxed text-muted-content">
               Enter the code shared by the organizer after taking part.
             </p>
           </div>
@@ -257,7 +257,7 @@ export default function QuestCompletionPanel({
           </div>
 
           <form className="p-5 sm:p-6" onSubmit={handleSubmit}>
-            <p className="text-sm leading-relaxed text-base-content/65">
+            <p className="text-sm leading-relaxed text-muted-content">
               The organizer will share a 10-character code at the end of the quest.
               Codes are checked securely by Kiwimpact.
             </p>
@@ -358,7 +358,7 @@ function CompletionRewardOverlay({
       }}
       open
     >
-      <div className="relative w-full max-w-xl overflow-hidden rounded-[2rem] border border-white/20 bg-white/10 p-6 text-center shadow-2xl sm:p-9">
+      <div className="relative w-full max-w-xl overflow-hidden rounded-[2rem] border border-primary-content/20 bg-primary-content/10 p-6 text-center shadow-2xl sm:p-9">
         <Sparkles aria-hidden="true" className="absolute left-8 top-8 size-7 text-accent" />
         <Sparkles aria-hidden="true" className="absolute bottom-12 right-10 size-5 text-accent" />
         <span className="mx-auto grid size-16 place-items-center rounded-full border border-accent/50 bg-accent/15 text-accent">
@@ -367,25 +367,25 @@ function CompletionRewardOverlay({
         <p className="mt-5 text-sm font-extrabold uppercase tracking-[0.14em] text-primary-content/70">
           Verified
         </p>
-        <h2 className="mt-2 text-4xl text-white" id="reward-title">Quest complete!</h2>
+        <h2 className="mt-2 text-4xl" id="reward-title">Quest complete!</h2>
         <p className="mx-auto mt-3 max-w-md text-primary-content/75">{questTitle}</p>
 
-        <div className="mt-7 rounded-2xl border border-white/15 bg-white/10 p-5">
+        <div className="mt-7 rounded-2xl border border-primary-content/15 bg-primary-content/10 p-5">
           <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary-content/65">
             XP earned
           </p>
-          <p className="mt-2 inline-flex items-center gap-2 text-4xl font-extrabold text-white">
+          <p className="mt-2 inline-flex items-center gap-2 text-4xl font-extrabold">
             <Zap aria-hidden="true" className="size-7 text-accent" />
             +{xpAward} XP
           </p>
         </div>
 
         {progression.data && (
-          <div className="mt-4 rounded-2xl border border-white/15 bg-white/10 p-4">
+          <div className="mt-4 rounded-2xl border border-primary-content/15 bg-primary-content/10 p-4">
             <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary-content/65">
               Current progress
             </p>
-            <p className="mt-2 text-xl font-bold text-white">
+            <p className="mt-2 text-xl font-bold">
               Level {progression.data.level} · {progression.data.rankTitle}
             </p>
             <p className="mt-1 text-sm text-primary-content/70">
@@ -399,18 +399,18 @@ function CompletionRewardOverlay({
           Saved to your Impact Passport
         </p>
         <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link className="btn border-0 bg-white text-primary hover:bg-white/90" to="/passport">
+          <Link className="btn border-0 bg-primary-content text-primary hover:bg-primary-content/90" to="/passport">
             View Passport
           </Link>
           <Link
-            className="btn border-white/30 bg-transparent text-white hover:bg-white/10"
+            className="btn border-primary-content/30 bg-transparent text-primary-content hover:bg-primary-content/10"
             to="/passport/share"
           >
             <Share2 aria-hidden="true" className="size-4" />
             Create Share Card
           </Link>
           <button
-            className="btn border-white/30 bg-transparent text-white hover:bg-white/10"
+            className="btn border-primary-content/30 bg-transparent text-primary-content hover:bg-primary-content/10"
             onClick={onClose}
             ref={closeRef}
             type="button"
@@ -438,7 +438,7 @@ function CompletionShell({ children }: { children: React.ReactNode }) {
 function Timestamp({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-base-300 pb-3 last:border-0 last:pb-0">
-      <dt className="text-base-content/55">{label}</dt>
+      <dt className="text-muted-content">{label}</dt>
       <dd className="text-right font-semibold">{formatTimestamp(value)}</dd>
     </div>
   );

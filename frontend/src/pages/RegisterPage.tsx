@@ -86,7 +86,7 @@ export default function RegisterPage() {
             type="password"
             value={password}
           />
-          <span id="password-guidance" className="mt-1 text-xs text-base-content/60">
+          <span id="password-guidance" className="mt-1 text-xs text-muted-content">
             Use at least 12 characters with upper and lowercase letters, a number,
             and a symbol.
           </span>

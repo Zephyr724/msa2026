@@ -11,7 +11,7 @@ export function ManagementForbidden({
       <h1 className="text-3xl">
         {questSpecific ? 'Quest management unavailable' : 'Management unavailable'}
       </h1>
-      <p className="mt-4 text-base-content/70">
+      <p className="mt-4 text-muted-content">
         {questSpecific
           ? "You don't have access to manage this quest."
           : 'Organizer or Admin access is required to manage quests.'}
