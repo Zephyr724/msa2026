@@ -21,10 +21,22 @@ const QUEST_LIST_ITEM_KEYS = [
   'id', 'title', 'description', 'category', 'sourceType', 'registrationMode',
   'difficulty', 'xpAward', 'capacity', 'startAtUtc', 'endAtUtc',
   'locationRegion', 'locationDescription', 'coverImage',
+  'latitude', 'longitude',
+] as const;
+const CURRENT_QUEST_LIST_ITEM_KEYS = [
+  ...QUEST_LIST_ITEM_KEYS,
+  'availableSpots',
+] as const;
+const LEGACY_QUEST_LIST_ITEM_KEYS = QUEST_LIST_ITEM_KEYS.filter(
+  (key) => key !== 'latitude' && key !== 'longitude',
+);
+const LEGACY_QUEST_LIST_ITEM_KEYS_WITH_SPOTS = [
+  ...LEGACY_QUEST_LIST_ITEM_KEYS,
+  'availableSpots',
 ] as const;
 
 const QUEST_DETAIL_KEYS = [
-  ...QUEST_LIST_ITEM_KEYS,
+  ...CURRENT_QUEST_LIST_ITEM_KEYS,
   'externalSourceUrl', 'sourceCheckedAt',
 ] as const;
 
@@ -119,10 +131,17 @@ const ACCEPTED_REGION_TYPES = new Set<string>(['Country', 'AdministrativeArea', 
 
 function isValidLocationRegion(value: unknown): value is QuestLocationRegionDto {
   if (!isRecord(value)) return false;
-  return hasExactKeys(value, ['id', 'name', 'type'])
+  const legacyKeys = ['id', 'name', 'type'];
+  const currentKeys = [
+    'id', 'name', 'type', 'administrativeAreaName', 'countryName',
+  ];
+  return (hasExactKeys(value, legacyKeys) || hasExactKeys(value, currentKeys))
     && isUuidString(value.id)
     && isString(value.name)
     && isString(value.type)
+    && (value.administrativeAreaName === undefined
+      || isOptionalString(value.administrativeAreaName))
+    && (value.countryName === undefined || isOptionalString(value.countryName))
     && ACCEPTED_REGION_TYPES.has(value.type);
 }
 
@@ -167,6 +186,9 @@ function hasValidQuestListFields(value: unknown): value is QuestListItemDto {
   if (!isNonNegativeInteger(value.xpAward)) return false;
   if (value.capacity === undefined) return false;
   if (value.capacity !== null && !isNonNegativeInteger(value.capacity)) return false;
+  if (value.availableSpots !== undefined
+    && value.availableSpots !== null
+    && !isNonNegativeInteger(value.availableSpots)) return false;
   if (value.startAtUtc === undefined) return false;
   if (!isValidIsoTimestamp(value.startAtUtc)) return false;
   if (value.endAtUtc === undefined) return false;
@@ -180,17 +202,51 @@ function hasValidQuestListFields(value: unknown): value is QuestListItemDto {
   if (value.coverImage !== null) {
     if (!isValidCoverImage(value.coverImage)) return false;
   }
+  const latitude = value.latitude ?? null;
+  const longitude = value.longitude ?? null;
+  if (latitude !== null
+    && (typeof latitude !== 'number' || latitude < -90 || latitude > 90)) {
+    return false;
+  }
+  if (longitude !== null
+    && (typeof longitude !== 'number' || longitude < -180 || longitude > 180)) {
+    return false;
+  }
+  if ((latitude === null) !== (longitude === null)) return false;
   return true;
 }
 
 function isValidQuestListItem(value: unknown): value is QuestListItemDto {
   return isRecord(value)
-    && hasExactKeys(value, QUEST_LIST_ITEM_KEYS)
+    && (hasExactKeys(value, CURRENT_QUEST_LIST_ITEM_KEYS)
+      || hasExactKeys(value, QUEST_LIST_ITEM_KEYS)
+      || hasExactKeys(value, LEGACY_QUEST_LIST_ITEM_KEYS_WITH_SPOTS)
+      || hasExactKeys(value, LEGACY_QUEST_LIST_ITEM_KEYS))
     && hasValidQuestListFields(value);
 }
 
+export function validateQuestListItem(payload: unknown): QuestListItemDto {
+  if (!isValidQuestListItem(payload)) {
+    throw new Error('Quest list item response is not valid.');
+  }
+  return payload;
+}
+
 function isValidQuestDetail(value: unknown): value is QuestDetailDto {
-  if (!isRecord(value) || !hasExactKeys(value, QUEST_DETAIL_KEYS)) return false;
+  const legacyDetailKeys = QUEST_DETAIL_KEYS.filter(
+    (key) => key !== 'latitude' && key !== 'longitude',
+  );
+  const legacyDetailKeysWithoutSpots = legacyDetailKeys.filter(
+    (key) => key !== 'availableSpots',
+  );
+  const detailKeysWithoutSpots = QUEST_DETAIL_KEYS.filter(
+    (key) => key !== 'availableSpots',
+  );
+  if (!isRecord(value)
+    || (!hasExactKeys(value, QUEST_DETAIL_KEYS)
+      && !hasExactKeys(value, legacyDetailKeys)
+      && !hasExactKeys(value, detailKeysWithoutSpots)
+      && !hasExactKeys(value, legacyDetailKeysWithoutSpots))) return false;
   if (!hasValidQuestListFields(value)) return false;
   const rec = value as unknown as Record<string, unknown>;
   if (rec.externalSourceUrl === undefined) return false;
@@ -213,7 +269,11 @@ export function validateQuestsPage(payload: unknown): PagedResponse<QuestListIte
     if (!isValidQuestListItem(item)) {
       throw new Error(`Invalid Quest list item at index ${i}.`);
     }
-    items.push(item);
+    items.push({
+      ...item,
+      latitude: item.latitude ?? null,
+      longitude: item.longitude ?? null,
+    });
   }
   if (!hasExactKeys(payload, [
     'items', 'page', 'pageSize', 'totalCount', 'totalPages',
@@ -271,7 +331,11 @@ export function validateQuestDetail(payload: unknown): QuestDetailDto {
   if (!isValidQuestDetail(payload)) {
     throw new Error('Quest detail response is not valid.');
   }
-  return payload;
+  return {
+    ...payload,
+    latitude: payload.latitude ?? null,
+    longitude: payload.longitude ?? null,
+  };
 }
 
 export function validateQuestImages(payload: unknown): QuestImageDto[] {

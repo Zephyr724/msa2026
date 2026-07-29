@@ -107,7 +107,7 @@
 - `PATCH`: 409 if Home Community change within cooldown period. 400 if Region invalid/inactive/not LocalArea.
 - `PATCH`: first Home Community selection has no cooldown.
 - `PATCH` response includes `nextAllowedCommunityChangeAt` when cooldown is active.
-- Progression: `401` anonymous; `503 progression-not-ready` while any Verified completion still lacks its XP row (reward state incomplete; bounded ProblemDetails with no counts or internals; evaluated live on every request, never cached); `404` when the authenticated user has no profile row.
+- Progression: `401` anonymous; `503 progression-not-ready` while any Verified completion still lacks its XP row (reward state incomplete; bounded ProblemDetails with no counts or internals; evaluated live on every request, never cached); `404 profile-not-found` when the authenticated user has no profile row.
 
 ### 2.3 Regions
 
@@ -245,25 +245,40 @@
 | `GET`  | `/api/v1/users/me/passport/completions`             | Member+ | Paginated completion history. Returns one primary display record per Quest using the precedence: 1) Verified, 2) Pending EvidenceClaim, 3) SelfReported, 4) latest Rejected EvidenceClaim. |
 | `GET`  | `/api/v1/users/me/passport/community-participation` | Member+ | Community Participation section: historical contributions by community (from XpTransaction.CommunityRegionIdAtAward), including departed communities. |
 
+The authenticated progression, Passport, Passport completion,
+community-participation, and earned-achievement reads use the bounded Problem
+Details type `https://kiwimpact.app/problems/profile-not-found` for their
+existing missing-profile `404`. A generic or route-level `404` must not be
+interpreted by the client as proof that the user's Passport profile is absent.
+
 **Important error conditions:**
 
 - Passport completion history returns one primary display record per Quest — not every raw `QuestCompletion` row. Where more than one Rejected Evidence Claim exists, the latest by `CreatedAt` is used. Full Evidence Claim history remains available from `GET /api/v1/users/me/claims`.
 - Passport includes Home Community label only when `ShowCommunityOnPassport` is enabled.
 - Community Participation uses `CommunityRegionIdAtAward` snapshot — no current-HomeCommunity filtering.
 
-**Implemented subset (Slice 5B, 2026-07-26):** only
-`GET /api/v1/users/me/passport/completions` is implemented, with a narrower
-record set than the long-term contract above. The other two Passport routes
-(`/users/me/passport`, `/users/me/passport/community-participation`) remain
-unimplemented future direction.
+**Implementation status (Slice 12, 2026-07-27):** all three Passport routes
+above are implemented. Slice 12 completed the summary and historical Community
+Participation reads without adding a persistence model.
 
-- **Record set:** the authenticated caller's `QuestCompletion` rows with
-  `Status == Verified` and `Method == CompletionCode` only (the only status
-  and method currently implemented). The accepted one-record-per-Quest
-  precedence above (Verified > Pending EvidenceClaim > SelfReported > latest
-  Rejected) remains the unimplemented long-term direction; a future
-  completion-method Slice must broaden the backend filter, DTO/validators,
-  and UI labels together.
+- `GET /api/v1/users/me/passport` returns the caller's display name,
+  authoritative XP/level/rank, optional Home Community under the existing
+  `ShowCommunityOnPassport` preference, Verified/SelfReported/Pending counts,
+  and Verified XP-producing impact grouped by Quest category. Category values
+  are aggregates, not goals or environmental outcome claims.
+- `GET /api/v1/users/me/passport/community-participation` groups the caller's
+  immutable XP ledger rows by `CommunityRegionIdAtAward`. Each item returns the
+  Region summary, whether it is the current Home Community, Verified completion
+  count, Verified XP, challenges actually contributed to during their
+  half-open period, challenge-sourced achievements earned, and latest
+  contribution timestamp. Null-attributed XP is excluded.
+- Both routes derive identity only from the authenticated session. They accept
+  no user selector and never return email, user id, evidence, claim text, or
+  review notes.
+
+- **Completion-history record set:** the authenticated caller's primary
+  display record per Quest using the accepted precedence above (Verified >
+  Pending EvidenceClaim > SelfReported > latest Rejected).
 - **Query:** `page` (1-based, default 1, values < 1 normalize to 1) and
   `pageSize` (default 12, < 1 normalizes to 12, clamped to 50). Ordered by
   `VerifiedAtUtc DESC` with explicit nulls-last semantics, tie-break `Id
@@ -356,7 +371,11 @@ or any supplied `page`/`pageSize`, returns 400. Rows use ordinal ranks after
 ordering by total XP descending, verified completion count descending,
 case-folded display name ascending, then internal UserId ascending; UserId is
 never serialized. The exact response is
-`{ scope, period, rows[{ rank, displayName, totalXp, verifiedCompletionCount }] }`.
+`{ scope, period, rows[{ rank, displayName, totalXp, verifiedCompletionCount,
+isCurrentUser }] }`. `isCurrentUser` is `true` only when the optional
+authenticated actor's internal UserId matches that row; it is always `false`
+for anonymous reads. Display names are never used as identity. UserId is
+never serialized.
 While any Verified completion lacks its XP transaction, the route returns
 503 `leaderboard-not-ready`. All other capabilities in this section remain
 accepted future direction.

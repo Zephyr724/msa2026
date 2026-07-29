@@ -1,3 +1,4 @@
+import { ClipboardList, Plus, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import QuestLifecycleActions from '../components/organizer/QuestLifecycleActions';
@@ -34,7 +35,7 @@ export default function OrganizerQuestListPage() {
 
   if (query.isPending) {
     return (
-      <main aria-live="polite" className="container mx-auto px-4 py-8">
+      <main aria-live="polite" className="kiwi-page py-10">
         <p className="sr-only">Loading managed quests…</p>
         <div className="skeleton h-10 w-72" />
         <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -51,13 +52,18 @@ export default function OrganizerQuestListPage() {
   }
 
   return (
-    <main className="container mx-auto px-4 py-8">
+    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-10 sm:py-14">
+    <main className="kiwi-page">
       <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Manage quests</h1>
-          <p className="mt-1 text-base-content/65">Create and maintain quests you can manage.</p>
+          <p className="kiwi-stat-label">Organizer workspace</p>
+          <h1 className="mt-2 text-4xl sm:text-5xl">Manage quests</h1>
+          <p className="mt-2 text-muted-content">Create, publish, and maintain quests you can manage.</p>
         </div>
-        <Link className="btn btn-primary" to="/organizer/quests/new">Create quest</Link>
+        <Link className="btn btn-primary rounded-full" to="/organizer/quests/new">
+          <Plus aria-hidden="true" className="size-4" />
+          Create quest
+        </Link>
       </div>
 
       {statusMessage && <p className="mt-4" role="status">{statusMessage}</p>}
@@ -71,10 +77,11 @@ export default function OrganizerQuestListPage() {
       )}
 
       {query.data?.length === 0 && (
-        <section className="mt-8 rounded-box bg-base-100 p-8 text-center shadow-sm">
-          <h2 className="text-xl font-semibold">No quests yet</h2>
-          <p className="mt-2 text-base-content/65">Create a draft to start planning your first quest.</p>
-          <Link className="btn btn-primary mt-5" to="/organizer/quests/new">Create quest</Link>
+        <section className="kiwi-panel mt-8 p-10 text-center">
+          <Search aria-hidden="true" className="mx-auto size-8 text-primary" />
+          <h2 className="mt-4 text-2xl">No quests yet</h2>
+          <p className="mt-2 text-muted-content">Create a draft to start planning your first quest.</p>
+          <Link className="btn btn-primary mt-5 rounded-full" to="/organizer/quests/new">Create quest</Link>
         </section>
       )}
 
@@ -91,6 +98,7 @@ export default function OrganizerQuestListPage() {
         </div>
       )}
     </main>
+    </div>
   );
 }
 
@@ -105,23 +113,26 @@ function ManagedQuestCard({
 }) {
   const readOnly = quest.status === 'Archived';
   return (
-    <article className="card bg-base-100 shadow-sm">
+    <article className="kiwi-card-hover card border border-base-300 bg-base-100">
       <div className="card-body gap-4">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="card-title text-xl">{quest.title}</h2>
+          <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <ClipboardList aria-hidden="true" className="size-5" />
+          </span>
           <QuestStatusBadge status={quest.status} />
         </div>
+        <h2 className="card-title text-xl">{quest.title}</h2>
         <div className="flex flex-wrap gap-2 text-sm">
           <span className="badge badge-outline">{quest.category}</span>
           <span className="badge badge-outline">{quest.difficulty}</span>
         </div>
-        <dl className="space-y-1 text-sm text-base-content/70">
+        <dl className="space-y-1 text-sm text-muted-content">
           <div><dt className="inline font-medium">Region: </dt><dd className="inline">{quest.locationRegion?.name ?? 'None'}</dd></div>
           <div><dt className="inline font-medium">Starts: </dt><dd className="inline">{formatDate(quest.startAtUtc)}</dd></div>
           <div><dt className="inline font-medium">Capacity: </dt><dd className="inline">{quest.capacity ?? 'Unlimited'}</dd></div>
         </dl>
         <div className="card-actions mt-auto items-center">
-          <Link className="btn btn-ghost btn-sm" to={`/organizer/quests/${quest.id}/edit`}>
+          <Link className="btn btn-outline btn-sm rounded-full" to={`/organizer/quests/${quest.id}/edit`}>
             {readOnly ? 'View' : 'Edit'}
           </Link>
           <QuestLifecycleActions

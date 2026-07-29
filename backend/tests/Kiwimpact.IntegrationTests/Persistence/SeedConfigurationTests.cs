@@ -1,7 +1,10 @@
+using Kiwimpact.Core.Enums;
+using Kiwimpact.Core.Progression;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -344,6 +347,175 @@ public sealed class SeedConfigurationTests
             await container.DisposeAsync();
         }
     }
+
+    [Fact]
+    public async Task DemoActivitySeed_IsIdempotentAndRebasesObservablePeriods()
+    {
+        await using var container = new PostgreSqlBuilder()
+            .WithImage("postgres:17-alpine")
+            .Build();
+        await container.StartAsync(TestContext.Current.CancellationToken);
+
+        try
+        {
+            var config = new Dictionary<string, string?>
+            {
+                ["Seed:Roles"] = "true",
+                ["Seed:Region"] = "true",
+                ["Seed:DemoQuests"] = "true",
+                ["Seed:DemoAccounts"] = "true",
+                ["DemoAccounts:Password"] = "Slice19!Demo2026",
+                ["CommunityChallenges:FinalizerEnabled"] = "false",
+            };
+            using var factory = new SeedConfigWebApplicationFactory(
+                container.GetConnectionString(),
+                config);
+            _ = factory.CreateClient();
+
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            var march = new DateTimeOffset(
+                2027, 3, 10, 8, 0, 0, TimeSpan.Zero);
+
+            await DemoActivitySeed.SeedAsync(
+                db,
+                DemoAccountSeedOptions.StandardPersonas,
+                march,
+                TestContext.Current.CancellationToken);
+
+            var countsAfterFirst = await DemoActivityCountsAsync(db);
+            await DemoActivitySeed.SeedAsync(
+                db,
+                DemoAccountSeedOptions.StandardPersonas,
+                march,
+                TestContext.Current.CancellationToken);
+            Assert.Equal(countsAfterFirst, await DemoActivityCountsAsync(db));
+
+            var primaryId = await db.Set<ApplicationUser>()
+                .Where(user => user.NormalizedEmail == "ADMIN1@KIWIMPACT.TEST")
+                .Select(user => user.Id)
+                .SingleAsync(TestContext.Current.CancellationToken);
+            var primaryAwards = await db.XpTransactions
+                .Where(transaction => transaction.UserId == primaryId)
+                .Select(transaction => transaction.CreatedAt)
+                .ToListAsync(TestContext.Current.CancellationToken);
+            var marchStreak = WeeklyStreakCalculator.Calculate(
+                primaryAwards,
+                march);
+            Assert.Equal(5, marchStreak.CurrentWeeks);
+            Assert.True(marchStreak.HasVerifiedImpactThisWeek);
+
+            await AssertCurrentDemoChallengesAsync(db, march);
+            await AssertSupportingNeighboursArePasswordlessAsync(db);
+
+            var april = new DateTimeOffset(
+                2027, 4, 15, 8, 0, 0, TimeSpan.Zero);
+            await DemoActivitySeed.SeedAsync(
+                db,
+                DemoAccountSeedOptions.StandardPersonas,
+                april,
+                TestContext.Current.CancellationToken);
+            var countsAfterAdvance = await DemoActivityCountsAsync(db);
+            Assert.Equal(countsAfterFirst.Users, countsAfterAdvance.Users);
+            Assert.Equal(
+                countsAfterFirst.Completions,
+                countsAfterAdvance.Completions);
+            Assert.Equal(
+                countsAfterFirst.XpTransactions,
+                countsAfterAdvance.XpTransactions);
+            Assert.Equal(
+                countsAfterFirst.Challenges + 5,
+                countsAfterAdvance.Challenges);
+            await AssertCurrentDemoChallengesAsync(db, april);
+
+            var aprilAwards = await db.XpTransactions
+                .Where(transaction => transaction.UserId == primaryId)
+                .Select(transaction => transaction.CreatedAt)
+                .ToListAsync(TestContext.Current.CancellationToken);
+            var aprilStreak = WeeklyStreakCalculator.Calculate(
+                aprilAwards,
+                april);
+            Assert.Equal(5, aprilStreak.CurrentWeeks);
+            Assert.True(aprilStreak.HasVerifiedImpactThisWeek);
+
+            await DemoActivitySeed.SeedAsync(
+                db,
+                DemoAccountSeedOptions.StandardPersonas,
+                april,
+                TestContext.Current.CancellationToken);
+            Assert.Equal(countsAfterAdvance, await DemoActivityCountsAsync(db));
+        }
+        finally
+        {
+            await container.DisposeAsync();
+        }
+    }
+
+    private static async Task<DemoActivityCounts> DemoActivityCountsAsync(
+        KiwimpactDbContext db) =>
+        new(
+            await db.Set<ApplicationUser>().CountAsync(
+                TestContext.Current.CancellationToken),
+            await db.QuestCompletions.CountAsync(
+                TestContext.Current.CancellationToken),
+            await db.XpTransactions.CountAsync(
+                TestContext.Current.CancellationToken),
+            await db.CommunityChallenges.CountAsync(
+                TestContext.Current.CancellationToken));
+
+    private static async Task AssertCurrentDemoChallengesAsync(
+        KiwimpactDbContext db,
+        DateTimeOffset now)
+    {
+        var active = await db.CommunityChallenges
+            .Where(challenge => challenge.Status == ChallengeStatus.Active)
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(5, active.Count);
+        Assert.All(active, challenge =>
+        {
+            Assert.True(challenge.PeriodStart <= now);
+            Assert.True(challenge.PeriodEnd > now);
+            Assert.Equal(50, challenge.TargetValue);
+            Assert.Null(challenge.RewardAchievementId);
+        });
+    }
+
+    private static async Task AssertSupportingNeighboursArePasswordlessAsync(
+        KiwimpactDbContext db)
+    {
+        var neighbours = await db.Set<ApplicationUser>()
+            .Where(user =>
+                user.NormalizedUserName != null &&
+                user.NormalizedUserName.StartsWith("DEMO-NEIGHBOUR-"))
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(50, neighbours.Count);
+        Assert.All(neighbours, neighbour =>
+        {
+            Assert.Null(neighbour.PasswordHash);
+            Assert.False(neighbour.EmailConfirmed);
+            Assert.True(neighbour.LockoutEnabled);
+        });
+
+        var neighbourIds = neighbours.Select(neighbour => neighbour.Id).ToArray();
+        Assert.Empty(await db.Set<IdentityUserRole<Guid>>()
+            .Where(item => neighbourIds.Contains(item.UserId))
+            .ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(await db.Set<IdentityUserClaim<Guid>>()
+            .Where(item => neighbourIds.Contains(item.UserId))
+            .ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(await db.Set<IdentityUserLogin<Guid>>()
+            .Where(item => neighbourIds.Contains(item.UserId))
+            .ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(await db.Set<IdentityUserToken<Guid>>()
+            .Where(item => neighbourIds.Contains(item.UserId))
+            .ToListAsync(TestContext.Current.CancellationToken));
+    }
+
+    private sealed record DemoActivityCounts(
+        int Users,
+        int Completions,
+        int XpTransactions,
+        int Challenges);
 }
 
 // ── Test Helpers ───────────────────────────────────────────────────────
@@ -414,11 +586,18 @@ internal sealed class SeedConfigWebApplicationFactory
         builder.ConfigureAppConfiguration((_, configBuilder) =>
         {
             configBuilder.AddInMemoryCollection(_config);
-            configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+            var defaults = new Dictionary<string, string?>
             {
                 ["CompletionCodes:HmacKey"] = Convert.ToBase64String(
                     Enumerable.Range(1, 32).Select(value => (byte)value).ToArray()),
-            });
+            };
+            if (!_config.ContainsKey("Seed:DemoAccounts"))
+            {
+                // Local developer persona settings must not alter the exact
+                // flag combination exercised by isolated seed tests.
+                defaults["Seed:DemoAccounts"] = "false";
+            }
+            configBuilder.AddInMemoryCollection(defaults);
         });
 
         builder.ConfigureServices(services =>

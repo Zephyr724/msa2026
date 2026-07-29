@@ -62,6 +62,8 @@ describe('Organizer Quest create page', () => {
       endAtUtc: null,
       locationRegionId: null,
       locationDescription: null,
+      latitude: null,
+      longitude: null,
       externalSourceUrl: null,
       coverImage: {
         imageUrl: created.coverImage.imageUrl,

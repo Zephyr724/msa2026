@@ -15,6 +15,10 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
     public const string VerifiedCompletionConstraint =
         "UX_QuestCompletions_UserId_QuestId_Verified";
     public const string ActiveCodeConstraint = "UX_CompletionCodes_QuestId_Active";
+    public const string PendingClaimConstraint =
+        "UX_QuestCompletions_UserId_QuestId_PendingClaim";
+    public const string SelfReportedConstraint =
+        "UX_QuestCompletions_UserId_QuestId_SelfReported";
 
     private readonly KiwimpactDbContext _db;
     private readonly CompletionCodeProtector _protector;
@@ -259,12 +263,286 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
             .AsNoTracking()
             .Where(item =>
                 item.UserId == actorId &&
-                item.QuestId == questId &&
-                item.Status == QuestCompletionStatus.Verified)
-            .SingleOrDefaultAsync(ct);
+                item.QuestId == questId)
+            .OrderBy(item => item.Status == QuestCompletionStatus.Verified ? 0 :
+                item.Status == QuestCompletionStatus.Pending ? 1 :
+                item.Status == QuestCompletionStatus.SelfReported ? 2 : 3)
+            .ThenByDescending(item => item.CreatedAt)
+            .FirstOrDefaultAsync(ct);
         return completion is null
             ? MyQuestCompletionState.None
             : MyQuestCompletionState.FromCompletion(completion);
+    }
+
+    public async Task<EvidenceClaimRecord> SubmitClaimAsync(
+        Guid questId,
+        Guid actorId,
+        EvidenceClaimInput input,
+        DateTimeOffset now,
+        CancellationToken ct = default)
+    {
+        await using var transaction = await _db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            EnsureCompletionDate(input.CompletedAtUtc, now);
+            var quest = await LockQuestAsync(questId, ct)
+                ?? throw Error(QuestCompletionError.NotFound, "Quest not found.");
+            var participationId = await EnsureClaimEligibleAsync(quest, actorId, ct);
+            if (await HasVerifiedAsync(questId, actorId, ct))
+                throw Error(QuestCompletionError.AlreadyCompleted,
+                    "You have already completed this Quest.");
+            var profile = await LockUserProfileAsync(actorId, ct)
+                ?? throw Error(QuestCompletionError.Forbidden, "Member profile not found.");
+
+            var completion = QuestCompletion.CreateEvidenceClaim(
+                actorId, quest, participationId, profile.HomeCommunityRegionId,
+                input.CompletedAtUtc, now);
+            var detail = EvidenceClaimDetail.Create(
+                completion.Id, input.Description, input.EvidenceUrl, input.UserDeclaration);
+            completion.EvidenceClaimDetail = detail;
+            detail.QuestCompletion = completion;
+            _db.QuestCompletions.Add(completion);
+            _db.EvidenceClaimDetails.Add(detail);
+            await _db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return ToClaimRecord(completion, detail, quest.Title);
+        }
+        catch (ArgumentException exception)
+        {
+            await transaction.RollbackAsync(ct);
+            throw Error(QuestCompletionError.InvalidEvidence, exception.Message);
+        }
+        catch (DbUpdateException exception) when (IsUnique(exception, PendingClaimConstraint))
+        {
+            await transaction.RollbackAsync(ct);
+            throw Error(QuestCompletionError.PendingClaimExists,
+                "A pending evidence claim already exists for this Quest.");
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    public async Task<MyQuestCompletionState> SelfReportAsync(
+        Guid questId,
+        Guid actorId,
+        DateTimeOffset completedAtUtc,
+        DateTimeOffset now,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            EnsureCompletionDate(completedAtUtc, now);
+            var quest = await _db.Quests.SingleOrDefaultAsync(item => item.Id == questId, ct)
+                ?? throw Error(QuestCompletionError.NotFound, "Quest not found.");
+            var participationId = await EnsureClaimEligibleAsync(quest, actorId, ct);
+            if (await HasVerifiedAsync(questId, actorId, ct))
+                throw Error(QuestCompletionError.AlreadyCompleted,
+                    "You have already completed this Quest.");
+            var completion = QuestCompletion.CreateSelfReported(
+                actorId, quest, participationId, completedAtUtc, now);
+            _db.QuestCompletions.Add(completion);
+            await _db.SaveChangesAsync(ct);
+            return MyQuestCompletionState.FromCompletion(completion);
+        }
+        catch (DbUpdateException exception) when (IsUnique(exception, SelfReportedConstraint))
+        {
+            throw Error(QuestCompletionError.SelfReportExists,
+                "This Quest has already been self-reported.");
+        }
+    }
+
+    public async Task<IReadOnlyList<EvidenceClaimSummary>> ListMyClaimsAsync(
+        Guid actorId,
+        QuestCompletionStatus? status,
+        CancellationToken ct = default)
+    {
+        var query = _db.QuestCompletions
+            .AsNoTracking()
+            .Where(completion =>
+                completion.Method == CompletionMethod.EvidenceClaim &&
+                completion.UserId == actorId);
+        if (status.HasValue)
+            query = query.Where(completion => completion.Status == status.Value);
+        return await query
+            .OrderByDescending(completion => completion.CreatedAt)
+            .ThenBy(completion => completion.Id)
+            .Select(completion => new EvidenceClaimSummary(
+                completion.Id, completion.UserId, completion.QuestId,
+                completion.Quest!.Title, completion.Status, completion.CompletedAt,
+                completion.CreatedAt, completion.EvidenceClaimDetail!.ReviewedAt))
+            .ToListAsync(ct);
+    }
+
+    public async Task<EvidenceClaimRecord> GetClaimAsync(
+        Guid claimId,
+        Guid actorId,
+        bool isAdmin,
+        CancellationToken ct = default)
+    {
+        var completion = await _db.QuestCompletions
+            .AsNoTracking()
+            .Include(item => item.Quest)
+            .Include(item => item.EvidenceClaimDetail)
+            .SingleOrDefaultAsync(item =>
+                item.Id == claimId &&
+                item.Method == CompletionMethod.EvidenceClaim, ct)
+            ?? throw Error(QuestCompletionError.NotFound, "Claim not found.");
+        if (!isAdmin && completion.UserId != actorId)
+            throw Error(QuestCompletionError.NotFound, "Claim not found.");
+        return ToClaimRecord(
+            completion,
+            completion.EvidenceClaimDetail!,
+            completion.Quest!.Title);
+    }
+
+    public async Task<EvidenceClaimRecord> UpdateClaimAsync(
+        Guid claimId,
+        Guid actorId,
+        EvidenceClaimInput input,
+        DateTimeOffset now,
+        CancellationToken ct = default)
+    {
+        var completion = await _db.QuestCompletions
+            .Include(item => item.Quest)
+            .Include(item => item.EvidenceClaimDetail)
+            .SingleOrDefaultAsync(item =>
+                item.Id == claimId &&
+                item.UserId == actorId &&
+                item.Method == CompletionMethod.EvidenceClaim, ct)
+            ?? throw Error(QuestCompletionError.NotFound, "Claim not found.");
+        try
+        {
+            EnsureCompletionDate(input.CompletedAtUtc, now);
+            completion.UpdatePendingClaim(input.CompletedAtUtc, now);
+            completion.EvidenceClaimDetail!.Update(
+                input.Description, input.EvidenceUrl, input.UserDeclaration);
+            await _db.SaveChangesAsync(ct);
+            return ToClaimRecord(
+                completion,
+                completion.EvidenceClaimDetail,
+                completion.Quest!.Title);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw Error(QuestCompletionError.ClaimAlreadyReviewed, exception.Message);
+        }
+        catch (ArgumentException exception)
+        {
+            throw Error(QuestCompletionError.InvalidEvidence, exception.Message);
+        }
+    }
+
+    public async Task WithdrawClaimAsync(
+        Guid claimId,
+        Guid actorId,
+        CancellationToken ct = default)
+    {
+        var completion = await _db.QuestCompletions
+            .SingleOrDefaultAsync(item =>
+                item.Id == claimId &&
+                item.UserId == actorId &&
+                item.Method == CompletionMethod.EvidenceClaim, ct)
+            ?? throw Error(QuestCompletionError.NotFound, "Claim not found.");
+        if (completion.Status != QuestCompletionStatus.Pending)
+            throw Error(QuestCompletionError.ClaimAlreadyReviewed,
+                "Reviewed claims cannot be withdrawn.");
+        _db.QuestCompletions.Remove(completion);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw Error(QuestCompletionError.ClaimAlreadyReviewed,
+                "The claim changed while it was being withdrawn.");
+        }
+    }
+
+    public async Task<IReadOnlyList<EvidenceClaimSummary>> ListPendingClaimsAsync(
+        CancellationToken ct = default) =>
+        await _db.QuestCompletions
+            .AsNoTracking()
+            .Where(completion =>
+                completion.Method == CompletionMethod.EvidenceClaim &&
+                completion.Status == QuestCompletionStatus.Pending)
+            .OrderBy(completion => completion.CreatedAt)
+            .ThenBy(completion => completion.Id)
+            .Select(completion => new EvidenceClaimSummary(
+                completion.Id, completion.UserId, completion.QuestId,
+                completion.Quest!.Title, completion.Status, completion.CompletedAt,
+                completion.CreatedAt, completion.EvidenceClaimDetail!.ReviewedAt))
+            .ToListAsync(ct);
+
+    public async Task<EvidenceClaimRecord> ReviewClaimAsync(
+        Guid claimId,
+        Guid reviewerId,
+        bool approve,
+        string? reviewNote,
+        DateTimeOffset now,
+        CancellationToken ct = default)
+    {
+        await using var transaction = await _db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var completion = await _db.QuestCompletions
+                .FromSqlInterpolated($$"""
+                    SELECT c.*, c.xmin
+                    FROM "QuestCompletions" AS c
+                    WHERE c."Id" = {{claimId}}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(ct)
+                ?? throw Error(QuestCompletionError.NotFound, "Claim not found.");
+            if (completion.Method != CompletionMethod.EvidenceClaim)
+                throw Error(QuestCompletionError.NotFound, "Claim not found.");
+            if (completion.UserId == reviewerId)
+                throw Error(QuestCompletionError.Forbidden,
+                    "An Admin cannot review their own claim.");
+            if (completion.Status != QuestCompletionStatus.Pending)
+                throw Error(QuestCompletionError.ClaimAlreadyReviewed,
+                    "This claim has already been reviewed.");
+            var detail = await _db.EvidenceClaimDetails
+                .SingleAsync(item => item.QuestCompletionId == claimId, ct);
+            var quest = await _db.Quests.SingleAsync(item => item.Id == completion.QuestId, ct);
+
+            detail.RecordReview(reviewerId, reviewNote, now);
+            if (approve)
+            {
+                if (await HasVerifiedAsync(completion.QuestId, completion.UserId, ct))
+                    throw Error(QuestCompletionError.AlreadyCompleted,
+                        "The member already has a verified completion.");
+                var profile = await LockUserProfileAsync(completion.UserId, ct)
+                    ?? throw new InvalidOperationException("Member profile not found.");
+                completion.ApproveEvidenceClaim(now);
+                var xp = XpTransaction.CreateFromVerifiedCompletion(completion);
+                profile.ApplyXpAward(xp.XpAmount, now);
+                _db.XpTransactions.Add(xp);
+                await _achievementAwards.StageMissingMilestoneAwardsAsync(
+                    completion.UserId, xp, ct);
+            }
+            else
+            {
+                completion.RejectEvidenceClaim(now);
+            }
+
+            await _db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return ToClaimRecord(completion, detail, quest.Title);
+        }
+        catch (DbUpdateException exception) when (IsUnique(exception, VerifiedCompletionConstraint))
+        {
+            await transaction.RollbackAsync(ct);
+            throw Error(QuestCompletionError.AlreadyCompleted,
+                "The member already has a verified completion.");
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     private Task<Quest?> LockQuestAsync(Guid questId, CancellationToken ct) =>
@@ -286,6 +564,58 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
                 FOR UPDATE
                 """)
             .SingleOrDefaultAsync(ct);
+
+    private async Task<Guid?> EnsureClaimEligibleAsync(
+        Quest quest, Guid actorId, CancellationToken ct)
+    {
+        if (quest.CreatedByUserId == actorId)
+            throw Error(QuestCompletionError.OwnQuest,
+                "You cannot claim completion for a Quest you created.");
+        if (quest.Status == QuestStatus.Draft)
+            throw Error(QuestCompletionError.NotFound, "Quest not found.");
+        if (quest.Status != QuestStatus.Published)
+            throw Error(QuestCompletionError.CancelledOrArchived,
+                "Only a published Quest can be completed.");
+        if (quest.RegistrationMode != RegistrationMode.Native)
+            return null;
+        var participationId = await _db.QuestParticipations
+            .Where(item => item.UserId == actorId &&
+                item.QuestId == quest.Id && item.CancelledAt == null)
+            .Select(item => (Guid?)item.Id)
+            .SingleOrDefaultAsync(ct);
+        if (!participationId.HasValue)
+            throw Error(QuestCompletionError.NoActiveParticipation,
+                "An active Quest participation is required.");
+        return participationId;
+    }
+
+    private Task<bool> HasVerifiedAsync(Guid questId, Guid actorId, CancellationToken ct) =>
+        _db.QuestCompletions.AsNoTracking().AnyAsync(item =>
+            item.QuestId == questId && item.UserId == actorId &&
+            item.Status == QuestCompletionStatus.Verified, ct);
+
+    private static EvidenceClaimRecord ToClaimRecord(
+        QuestCompletion completion, EvidenceClaimDetail detail, string questTitle) =>
+        new(completion.Id, completion.UserId, completion.QuestId, questTitle,
+            completion.Status, completion.CompletedAt, completion.CreatedAt,
+            detail.Description, detail.EvidenceUrl, detail.UserDeclaration,
+            detail.ReviewNote, detail.ReviewedByUserId, detail.ReviewedAt,
+            detail.EvidencePurgedAt);
+
+    private static bool IsUnique(DbUpdateException exception, string constraint) =>
+        exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: var constraintName,
+        } && constraintName == constraint;
+
+    private static void EnsureCompletionDate(DateTimeOffset completedAt, DateTimeOffset now)
+    {
+        var utc = completedAt.ToUniversalTime();
+        if (utc < DateTimeOffset.UnixEpoch || utc > now.ToUniversalTime())
+            throw Error(QuestCompletionError.InvalidEvidence,
+                "Completion date must be a valid date that is not in the future.");
+    }
 
     private static void EnsureManagementAccess(Quest quest, Guid actorId, bool isAdmin)
     {

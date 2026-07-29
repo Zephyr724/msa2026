@@ -10,8 +10,11 @@ public sealed record QuestListItemDto(
     string Difficulty,
     int XpAward,
     int? Capacity,
+    int? AvailableSpots,
     string? StartAtUtc,
     string? EndAtUtc,
     QuestLocationRegionDto? LocationRegion,
     string? LocationDescription,
-    QuestCoverImageDto? CoverImage);
+    QuestCoverImageDto? CoverImage,
+    decimal? Latitude = null,
+    decimal? Longitude = null);

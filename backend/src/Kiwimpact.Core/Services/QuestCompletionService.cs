@@ -1,4 +1,5 @@
 using Kiwimpact.Core.Repositories;
+using Kiwimpact.Core.Enums;
 
 namespace Kiwimpact.Core.Services;
 
@@ -52,12 +53,90 @@ public sealed class QuestCompletionService : IQuestCompletionService
         return _repository.GetStateAsync(questId, actorId, ct);
     }
 
+    public Task<EvidenceClaimRecord> SubmitClaimAsync(
+        Guid questId, Guid actorId, EvidenceClaimInput input,
+        CancellationToken ct = default)
+    {
+        EnsureRequest(questId, actorId);
+        ArgumentNullException.ThrowIfNull(input);
+        return _repository.SubmitClaimAsync(
+            questId, actorId, input, DateTimeOffset.UtcNow, ct);
+    }
+
+    public Task<MyQuestCompletionState> SelfReportAsync(
+        Guid questId, Guid actorId, DateTimeOffset completedAtUtc,
+        CancellationToken ct = default)
+    {
+        EnsureRequest(questId, actorId);
+        return _repository.SelfReportAsync(
+            questId, actorId, completedAtUtc, DateTimeOffset.UtcNow, ct);
+    }
+
+    public Task<IReadOnlyList<EvidenceClaimSummary>> ListMyClaimsAsync(
+        Guid actorId, QuestCompletionStatus? status, CancellationToken ct = default)
+    {
+        EnsureActor(actorId);
+        return _repository.ListMyClaimsAsync(actorId, status, ct);
+    }
+
+    public Task<EvidenceClaimRecord> GetClaimAsync(
+        Guid claimId, Guid actorId, bool isAdmin, CancellationToken ct = default)
+    {
+        EnsureClaimRequest(claimId, actorId);
+        return _repository.GetClaimAsync(claimId, actorId, isAdmin, ct);
+    }
+
+    public Task<EvidenceClaimRecord> UpdateClaimAsync(
+        Guid claimId, Guid actorId, EvidenceClaimInput input,
+        CancellationToken ct = default)
+    {
+        EnsureClaimRequest(claimId, actorId);
+        ArgumentNullException.ThrowIfNull(input);
+        return _repository.UpdateClaimAsync(
+            claimId, actorId, input, DateTimeOffset.UtcNow, ct);
+    }
+
+    public Task WithdrawClaimAsync(
+        Guid claimId, Guid actorId, CancellationToken ct = default)
+    {
+        EnsureClaimRequest(claimId, actorId);
+        return _repository.WithdrawClaimAsync(claimId, actorId, ct);
+    }
+
+    public Task<IReadOnlyList<EvidenceClaimSummary>> ListPendingClaimsAsync(
+        CancellationToken ct = default) =>
+        _repository.ListPendingClaimsAsync(ct);
+
+    public Task<EvidenceClaimRecord> ReviewClaimAsync(
+        Guid claimId, Guid reviewerId, bool approve, string? reviewNote,
+        CancellationToken ct = default)
+    {
+        EnsureClaimRequest(claimId, reviewerId);
+        return _repository.ReviewClaimAsync(
+            claimId, reviewerId, approve, reviewNote, DateTimeOffset.UtcNow, ct);
+    }
+
     private static void EnsureRequest(Guid questId, Guid actorId)
     {
         if (questId == Guid.Empty)
             throw new QuestCompletionException(
                 QuestCompletionError.NotFound,
                 "Quest not found.");
+        if (actorId == Guid.Empty)
+            throw new QuestCompletionException(
+                QuestCompletionError.Forbidden,
+                "Authenticated user is required.");
+    }
+
+    private static void EnsureClaimRequest(Guid claimId, Guid actorId)
+    {
+        if (claimId == Guid.Empty)
+            throw new QuestCompletionException(QuestCompletionError.NotFound, "Claim not found.");
+        EnsureActor(actorId);
+    }
+
+    private static void EnsureActor(Guid actorId)
+    {
         if (actorId == Guid.Empty)
             throw new QuestCompletionException(
                 QuestCompletionError.Forbidden,

@@ -60,13 +60,12 @@ export default function ThemeSwitcher() {
         aria-controls={optionsId}
         aria-expanded={isOpen}
         aria-label={`Theme preference: ${currentOption.label}`}
-        className="btn btn-ghost btn-sm gap-1 px-2"
+        className="btn btn-ghost btn-sm btn-square"
         onClick={() => setIsOpen((open) => !open)}
         ref={triggerRef}
         type="button"
       >
         <CurrentIcon aria-hidden="true" className="size-4" />
-        <span className="hidden lg:inline">{currentOption.label}</span>
       </button>
 
       {isOpen && (

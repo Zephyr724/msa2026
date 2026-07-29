@@ -22,4 +22,9 @@ public interface IQuestParticipationRepository
         Guid actorId,
         DateTimeOffset now,
         CancellationToken ct = default);
+
+    Task<IReadOnlyList<QuestParticipation>> ListMineAsync(
+        Guid actorId,
+        MyQuestParticipationFilter filter,
+        CancellationToken ct = default);
 }

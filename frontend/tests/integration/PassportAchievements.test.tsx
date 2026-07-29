@@ -176,7 +176,7 @@ describe('Passport achievements section', () => {
     const { container } = renderSection();
 
     await screen.findByText('First Steps');
-    expect(container.querySelectorAll('svg.lucide-award')).toHaveLength(1);
+    expect(container.querySelectorAll('svg[role="img"]')).toHaveLength(2);
     expect(container.querySelectorAll('img')).toHaveLength(1);
     const lockedImage = container.querySelector('img');
     expect(lockedImage).toHaveAttribute(
@@ -239,13 +239,31 @@ describe('Passport achievements section', () => {
   it('bounds a 404 to the section without offering retry', async () => {
     stubAchievementApi({
       earnedResponse: () =>
-        Promise.resolve(jsonResponse({ title: 'Not Found' }, 404)),
+        Promise.resolve(jsonResponse({
+          type: 'https://kiwimpact.app/problems/profile-not-found',
+          title: 'Profile Not Found',
+          status: 404,
+        }, 404)),
     });
     renderSection();
 
     expect(await screen.findByText('Passport unavailable')).toBeInTheDocument();
     expect(within(achievementsRegion()).queryByRole('button', { name: 'Retry' }))
       .not.toBeInTheDocument();
+  });
+
+  it('does not mislabel an unrelated 404 as a missing Passport profile', async () => {
+    stubAchievementApi({
+      earnedResponse: () =>
+        Promise.resolve(jsonResponse({ title: 'Not Found', status: 404 }, 404)),
+    });
+    renderSection();
+
+    expect(await screen.findByText('We could not load this section.'))
+      .toBeInTheDocument();
+    expect(screen.queryByText('Passport unavailable')).not.toBeInTheDocument();
+    expect(within(achievementsRegion()).getByRole('button', { name: 'Retry' }))
+      .toBeInTheDocument();
   });
 
   it('bounds progression-not-ready to Achievements and recovers on manual retry', async () => {

@@ -1,13 +1,87 @@
+name: kiwimpact
+
+x-app-environment: &app-environment
+  ASPNETCORE_ENVIRONMENT: Production
+  ASPNETCORE_HTTP_PORTS: "8080"
+  DOTNET_BUNDLE_EXTRACT_BASE_DIR: /tmp/dotnet-bundle
+  AllowedHosts: "${ALLOWED_HOSTS:-localhost;127.0.0.1}"
+  ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=kiwimpact;Username=kiwimpact;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the untracked .env file}"
+  CompletionCodes__HmacKey: "${COMPLETION_CODES_HMAC_KEY:?Set COMPLETION_CODES_HMAC_KEY in the untracked .env file}"
+  DataProtection__ApplicationName: Kiwimpact
+  DataProtection__KeyPath: /var/lib/kiwimpact/keys
+  HttpsRedirection__Enabled: "false"
+  Auth__FrontendBaseUrl: "http://localhost:${APP_PORT:-8080}"
+  Email__Enabled: "${EMAIL_ENABLED:-false}"
+  Email__Smtp__Host: mailpit
+  Email__Smtp__Port: "1025"
+  Seed__Roles: "true"
+  Seed__Region: "false"
+  Seed__DemoQuests: "false"
+  Seed__DemoAccounts: "false"
+
 services:
+  app:
+    image: "kiwimpact:${KIWIMPACT_IMAGE_TAG:-local}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GOOGLE_MAPS_BROWSER_VALUE: "${VITE_GOOGLE_MAPS_API_KEY:-}"
+        GOOGLE_MAPS_MAP_ID: "${VITE_GOOGLE_MAPS_MAP_ID:-}"
+    environment: *app-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - data_protection_keys:/var/lib/kiwimpact/keys
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://127.0.0.1:8080/health/live
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 4
+
+  migrate:
+    image: "kiwimpact:${KIWIMPACT_IMAGE_TAG:-local}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GOOGLE_MAPS_BROWSER_VALUE: "${VITE_GOOGLE_MAPS_API_KEY:-}"
+        GOOGLE_MAPS_MAP_ID: "${VITE_GOOGLE_MAPS_MAP_ID:-}"
+    entrypoint:
+      - /app/migrate
+    environment: *app-environment
+    volumes:
+      - data_protection_keys:/var/lib/kiwimpact/keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: "no"
+
   postgres:
     image: postgres:17-alpine
-    container_name: kiwimpact-postgres
     environment:
       POSTGRES_USER: kiwimpact
-      POSTGRES_PASSWORD: kiwimpact_dev
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the untracked .env file}"
       POSTGRES_DB: kiwimpact
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,10 +92,12 @@ services:
 
   mailpit:
     image: axllent/mailpit:latest
-    container_name: kiwimpact-mailpit
+    profiles:
+      - development
     ports:
       - "8025:8025"
       - "1025:1025"
 
 volumes:
   postgres_data:
+  data_protection_keys:

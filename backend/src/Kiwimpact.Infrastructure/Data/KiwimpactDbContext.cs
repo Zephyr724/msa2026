@@ -15,11 +15,13 @@ public sealed class KiwimpactDbContext
     public DbSet<QuestImage> QuestImages => Set<QuestImage>();
     public DbSet<QuestParticipation> QuestParticipations => Set<QuestParticipation>();
     public DbSet<QuestCompletion> QuestCompletions => Set<QuestCompletion>();
+    public DbSet<EvidenceClaimDetail> EvidenceClaimDetails => Set<EvidenceClaimDetail>();
     public DbSet<CompletionCode> CompletionCodes => Set<CompletionCode>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<XpTransaction> XpTransactions => Set<XpTransaction>();
     public DbSet<Achievement> Achievements => Set<Achievement>();
     public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
+    public DbSet<CommunityChallenge> CommunityChallenges => Set<CommunityChallenge>();
 
     public KiwimpactDbContext(DbContextOptions<KiwimpactDbContext> options)
         : base(options)

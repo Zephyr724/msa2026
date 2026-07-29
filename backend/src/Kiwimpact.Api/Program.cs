@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Kiwimpact.Api.Reconciliation;
+using Kiwimpact.Api.Hubs;
 using Kiwimpact.Api.Security;
 using Kiwimpact.Core.Services;
 using Kiwimpact.Core.Security;
@@ -9,13 +10,24 @@ using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
 using Kiwimpact.Infrastructure.Reconciliation;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile(
+        "appsettings.Development.local.json",
+        optional: true,
+        reloadOnChange: false);
+    // Keep environment variables authoritative for shared/dev-hosted runs.
+    builder.Configuration.AddEnvironmentVariables();
+}
 
 // ── Service Registration ────────────────────────────────────────────
 builder.Services.AddScoped<ApiAntiforgeryFilter>();
@@ -24,6 +36,18 @@ builder.Services.AddControllers(options =>
 
 // Problem Details for consistent error responses
 builder.Services.AddProblemDetails();
+builder.Services.AddSignalR();
+
+var dataProtection = builder.Services
+    .AddDataProtection()
+    .SetApplicationName(
+        builder.Configuration["DataProtection:ApplicationName"] ?? "Kiwimpact");
+var dataProtectionKeyPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeyPath))
+{
+    var keyDirectory = Directory.CreateDirectory(dataProtectionKeyPath);
+    dataProtection.PersistKeysToFileSystem(keyDirectory);
+}
 
 // OpenAPI generation
 builder.Services.AddOpenApi();
@@ -81,6 +105,9 @@ builder.Services.AddOptions<AchievementBackfillOptions>()
         "AchievementBackfill:MaxConsecutiveRowFailures must be positive.")
     .ValidateOnStart();
 builder.Services.AddHostedService<AchievementBackfillHostedService>();
+builder.Services.AddHostedService<EvidencePurgeHostedService>();
+builder.Services.AddSingleton<CommunityChallengeFinalizer>();
+builder.Services.AddHostedService<CommunityChallengeFinalizerHostedService>();
 
 builder.Services.AddOptions<CompletionCodeOptions>()
     .Bind(builder.Configuration.GetSection("CompletionCodes"))
@@ -100,7 +127,8 @@ builder.Services
     .AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
         options.User.RequireUniqueEmail = true;
-        options.SignIn.RequireConfirmedEmail = false;
+        options.SignIn.RequireConfirmedEmail =
+            builder.Configuration.GetValue("Auth:RequireConfirmedEmail", true);
         options.Password.RequiredLength = 12;
         options.Password.RequiredUniqueChars = 4;
         options.Password.RequireDigit = true;
@@ -112,7 +140,16 @@ builder.Services
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     })
     .AddEntityFrameworkStores<KiwimpactDbContext>()
+    .AddTokenProvider<PasswordResetTokenProvider>("KiwimpactReset")
     .AddDefaultTokenProviders();
+
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+    options.TokenLifespan = TimeSpan.FromHours(24));
+builder.Services.Configure<PasswordResetTokenProviderOptions>(options =>
+    options.TokenLifespan = TimeSpan.FromMinutes(45));
+builder.Services.Configure<IdentityOptions>(options =>
+    options.Tokens.PasswordResetTokenProvider = "KiwimpactReset");
+builder.Services.AddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -226,16 +263,34 @@ var app = builder.Build();
 
 // ── Middleware Pipeline ──────────────────────────────────────────────
 app.UseExceptionHandler();
-app.UseRouting();
-app.UseCors();
 
 // HTTPS redirection enabled only in non-Development environments
-// so the local HTTP Vite proxy on port 5000 remains usable during development.
-if (!app.Environment.IsDevelopment())
+// so the local HTTP Vite proxy remains usable during development.
+if (!app.Environment.IsDevelopment() &&
+    builder.Configuration.GetValue("HttpsRedirection:Enabled", true))
 {
     app.UseHttpsRedirection();
 }
 
+app.UseDefaultFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        if (context.Context.Request.Path.StartsWithSegments("/assets"))
+        {
+            context.Context.Response.Headers.CacheControl =
+                "public,max-age=31536000,immutable";
+        }
+        else
+        {
+            context.Context.Response.Headers.CacheControl = "no-cache";
+        }
+    },
+});
+
+app.UseRouting();
+app.UseCors();
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
@@ -337,10 +392,27 @@ if (seedRoles || (app.Environment.IsDevelopment() &&
             services.GetRequiredService<UserManager<ApplicationUser>>(),
             new DemoAccountSeedOptions(
                 seedDemoAccounts,
-                builder.Configuration["DemoAccounts:Organizer:Email"],
-                builder.Configuration["DemoAccounts:Organizer:Password"],
-                builder.Configuration["DemoAccounts:Admin:Email"],
-                builder.Configuration["DemoAccounts:Admin:Password"]));
+                builder.Configuration["DemoAccounts:Password"],
+                DemoAccountSeedOptions.StandardPersonas));
+        // Activity depends on both the configured personas and demo Quests.
+        // Accounts remain independently seedable for authentication testing.
+        if (seedDemoAccounts && seedDemoQuests)
+        {
+            await using var demoActivityTransaction =
+                await db.Database.BeginTransactionAsync();
+            try
+            {
+                await DemoActivitySeed.SeedAsync(
+                    db,
+                    DemoAccountSeedOptions.StandardPersonas);
+                await demoActivityTransaction.CommitAsync();
+            }
+            catch
+            {
+                await demoActivityTransaction.RollbackAsync();
+                throw;
+            }
+        }
     }
 }
 
@@ -373,5 +445,44 @@ app.MapScalarApiReference();
 
 // Map controllers
 app.MapControllers();
+app.MapHub<LeaderboardHub>("/hubs/leaderboard");
+
+// Serve the built React application only for safe, non-file frontend routes.
+// Reserved server paths always retain their ordinary 404/405 response instead
+// of being converted into a misleading HTML success response.
+app.MapMethods("/{**path}", [HttpMethods.Get, HttpMethods.Head], async context =>
+{
+    var requestPath = context.Request.Path;
+    if (IsReservedServerPath(requestPath) || Path.HasExtension(requestPath))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    var indexPath = Path.Combine(app.Environment.WebRootPath ?? string.Empty, "index.html");
+    if (!File.Exists(indexPath))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    context.Response.ContentType = "text/html; charset=utf-8";
+    context.Response.Headers.CacheControl = "no-cache";
+    if (!HttpMethods.IsHead(context.Request.Method))
+    {
+        await context.Response.SendFileAsync(indexPath, context.RequestAborted);
+    }
+});
 
 app.Run();
+
+static bool IsReservedServerPath(PathString path) =>
+    StartsWithSegment(path, "/api") ||
+    StartsWithSegment(path, "/health") ||
+    StartsWithSegment(path, "/openapi") ||
+    StartsWithSegment(path, "/scalar") ||
+    StartsWithSegment(path, "/hubs");
+
+static bool StartsWithSegment(PathString path, string segment) =>
+    path.Equals(segment, StringComparison.OrdinalIgnoreCase) ||
+    path.StartsWithSegments(segment, StringComparison.OrdinalIgnoreCase);

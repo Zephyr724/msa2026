@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+appsettings.Development.local.json
 
 # Node dependencies
 node_modules/
@@ -29,6 +30,9 @@ obj/
 # Logs
 *.log
 logs/
+
+# Browser automation artifacts
+.playwright-mcp/
 
 # OS files
 .DS_Store

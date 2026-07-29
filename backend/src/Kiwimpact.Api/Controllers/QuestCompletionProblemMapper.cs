@@ -17,6 +17,8 @@ internal static class QuestCompletionProblemMapper
                 ProblemDetailsHelper.Forbidden(exception.Message),
             QuestCompletionError.UnsupportedQuest =>
                 ProblemDetailsHelper.Validation(exception.Message),
+            QuestCompletionError.InvalidEvidence =>
+                ProblemDetailsHelper.Validation(exception.Message),
             QuestCompletionError.InvalidCompletionCode =>
                 ProblemDetailsHelper.InvalidCompletionCode(),
             QuestCompletionError.OwnQuest or
@@ -24,6 +26,9 @@ internal static class QuestCompletionProblemMapper
             QuestCompletionError.QuestNotPublished or
             QuestCompletionError.NoActiveParticipation or
             QuestCompletionError.AlreadyCompleted or
+            QuestCompletionError.PendingClaimExists or
+            QuestCompletionError.SelfReportExists or
+            QuestCompletionError.ClaimAlreadyReviewed or
             QuestCompletionError.EmptyValidityWindow or
             QuestCompletionError.Concurrency =>
                 ProblemDetailsHelper.Conflict(exception.Message),

@@ -88,6 +88,7 @@ public sealed class AchievementRepository : IAchievementRepository
             .AsNoTracking()
             .Where(award =>
                 award.UserId == userId &&
+                award.SourceCommunityChallengeId == null &&
                 eligibleIds.Contains(award.AchievementId))
             .Select(award => award.AchievementId)
             .ToListAsync(ct);

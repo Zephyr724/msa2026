@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -35,11 +35,17 @@ function completionItem(overrides: Record<string, unknown> = {}) {
     questTitle: 'Harbour restoration day',
     questCategory: 'RestoreNature',
     questStatus: 'Published',
+    coverImage: {
+      id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      imageUrl: '/images/quests/native-planting.svg',
+      altText: 'Volunteers planting native trees',
+    },
     status: 'Verified',
     method: 'CompletionCode',
     completedAtUtc: '2026-07-20T09:00:00.0000000Z',
     verifiedAtUtc: '2026-07-21T09:00:00.0000000Z',
     xpAmount: 50,
+    achievementNames: ['First Step'],
     ...overrides,
   };
 }
@@ -87,6 +93,8 @@ interface StubOptions {
   completions?: (url: string) => Promise<Response>;
   catalog?: () => Promise<Response>;
   achievements?: () => Promise<Response>;
+  summary?: () => Promise<Response>;
+  communityParticipation?: () => Promise<Response>;
 }
 
 function stubPassportApi({
@@ -94,6 +102,8 @@ function stubPassportApi({
   completions,
   catalog,
   achievements,
+  summary,
+  communityParticipation,
 }: StubOptions) {
   const fetchMock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
     const url = String(input);
@@ -103,11 +113,48 @@ function stubPassportApi({
     if (url.includes('/v1/users/me/passport/completions')) {
       return completions?.(url) ?? Promise.resolve(jsonResponse(emptyHistory()));
     }
+    if (url.endsWith('/v1/users/me/passport/community-participation')) {
+      return communityParticipation?.() ?? Promise.resolve(jsonResponse([]));
+    }
+    if (url.endsWith('/v1/users/me/passport')) {
+      return summary?.() ?? Promise.resolve(jsonResponse({
+        displayName: 'Aroha',
+        totalXp: 120,
+        level: 3,
+        rankTitle: 'Novice',
+        homeCommunity: null,
+        verifiedCompletionCount: 1,
+        selfReportedCompletionCount: 0,
+        pendingCompletionCount: 0,
+        categoryImpact: [{
+          category: 'RestoreNature',
+          verifiedCompletionCount: 1,
+          verifiedXp: 50,
+        }],
+      }));
+    }
     if (url.endsWith('/v1/achievements')) {
       return catalog?.() ?? Promise.resolve(jsonResponse(achievementCatalog()));
     }
     if (url.endsWith('/v1/users/me/achievements')) {
       return achievements?.() ?? Promise.resolve(jsonResponse([]));
+    }
+    if (url.endsWith('/v1/users/me/profile')) {
+      return Promise.resolve(jsonResponse({
+        displayName: 'Aroha',
+        homeCommunity: null,
+        showCommunityOnPassport: false,
+        communityChangeAvailableAtUtc: null,
+      }));
+    }
+    if (url.endsWith('/v1/users/me/streak')) {
+      return Promise.resolve(jsonResponse({
+        currentWeeks: 2,
+        hasVerifiedImpactThisWeek: true,
+      }));
+    }
+    if (url.endsWith('/v1/users/me/claims')) {
+      return Promise.resolve(jsonResponse([]));
     }
     return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
   });
@@ -195,9 +242,35 @@ describe('PassportPage', () => {
     expect(screen.getByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
     expect(screen.getByText('45 XP to Level 4')).toBeInTheDocument();
 
-    expect(screen.getByText('RestoreNature')).toBeInTheDocument();
-    expect(screen.getByText('Verified')).toBeInTheDocument();
-    expect(screen.getByText('50 XP')).toBeInTheDocument();
+    expect(screen.getAllByText('Restore Nature')).not.toHaveLength(0);
+    expect(screen.getAllByText('Verified')).not.toHaveLength(0);
+    expect(screen.getByText('50 XP')).toHaveClass(
+      'border-amber-200',
+      'bg-amber-50',
+      'text-amber-700',
+      'dark:border-amber-700',
+      'dark:bg-amber-900/30',
+      'dark:text-amber-300',
+    );
+    const xpProgress = screen.getByRole('progressbar', {
+      name: 'Progress toward Level 4',
+    });
+    expect(xpProgress).toHaveClass('bg-base-300');
+    expect(xpProgress.firstElementChild).toHaveClass(
+      'bg-gradient-to-r',
+      'from-primary',
+      'to-emerald-400',
+    );
+    expect(screen.getByText('First Step')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Volunteers planting native trees' }))
+      .toHaveAttribute('src', expect.stringContaining('images.unsplash.com'));
+    expect(screen.getByRole('link', { name: 'Share' }))
+      .toHaveAttribute(
+        'href',
+        '/passport/share?completionId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      );
+    expect(historyRegion().querySelector('ul')?.className)
+      .toContain('sm:grid-cols-2');
     const time = container.querySelector('time');
     expect(time).toHaveAttribute('dateTime', '2026-07-20T09:00:00.0000000Z');
   });
@@ -234,13 +307,16 @@ describe('PassportPage', () => {
   it('F16: labels an ordinary reward-pending row as XP pending, never an estimate', async () => {
     stubPassportApi({
       completions: () =>
-        Promise.resolve(jsonResponse(historyPage([completionItem({ xpAmount: null })]))),
+        Promise.resolve(jsonResponse(historyPage([completionItem({
+          achievementNames: [],
+          xpAmount: null,
+        })]))),
     });
     renderPassport();
 
     const row = (await screen.findByText('Harbour restoration day')).closest('li');
     expect(row).toHaveTextContent('XP pending');
-    expect(row?.textContent).not.toMatch(/\d+\s*XP/);
+    expect(row?.textContent).not.toMatch(/\d+\s+XP/);
   });
 
   it('F11: degrades only the summary on a progression 503, with a working retry', async () => {
@@ -288,13 +364,30 @@ describe('PassportPage', () => {
   it('F13: shows "Passport unavailable" on a missing-profile 404', async () => {
     stubPassportApi({
       progression: () =>
-        Promise.resolve(jsonResponse({ title: 'Not Found', status: 404 }, 404)),
+        Promise.resolve(jsonResponse({
+          type: 'https://kiwimpact.app/problems/profile-not-found',
+          title: 'Profile Not Found',
+          status: 404,
+        }, 404)),
     });
     renderPassport();
 
     await waitFor(() =>
       expect(summaryRegion()).toHaveTextContent('Passport unavailable'));
     expect(summaryRegion().querySelector('button')).not.toBeInTheDocument();
+  });
+
+  it('does not mislabel an unrelated 404 as a missing Passport profile', async () => {
+    stubPassportApi({
+      progression: () =>
+        Promise.resolve(jsonResponse({ title: 'Not Found', status: 404 }, 404)),
+    });
+    renderPassport();
+
+    await waitFor(() =>
+      expect(summaryRegion()).toHaveTextContent('We could not load this section.'));
+    expect(summaryRegion()).not.toHaveTextContent('Passport unavailable');
+    expect(summaryRegion().querySelector('button')).toHaveTextContent('Retry');
   });
 
   it('F14: shows a generic per-region error with Retry on an unexpected 500', async () => {
@@ -407,7 +500,7 @@ describe('PassportPage', () => {
     expect(sessionStorage.length).toBe(0);
   });
 
-  it('F20: includes achievements but no deferred Passport domains', async () => {
+  it('F20: includes the accepted streak and privacy-safe Share Card domains', async () => {
     stubPassportApi({
       completions: () =>
         Promise.resolve(jsonResponse(historyPage([completionItem()]))),
@@ -416,8 +509,8 @@ describe('PassportPage', () => {
     await screen.findByText('Harbour restoration day');
 
     expect(container.textContent).toMatch(/achievement/i);
-    expect(container.textContent)
-      .not.toMatch(/streak|leaderboard|share.?card|carbon/i);
+    expect(container.textContent).toMatch(/streak|share.?card/i);
+    expect(container.textContent).not.toMatch(/carbon/i);
   });
 
   it('F21: meets the accessibility contract', async () => {
@@ -447,7 +540,9 @@ describe('PassportPage', () => {
       .toBeInTheDocument();
 
     // Progressbar ARIA values in the unified within-level unit.
-    const bar = screen.getByRole('progressbar');
+    const bar = screen.getByRole('progressbar', {
+      name: 'Progress toward Level 4',
+    });
     expect(bar).toHaveAttribute('aria-valuemin', '0');
     expect(bar).toHaveAttribute('aria-valuemax', '65');
     expect(bar).toHaveAttribute('aria-valuenow', '20');
@@ -465,21 +560,21 @@ describe('PassportPage', () => {
       .toHaveAttribute('dateTime', '2026-07-20T09:00:00.0000000Z');
   });
 
-  it('F22: uses stacked regions and a responsive one-to-three-column achievement grid', async () => {
+  it('F22: uses stacked regions and the Figma responsive achievement grid', async () => {
     stubPassportApi({});
     const { container } = renderPassport();
     await screen.findByText('First Steps');
 
     const main = container.querySelector('main');
-    expect(main?.className).toContain('max-w-4xl');
+    expect(main?.className).toContain('kiwi-page-wide');
     expect(main?.querySelector('.md\\:grid-cols-3')).not.toBeInTheDocument();
     expect(summaryRegion().className).not.toContain('md:col-span-1');
     expect(historyRegion().className).not.toContain('md:col-span-2');
     const achievementGrid = screen.getByRole('region', { name: 'Achievements' })
       .querySelector('ul');
-    expect(achievementGrid?.className).toContain('grid-cols-1');
-    expect(achievementGrid?.className).toContain('sm:grid-cols-2');
-    expect(achievementGrid?.className).toContain('lg:grid-cols-3');
+    expect(achievementGrid?.className).toContain('grid-cols-2');
+    expect(achievementGrid?.className).toContain('sm:grid-cols-3');
+    expect(achievementGrid?.className).toContain('lg:grid-cols-4');
   });
 
   it('F23: places Achievements between Progress and Completion history', async () => {
@@ -491,8 +586,76 @@ describe('PassportPage', () => {
       .map((heading) => heading.textContent);
     expect(headings).toEqual([
       'Progress',
+      'Building Momentum',
+      'Quest category progress',
       'Achievements',
+      'Community challenge participation',
+      'Passport settings',
+      'Share Card',
       'Completion history',
     ]);
+  });
+
+  it('uses the exact Figma category colours for Passport progress bars', async () => {
+    stubPassportApi({});
+    renderPassport();
+    await screen.findByRole('heading', { name: 'Quest category progress' });
+
+    const expectedColours = [
+      ['Restore Nature', 'bg-[#2F8F5B]'],
+      ['Protect Wildlife', 'bg-[#3C72C9]'],
+      ['Clean & Reduce Waste', 'bg-[#C74444]'],
+      ['Grow & Compost', 'bg-[#6C8F2F]'],
+      ['Observe & Measure', 'bg-[#6C63D9]'],
+      ['Learn & Share', 'bg-[#C963D9]'],
+    ] as const;
+
+    for (const [label, colourClass] of expectedColours) {
+      expect(screen.getByRole('progressbar', { name: new RegExp(`^${label}:`) })
+        .querySelector('span')?.className).toContain(colourClass);
+    }
+  });
+
+  it('filters against the complete Passport history rather than only the visible page', async () => {
+    const verified = completionItem();
+    const selfReported = completionItem({
+      completionId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      questId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      questTitle: 'Waste-free habit',
+      questCategory: 'CleanReduceWaste',
+      status: 'SelfReported',
+      method: 'SelfReported',
+      verifiedAtUtc: null,
+      xpAmount: null,
+      achievementNames: [],
+    });
+    stubPassportApi({
+      completions: (url) => Promise.resolve(jsonResponse(
+        url.includes('pageSize=50')
+          ? {
+            items: [verified, selfReported],
+            page: 1,
+            pageSize: 50,
+            totalCount: 2,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          }
+          : historyPage([verified]),
+      )),
+    });
+    const user = userEvent.setup();
+    renderPassport();
+
+    await within(historyRegion()).findByText('Harbour restoration day');
+    await user.click(screen.getByRole('button', { name: 'Self reported' }));
+
+    expect(await within(historyRegion()).findByText('Waste-free habit')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', {
+      name: 'Filter completion history by Restore Nature',
+    }));
+    expect(await within(historyRegion()).findByText('No matching completions')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show all' }));
+    expect(await within(historyRegion()).findByText('Harbour restoration day')).toBeInTheDocument();
   });
 });

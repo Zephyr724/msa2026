@@ -18,4 +18,9 @@ public interface IQuestParticipationService
         Guid questId,
         Guid actorId,
         CancellationToken ct = default);
+
+    Task<IReadOnlyList<QuestParticipation>> ListMineAsync(
+        Guid actorId,
+        MyQuestParticipationFilter filter,
+        CancellationToken ct = default);
 }

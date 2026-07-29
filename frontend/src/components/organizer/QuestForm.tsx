@@ -14,6 +14,7 @@ import type {
   QuestManagementDetailDto,
 } from '../../types/questManagement';
 import type { QuestFormValues } from './questFormModel';
+import { CoordinatePicker } from '../maps/CoordinatePicker';
 
 type FieldErrors = Partial<Record<keyof QuestFormValues, string>>;
 
@@ -72,6 +73,18 @@ function validate(fields: QuestFormValues): FieldErrors {
   if (fields.locationDescription.trim().length > 500) {
     errors.locationDescription = 'Use 500 characters or fewer.';
   }
+  if ((fields.latitude.trim() === '') !== (fields.longitude.trim() === '')) {
+    errors.latitude = 'Enter both latitude and longitude, or leave both blank.';
+  } else if (fields.latitude.trim() && fields.longitude.trim()) {
+    const latitude = Number(fields.latitude);
+    const longitude = Number(fields.longitude);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      errors.latitude = 'Latitude must be between -90 and 90.';
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      errors.longitude = 'Longitude must be between -180 and 180.';
+    }
+  }
   if (fields.externalSourceUrl.trim().length > 2_000) {
     errors.externalSourceUrl = 'Use 2,000 characters or fewer.';
   } else if (fields.externalSourceUrl.trim() && !isHttpsUrl(fields.externalSourceUrl.trim())) {
@@ -115,6 +128,8 @@ function toCreateInput(fields: QuestFormValues): CreateQuestInput {
     endAtUtc: fields.endAtUtc ? new Date(fields.endAtUtc).toISOString() : null,
     locationRegionId: fields.locationRegionId || null,
     locationDescription: optionalText(fields.locationDescription),
+    latitude: fields.latitude.trim() ? Number(fields.latitude) : null,
+    longitude: fields.longitude.trim() ? Number(fields.longitude) : null,
     externalSourceUrl: optionalText(fields.externalSourceUrl),
     coverImage: {
       imageUrl: fields.coverImageUrl.trim(),
@@ -235,7 +250,7 @@ export default function QuestForm({
 
   return (
     <>
-      <form className="space-y-8" noValidate onSubmit={handleSubmit}>
+      <form className="space-y-6" noValidate onSubmit={handleSubmit}>
         {(errorMessages.length > 0 || serverError) && (
           <div className="alert alert-error items-start" role="alert">
             <div>
@@ -251,13 +266,13 @@ export default function QuestForm({
         )}
 
         <fieldset className="space-y-8" disabled={readOnly}>
-          <section className="space-y-4" aria-labelledby="quest-details-heading">
-            <h2 className="text-xl font-semibold" id="quest-details-heading">Quest details</h2>
+          <section className="kiwi-panel space-y-4 p-5 sm:p-6" aria-labelledby="quest-details-heading">
+            <h2 className="text-2xl" id="quest-details-heading">Quest details</h2>
             <FormControl label="Title" error={errors.title} field="title">
               <input
                 aria-describedby={describedBy('title')}
                 aria-invalid={!!errors.title}
-                className="input input-bordered w-full"
+                className="input input-bordered w-full rounded-xl"
                 id="title"
                 maxLength={200}
                 onChange={(event) => updateField('title', event.target.value)}
@@ -270,7 +285,7 @@ export default function QuestForm({
               <textarea
                 aria-describedby={describedBy('description')}
                 aria-invalid={!!errors.description}
-                className="textarea textarea-bordered min-h-36 w-full"
+                className="textarea textarea-bordered min-h-36 w-full rounded-xl"
                 id="description"
                 maxLength={2_000}
                 onChange={(event) => updateField('description', event.target.value)}
@@ -283,7 +298,7 @@ export default function QuestForm({
                 <select
                   aria-describedby={describedBy('category')}
                   aria-invalid={!!errors.category}
-                  className="select select-bordered w-full"
+                  className="select select-bordered w-full rounded-xl"
                   id="category"
                   onChange={(event) => updateField('category', event.target.value as QuestCategory)}
                   value={fields.category}
@@ -301,7 +316,7 @@ export default function QuestForm({
                 <select
                   aria-describedby={describedBy('registrationMode')}
                   aria-invalid={!!errors.registrationMode}
-                  className="select select-bordered w-full"
+                  className="select select-bordered w-full rounded-xl"
                   id="registrationMode"
                   onChange={(event) => updateField(
                     'registrationMode',
@@ -319,7 +334,7 @@ export default function QuestForm({
                 <select
                   aria-describedby={describedBy('difficulty')}
                   aria-invalid={!!errors.difficulty}
-                  className="select select-bordered w-full"
+                  className="select select-bordered w-full rounded-xl"
                   id="difficulty"
                   onChange={(event) => updateField(
                     'difficulty',
@@ -335,8 +350,8 @@ export default function QuestForm({
             </div>
           </section>
 
-          <section className="space-y-4" aria-labelledby="schedule-heading">
-            <h2 className="text-xl font-semibold" id="schedule-heading">Schedule and capacity</h2>
+          <section className="kiwi-panel space-y-4 p-5 sm:p-6" aria-labelledby="schedule-heading">
+            <h2 className="text-2xl" id="schedule-heading">Schedule and capacity</h2>
             <label className="label cursor-pointer justify-start gap-3" htmlFor="unlimitedCapacity">
               <input
                 checked={fields.unlimitedCapacity}
@@ -351,7 +366,7 @@ export default function QuestForm({
               <input
                 aria-describedby={describedBy('capacity', 'capacity-hint')}
                 aria-invalid={!!errors.capacity}
-                className="input input-bordered w-full"
+                className="input input-bordered w-full rounded-xl"
                 disabled={readOnly || fields.unlimitedCapacity}
                 id="capacity"
                 min="0"
@@ -360,7 +375,7 @@ export default function QuestForm({
                 type="number"
                 value={fields.capacity}
               />
-              <p className="text-sm text-base-content/60" id="capacity-hint">
+              <p className="text-sm text-muted-content" id="capacity-hint">
                 Zero is allowed. Select unlimited when no capacity applies.
               </p>
             </FormControl>
@@ -369,7 +384,7 @@ export default function QuestForm({
                 <input
                   aria-describedby={describedBy('startAtUtc')}
                   aria-invalid={!!errors.startAtUtc}
-                  className="input input-bordered w-full"
+                  className="input input-bordered w-full rounded-xl"
                   id="startAtUtc"
                   onChange={(event) => updateField('startAtUtc', event.target.value)}
                   type="datetime-local"
@@ -380,7 +395,7 @@ export default function QuestForm({
                 <input
                   aria-describedby={describedBy('endAtUtc')}
                   aria-invalid={!!errors.endAtUtc}
-                  className="input input-bordered w-full"
+                  className="input input-bordered w-full rounded-xl"
                   id="endAtUtc"
                   onChange={(event) => updateField('endAtUtc', event.target.value)}
                   type="datetime-local"
@@ -390,11 +405,11 @@ export default function QuestForm({
             </div>
           </section>
 
-          <section className="space-y-4" aria-labelledby="location-heading">
-            <h2 className="text-xl font-semibold" id="location-heading">Location</h2>
+          <section className="kiwi-panel space-y-4 p-5 sm:p-6" aria-labelledby="location-heading">
+            <h2 className="text-2xl" id="location-heading">Location</h2>
             <FormControl label="Region" field="locationRegionId">
               <select
-                className="select select-bordered w-full"
+                className="select select-bordered w-full rounded-xl"
                 id="locationRegionId"
                 onChange={(event) => updateField('locationRegionId', event.target.value)}
                 value={fields.locationRegionId}
@@ -423,12 +438,27 @@ export default function QuestForm({
               <input
                 aria-describedby={describedBy('locationDescription')}
                 aria-invalid={!!errors.locationDescription}
-                className="input input-bordered w-full"
+                className="input input-bordered w-full rounded-xl"
                 id="locationDescription"
                 maxLength={500}
                 onChange={(event) => updateField('locationDescription', event.target.value)}
                 type="text"
                 value={fields.locationDescription}
+              />
+            </FormControl>
+            <FormControl
+              label="Map coordinates"
+              error={errors.latitude ?? errors.longitude}
+              field="latitude"
+            >
+              <CoordinatePicker
+                disabled={readOnly}
+                latitude={fields.latitude}
+                longitude={fields.longitude}
+                onChange={(latitude, longitude) => {
+                  updateField('latitude', latitude);
+                  updateField('longitude', longitude);
+                }}
               />
             </FormControl>
             <FormControl
@@ -439,7 +469,7 @@ export default function QuestForm({
               <input
                 aria-describedby={describedBy('externalSourceUrl', 'external-source-hint')}
                 aria-invalid={!!errors.externalSourceUrl}
-                className="input input-bordered w-full"
+                className="input input-bordered w-full rounded-xl"
                 id="externalSourceUrl"
                 maxLength={2_000}
                 onChange={(event) => updateField('externalSourceUrl', event.target.value)}
@@ -447,16 +477,16 @@ export default function QuestForm({
                 type="url"
                 value={fields.externalSourceUrl}
               />
-              <p className="text-sm text-base-content/60" id="external-source-hint">
+              <p className="text-sm text-muted-content" id="external-source-hint">
                 Optional. HTTPS links only.
               </p>
             </FormControl>
           </section>
 
-          <section className="space-y-4" aria-labelledby="cover-heading">
+          <section className="kiwi-panel space-y-4 p-5 sm:p-6" aria-labelledby="cover-heading">
             <div>
-              <h2 className="text-xl font-semibold" id="cover-heading">Cover image</h2>
-              <p className="text-sm text-base-content/60">
+              <h2 className="text-2xl" id="cover-heading">Cover image</h2>
+              <p className="text-sm text-muted-content">
                 Add image metadata and a URL. File upload is not available here.
               </p>
             </div>

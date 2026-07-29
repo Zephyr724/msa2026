@@ -1,21 +1,9 @@
-import { useState, type ComponentType } from 'react';
-import {
-  Award,
-  Footprints,
-  Medal,
-  TrendingUp,
-  type LucideProps,
-} from 'lucide-react';
+import { useState } from 'react';
 import type {
   AchievementCatalogItem,
   EarnedAchievement,
 } from '../../types/achievement.ts';
-
-const ICONS_BY_CODE: Record<string, ComponentType<LucideProps>> = {
-  'verified-completions-1': Footprints,
-  'verified-completions-3': TrendingUp,
-  'verified-completions-5': Medal,
-};
+import { AchievementBadgeArt } from '../game/GameArtwork.tsx';
 
 function guardedIconUrl(iconUrl: string | null): string | null {
   if (iconUrl === null) return null;
@@ -32,16 +20,16 @@ function guardedIconUrl(iconUrl: string | null): string | null {
 function AchievementIcon({
   code,
   iconUrl,
+  label,
   muted,
 }: {
   code: string;
   iconUrl: string | null;
+  label: string;
   muted: boolean;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const Icon = ICONS_BY_CODE[code] ?? Award;
   const safeIconUrl = guardedIconUrl(iconUrl);
-  const className = `size-8 ${muted ? 'text-base-content/40' : 'text-primary'}`;
 
   if (safeIconUrl !== null && !imageFailed) {
     return (
@@ -57,10 +45,11 @@ function AchievementIcon({
   }
 
   return (
-    <Icon
-      aria-hidden="true"
-      className={className}
-      focusable="false"
+    <AchievementBadgeArt
+      code={code}
+      label={label}
+      size={52}
+      unlocked={!muted}
     />
   );
 }
@@ -79,15 +68,20 @@ export default function AchievementCard(props: AchievementCardProps) {
   const { achievement, unlocked } = props;
 
   return (
-    <li className="card border border-base-300 bg-base-100 shadow-sm">
+    <li className={`kiwi-card-hover card overflow-hidden border bg-base-100 ${
+      unlocked ? 'border-primary/35 shadow-sm' : 'border-base-300'
+    }`}>
       <div className="card-body gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
-          <AchievementIcon
-            key={`${achievement.code}:${achievement.iconUrl ?? ''}`}
-            code={achievement.code}
-            iconUrl={achievement.iconUrl}
-            muted={!unlocked}
-          />
+          <span className="grid size-16 place-items-center">
+            <AchievementIcon
+              key={`${achievement.code}:${achievement.iconUrl ?? ''}`}
+              code={achievement.code}
+              iconUrl={achievement.iconUrl}
+              label={achievement.name}
+              muted={!unlocked}
+            />
+          </span>
           <span
             className={unlocked
               ? 'badge badge-success'
@@ -97,8 +91,8 @@ export default function AchievementCard(props: AchievementCardProps) {
           </span>
         </div>
         <div>
-          <h3 className="font-semibold">{achievement.name}</h3>
-          <p className="mt-1 text-sm text-base-content/70">
+          <h3 className="text-lg">{achievement.name}</h3>
+          <p className="mt-1 text-sm text-muted-content">
             {achievement.description}
           </p>
         </div>

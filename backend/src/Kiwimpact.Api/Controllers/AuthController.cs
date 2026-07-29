@@ -11,6 +11,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Text;
+using System.Security.Claims;
 
 namespace Kiwimpact.Api.Controllers;
 
@@ -26,17 +29,26 @@ public sealed class AuthController : ControllerBase
     private readonly KiwimpactDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly IAccountEmailSender _emailSender;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IAntiforgery antiforgery,
         KiwimpactDbContext db,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager)
+        SignInManager<ApplicationUser> signInManager,
+        IAccountEmailSender emailSender,
+        IConfiguration configuration,
+        ILogger<AuthController> logger)
     {
         _antiforgery = antiforgery;
         _db = db;
         _userManager = userManager;
         _signInManager = signInManager;
+        _emailSender = emailSender;
+        _configuration = configuration;
+        _logger = logger;
     }
 
     /// <summary>Issue an antiforgery request token and its protected cookie.</summary>
@@ -116,12 +128,110 @@ public sealed class AuthController : ControllerBase
             return RegistrationFailure();
         }
 
+        await SendConfirmationAsync(user, cancellationToken);
         var response = new AuthSessionDto(
             user.Id,
             displayName,
             email,
             [AppRoles.Member]);
         return Created("/api/v1/auth/me", response);
+    }
+
+    /// <summary>Confirm an email address using an ASP.NET Core Identity token.</summary>
+    [HttpPost("confirm-email")]
+    [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.Register)]
+    public async Task<IActionResult> ConfirmEmail(
+        ConfirmEmailRequest request,
+        [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken)
+    {
+        var user = await _userManager.FindByIdAsync(request.UserId.ToString());
+        if (user is null || !TryDecodeToken(request.Token, out var token))
+            return InvalidLifecycleToken();
+        var result = await _userManager.ConfirmEmailAsync(user, token);
+        return result.Succeeded
+            ? Ok(new AccountLifecycleResultDto("Email confirmed. You can now sign in."))
+            : InvalidLifecycleToken();
+    }
+
+    /// <summary>Resend confirmation without revealing whether the account exists.</summary>
+    [HttpPost("resend-confirmation")]
+    [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.Register)]
+    public async Task<IActionResult> ResendConfirmation(
+        EmailOnlyRequest request,
+        [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken,
+        CancellationToken ct)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email.Trim());
+        if (user is not null && !await _userManager.IsEmailConfirmedAsync(user))
+            await SendConfirmationAsync(user, ct);
+        return Ok(GenericEmailResponse());
+    }
+
+    /// <summary>Send a password reset link without account enumeration.</summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.Register)]
+    public async Task<IActionResult> ForgotPassword(
+        EmailOnlyRequest request,
+        [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken,
+        CancellationToken ct)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email.Trim());
+        if (user is not null && await _userManager.IsEmailConfirmedAsync(user))
+        {
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            var url = BuildFrontendUrl(
+                "/reset-password", ("email", user.Email ?? request.Email), ("token", encoded));
+            await SendPasswordResetAsync(
+                user,
+                $"Reset your password within 45 minutes:\n{url}",
+                ct);
+        }
+        return Ok(GenericEmailResponse());
+    }
+
+    /// <summary>Reset a local password using an Identity token.</summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.Register)]
+    public async Task<IActionResult> ResetPassword(
+        ResetPasswordRequest request,
+        [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email.Trim());
+        if (user is null || !TryDecodeToken(request.Token, out var token))
+            return InvalidLifecycleToken();
+        var result = await _userManager.ResetPasswordAsync(user, token, request.Password);
+        return result.Succeeded
+            ? Ok(new AccountLifecycleResultDto("Password reset. You can now sign in."))
+            : InvalidLifecycleToken();
+    }
+
+    /// <summary>Change the authenticated user's local password.</summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    [EnableRateLimiting(AuthRateLimitPolicies.Register)]
+    public async Task<IActionResult> ChangePassword(
+        ChangePasswordRequest request,
+        [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+            return Unauthorized();
+        var result = await _userManager.ChangePasswordAsync(
+            user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            return Problem(
+                title: "Password change failed",
+                detail: "The current password is incorrect or the new password is invalid.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+        await _signInManager.RefreshSignInAsync(user);
+        return Ok(new AccountLifecycleResultDto("Password changed."));
     }
 
     /// <summary>Issue the Identity application cookie for valid credentials.</summary>
@@ -230,4 +340,80 @@ public sealed class AuthController : ControllerBase
             detail: GenericLoginDetail,
             statusCode: StatusCodes.Status401Unauthorized);
     }
+
+    private async Task SendConfirmationAsync(ApplicationUser user, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(user.Email))
+            return;
+        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+        var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+        var url = BuildFrontendUrl(
+            "/confirm-email", ("userId", user.Id.ToString()), ("token", encoded));
+        try
+        {
+            await _emailSender.SendAsync(
+                user.Email,
+                "Confirm your Kiwimpact email",
+                $"Confirm your email within 24 hours:\n{url}", ct);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Confirmation email delivery failed for account {UserId}.",
+                user.Id);
+        }
+    }
+
+    private async Task SendPasswordResetAsync(
+        ApplicationUser user, string message, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(user.Email))
+            return;
+        try
+        {
+            await _emailSender.SendAsync(
+                user.Email,
+                "Reset your Kiwimpact password",
+                message,
+                ct);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Password reset email delivery failed for account {UserId}.",
+                user.Id);
+        }
+    }
+
+    private string BuildFrontendUrl(string path, params (string Key, string Value)[] query)
+    {
+        var root = (_configuration["Auth:FrontendBaseUrl"] ?? "http://localhost:5173")
+            .TrimEnd('/');
+        return FrontendAccountLinkBuilder.Build(root, path, query);
+    }
+
+    private static bool TryDecodeToken(string encoded, out string token)
+    {
+        try
+        {
+            token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(encoded));
+            return token.Length > 0;
+        }
+        catch (FormatException)
+        {
+            token = string.Empty;
+            return false;
+        }
+    }
+
+    private AccountLifecycleResultDto GenericEmailResponse() =>
+        new("If the account is eligible, an email has been sent.");
+
+    private ObjectResult InvalidLifecycleToken() =>
+        Problem(
+            title: "Invalid or expired link",
+            detail: "This account link is invalid or has expired.",
+            statusCode: StatusCodes.Status400BadRequest);
 }

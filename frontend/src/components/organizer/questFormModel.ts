@@ -22,6 +22,8 @@ export interface QuestFormValues {
   locationRegionId: string;
   locationRegion: QuestLocationRegionDto | null;
   locationDescription: string;
+  latitude: string;
+  longitude: string;
   externalSourceUrl: string;
   coverImageUrl: string;
   coverAltText: string;
@@ -43,6 +45,8 @@ export const emptyQuestFormValues: QuestFormValues = {
   locationRegionId: '',
   locationRegion: null,
   locationDescription: '',
+  latitude: '',
+  longitude: '',
   externalSourceUrl: '',
   coverImageUrl: '',
   coverAltText: '',
@@ -67,6 +71,8 @@ export function questDetailToFormValues(
     locationRegionId: quest.locationRegion?.id ?? '',
     locationRegion: quest.locationRegion,
     locationDescription: quest.locationDescription ?? '',
+    latitude: quest.latitude == null ? '' : String(quest.latitude),
+    longitude: quest.longitude == null ? '' : String(quest.longitude),
     externalSourceUrl: quest.externalSourceUrl ?? '',
     coverImageUrl: quest.coverImage.imageUrl,
     coverAltText: quest.coverImage.altText,

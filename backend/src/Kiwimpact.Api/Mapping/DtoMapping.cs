@@ -1,5 +1,7 @@
 using Kiwimpact.Api.Contracts;
 using Kiwimpact.Core.Entities;
+using Kiwimpact.Core.Enums;
+using Kiwimpact.Core.Progression;
 using Kiwimpact.Core.Services;
 
 namespace Kiwimpact.Api.Mapping;
@@ -30,10 +32,36 @@ internal static class DtoMapping
 
     private static QuestLocationRegionDto ToQuestLocation(this Region region)
     {
+        var administrativeAreaName = region.Type switch
+        {
+            RegionType.AdministrativeArea => region.Name,
+            RegionType.LocalArea => region.ParentRegion?.Name,
+            _ => null,
+        };
+        var countryName = region.Type switch
+        {
+            RegionType.Country => region.Name,
+            RegionType.AdministrativeArea => region.ParentRegion?.Name,
+            RegionType.LocalArea => region.ParentRegion?.ParentRegion?.Name,
+            _ => null,
+        };
+
         return new QuestLocationRegionDto(
             region.Id,
             region.Name,
-            region.Type.ToString());
+            region.Type.ToString(),
+            administrativeAreaName,
+            countryName);
+    }
+
+    private static int? AvailableSpots(this Quest quest)
+    {
+        if (!quest.Capacity.HasValue)
+            return null;
+
+        var activeParticipants = quest.Participations.Count(
+            participation => !participation.CancelledAt.HasValue);
+        return Math.Max(quest.Capacity.Value - activeParticipants, 0);
     }
 
     private static QuestCoverImageDto ToCoverDto(this QuestImage image)
@@ -57,15 +85,18 @@ internal static class DtoMapping
             quest.SourceType.ToString(),
             quest.RegistrationMode?.ToString(),
             quest.Difficulty.ToString(),
-            quest.XpAward,
+            ProgressionRules.XpForDifficulty(quest.Difficulty),
             quest.Capacity,
+            quest.AvailableSpots(),
             quest.StartAtUtc?.ToString("O"),
             quest.EndAtUtc?.ToString("O"),
             quest.LocationRegion is { IsActive: true }
                 ? quest.LocationRegion.ToQuestLocation()
                 : null,
             quest.LocationDescription,
-            coverImage?.ToCoverDto());
+            coverImage?.ToCoverDto(),
+            quest.Latitude,
+            quest.Longitude);
     }
 
     public static QuestDetailDto ToDetail(this Quest quest)
@@ -81,8 +112,9 @@ internal static class DtoMapping
             quest.SourceType.ToString(),
             quest.RegistrationMode?.ToString(),
             quest.Difficulty.ToString(),
-            quest.XpAward,
+            ProgressionRules.XpForDifficulty(quest.Difficulty),
             quest.Capacity,
+            quest.AvailableSpots(),
             quest.StartAtUtc?.ToString("O"),
             quest.EndAtUtc?.ToString("O"),
             quest.LocationRegion is { IsActive: true }
@@ -91,7 +123,9 @@ internal static class DtoMapping
             quest.LocationDescription,
             coverImage?.ToCoverDto(),
             quest.ExternalSourceUrl,
-            quest.SourceCheckedAt?.ToString("O"));
+            quest.SourceCheckedAt?.ToString("O"),
+            quest.Latitude,
+            quest.Longitude);
     }
 
     public static QuestManagementListItemDto ToManagementListItem(this Quest quest)
@@ -128,7 +162,7 @@ internal static class DtoMapping
             quest.SourceType.ToString(),
             quest.RegistrationMode?.ToString(),
             quest.Difficulty.ToString(),
-            quest.XpAward,
+            ProgressionRules.XpForDifficulty(quest.Difficulty),
             quest.Capacity,
             quest.StartAtUtc?.ToString("O"),
             quest.EndAtUtc?.ToString("O"),
@@ -147,7 +181,9 @@ internal static class DtoMapping
                 cover.LicenceNote),
             quest.CreatedAt.ToString("O"),
             quest.UpdatedAt.ToString("O"),
-            quest.Version);
+            quest.Version,
+            quest.Latitude,
+            quest.Longitude);
     }
 
     public static QuestParticipationDto ToDto(this QuestParticipation participation)
@@ -167,6 +203,21 @@ internal static class DtoMapping
             state.CanJoin,
             state.IneligibilityReason?.ToString(),
             state.CapacityFull);
+    }
+
+    public static MyQuestParticipationListItemDto ToListDto(
+        this QuestParticipation participation)
+    {
+        var quest = participation.Quest
+            ?? throw new InvalidOperationException(
+                "My Quests participation is missing its Quest.");
+
+        return new MyQuestParticipationListItemDto(
+            participation.Id,
+            participation.CancelledAt.HasValue ? "Cancelled" : "Active",
+            participation.JoinedAt.ToString("O"),
+            participation.CancelledAt?.ToString("O"),
+            quest.ToListItem());
     }
 
     public static GeneratedCompletionCodeDto ToDto(this GeneratedCompletionCode generated)
@@ -211,11 +262,18 @@ internal static class DtoMapping
             item.QuestTitle,
             item.QuestCategory.ToString(),
             item.QuestStatus.ToString(),
+            item.CoverImage is null
+                ? null
+                : new QuestCoverImageDto(
+                    item.CoverImage.Id,
+                    item.CoverImage.ImageUrl,
+                    item.CoverImage.AltText),
             item.Status.ToString(),
             item.Method.ToString(),
             item.CompletedAtUtc.ToString("O"),
-            item.VerifiedAtUtc.ToString("O"),
-            item.XpAmount);
+            item.VerifiedAtUtc?.ToString("O"),
+            item.XpAmount,
+            item.AchievementNames);
     }
 
     public static AchievementCatalogItemDto ToDto(this AchievementCatalogItem item)
@@ -253,7 +311,9 @@ internal static class DtoMapping
         request.LocationRegionId,
         request.LocationDescription,
         request.ExternalSourceUrl,
-        request.CoverImage?.ToCommand());
+        request.CoverImage?.ToCommand(),
+        request.Latitude,
+        request.Longitude);
 
     public static UpdateQuestCommand ToCommand(this UpdateQuestRequest request) => new(
         request.Title,
@@ -268,7 +328,9 @@ internal static class DtoMapping
         request.LocationDescription,
         request.ExternalSourceUrl,
         request.CoverImage?.ToCommand(),
-        request.Version);
+        request.Version,
+        request.Latitude,
+        request.Longitude);
 
     private static QuestCoverImageCommand ToCommand(this CoverImageRequest request) => new(
         request.ImageUrl,

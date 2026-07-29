@@ -202,7 +202,9 @@ public sealed class QuestManagementService : IQuestManagementService
         command.EndAtUtc,
         command.LocationRegionId,
         command.LocationDescription,
-        command.ExternalSourceUrl);
+        command.ExternalSourceUrl,
+        command.Latitude,
+        command.Longitude);
 
     private static QuestDetails ToDetails(UpdateQuestCommand command) => new(
         command.Title ?? string.Empty,
@@ -215,7 +217,9 @@ public sealed class QuestManagementService : IQuestManagementService
         command.EndAtUtc,
         command.LocationRegionId,
         command.LocationDescription,
-        command.ExternalSourceUrl);
+        command.ExternalSourceUrl,
+        command.Latitude,
+        command.Longitude);
 
     private static QuestCoverImageDetails ToCoverDetails(QuestCoverImageCommand? cover)
     {

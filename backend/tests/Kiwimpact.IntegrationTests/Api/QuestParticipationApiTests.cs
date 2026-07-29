@@ -328,6 +328,126 @@ public sealed class QuestParticipationApiTests
     }
 
     [Fact]
+    public async Task MyParticipations_RequiresAuthentication()
+    {
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var response = await client.GetAsync(
+            "/api/v1/users/me/participations",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MyParticipations_ReturnsOnlyLatestPerQuestAndAppliesCurrentStatus()
+    {
+        var creator = await CreateAuthenticatedClientAsync(AppRoles.Organizer);
+        var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var other = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var activeQuest = await SeedQuestAsync(creator.UserId);
+        var cancelledQuest = await SeedQuestAsync(creator.UserId);
+        var rejoinedQuest = await SeedQuestAsync(creator.UserId);
+        var otherQuest = await SeedQuestAsync(creator.UserId);
+
+        await PostWithCsrfAsync(actor.Client, JoinPath(activeQuest.Id));
+        await PostWithCsrfAsync(actor.Client, JoinPath(cancelledQuest.Id));
+        await PostWithCsrfAsync(actor.Client, CancelPath(cancelledQuest.Id));
+        await PostWithCsrfAsync(actor.Client, JoinPath(rejoinedQuest.Id));
+        await PostWithCsrfAsync(actor.Client, CancelPath(rejoinedQuest.Id));
+        await PostWithCsrfAsync(actor.Client, JoinPath(rejoinedQuest.Id));
+        await PostWithCsrfAsync(other.Client, JoinPath(otherQuest.Id));
+
+        var all = await actor.Client.GetFromJsonAsync<MyQuestParticipationListItemDto[]>(
+            "/api/v1/users/me/participations?status=all",
+            TestContext.Current.CancellationToken);
+        var active = await actor.Client.GetFromJsonAsync<MyQuestParticipationListItemDto[]>(
+            "/api/v1/users/me/participations?status=active",
+            TestContext.Current.CancellationToken);
+        var cancelled = await actor.Client.GetFromJsonAsync<MyQuestParticipationListItemDto[]>(
+            "/api/v1/users/me/participations?status=cancelled",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(all);
+        Assert.Equal(3, all.Length);
+        Assert.Equal(3, all.Select(item => item.Quest.Id).Distinct().Count());
+        Assert.DoesNotContain(all, item => item.Quest.Id == otherQuest.Id);
+        Assert.Equal(2, active?.Length);
+        Assert.All(active!, item => Assert.Equal("Active", item.Status));
+        var cancelledItem = Assert.Single(cancelled!);
+        Assert.Equal(cancelledQuest.Id, cancelledItem.Quest.Id);
+        Assert.Equal("Cancelled", cancelledItem.Status);
+        Assert.NotNull(cancelledItem.CancelledAtUtc);
+        Assert.Contains(all, item =>
+            item.Quest.Id == rejoinedQuest.Id && item.Status == "Active");
+    }
+
+    [Fact]
+    public async Task MyParticipations_ReturnsLoadedCapacityAndLocationHierarchy()
+    {
+        var creator = await CreateAuthenticatedClientAsync(AppRoles.Organizer);
+        var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var otherActive = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var otherCancelled = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var quest = await SeedQuestAsync(
+            creator.UserId,
+            capacity: 5,
+            locationRegionId: RegionSeed.PuketapapaId,
+            locationDescription:
+                "Mount Roskill War Memorial Park, 13 May Road, Mount Roskill, Auckland 1041, New Zealand");
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            (await PostWithCsrfAsync(actor.Client, JoinPath(quest.Id))).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Created,
+            (await PostWithCsrfAsync(otherActive.Client, JoinPath(quest.Id))).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Created,
+            (await PostWithCsrfAsync(otherCancelled.Client, JoinPath(quest.Id))).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.OK,
+            (await PostWithCsrfAsync(otherCancelled.Client, CancelPath(quest.Id))).StatusCode);
+
+        var response = await actor.Client.GetAsync(
+            "/api/v1/users/me/participations?status=active",
+            TestContext.Current.CancellationToken);
+        var responseBody = await response.Content.ReadAsStringAsync(
+            TestContext.Current.CancellationToken);
+        Assert.True(
+            response.IsSuccessStatusCode,
+            $"Expected a successful My Quests response, received {(int)response.StatusCode}: {responseBody}");
+        var result = JsonSerializer.Deserialize<MyQuestParticipationListItemDto[]>(
+            responseBody,
+            JsonOptions);
+
+        var item = Assert.Single(result!);
+        Assert.Equal(3, item.Quest.AvailableSpots);
+        Assert.NotNull(item.Quest.LocationRegion);
+        Assert.Equal("Puketāpapa", item.Quest.LocationRegion.Name);
+        Assert.Equal("Auckland", item.Quest.LocationRegion.AdministrativeAreaName);
+        Assert.Equal("New Zealand", item.Quest.LocationRegion.CountryName);
+    }
+
+    [Fact]
+    public async Task MyParticipations_RejectsUnknownStatusWithoutLeakingRows()
+    {
+        var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
+
+        var response = await actor.Client.GetAsync(
+            "/api/v1/users/me/participations?status=someone-else",
+            TestContext.Current.CancellationToken);
+
+        await AssertProblemAsync(
+            response,
+            HttpStatusCode.BadRequest,
+            "Status must be one of: active, cancelled, all.");
+    }
+
+    [Fact]
     public async Task StateChangingEndpointsEnforceCsrf()
     {
         var actor = await CreateAuthenticatedClientAsync(AppRoles.Member);
@@ -354,9 +474,13 @@ public sealed class QuestParticipationApiTests
 
         var join = paths.GetProperty("/api/v1/quests/{questId}/join").GetProperty("post");
         var cancel = paths.GetProperty("/api/v1/quests/{questId}/cancel").GetProperty("post");
+        var listMine = paths
+            .GetProperty("/api/v1/users/me/participations")
+            .GetProperty("get");
 
         Assert.False(join.TryGetProperty("requestBody", out _));
         Assert.False(cancel.TryGetProperty("requestBody", out _));
+        Assert.False(listMine.TryGetProperty("requestBody", out _));
     }
 
     [Fact]
@@ -487,7 +611,9 @@ public sealed class QuestParticipationApiTests
         QuestStatus status = QuestStatus.Published,
         RegistrationMode registrationMode = RegistrationMode.Native,
         int? capacity = 10,
-        DateTimeOffset? endAt = null)
+        DateTimeOffset? endAt = null,
+        Guid? locationRegionId = null,
+        string? locationDescription = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
@@ -504,8 +630,8 @@ public sealed class QuestParticipationApiTests
                 capacity,
                 now.AddDays(-1),
                 effectiveEnd,
-                null,
-                null,
+                locationRegionId,
+                locationDescription,
                 registrationMode == RegistrationMode.External
                     ? "https://example.test/participation"
                     : null),

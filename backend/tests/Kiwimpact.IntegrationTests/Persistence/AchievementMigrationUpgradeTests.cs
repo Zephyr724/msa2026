@@ -64,12 +64,12 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
             AssertColumn(awardColumns, "AchievementId", "uuid", false);
             AssertColumn(awardColumns, "AwardedAt", "timestamp with time zone", false);
             AssertColumn(awardColumns, "XpTransactionId", "uuid", true);
-            Assert.Equal(5, awardColumns.Count);
-            // The staged schema deliberately omits the Deferred Community
-            // Challenge reference.
-            Assert.DoesNotContain(
+            AssertColumn(
                 awardColumns,
-                column => column.Name == "SourceCommunityChallengeId");
+                "SourceCommunityChallengeId",
+                "uuid",
+                true);
+            Assert.Equal(6, awardColumns.Count);
 
             var achievementIndexes = await IndexNamesAsync(db, "Achievements");
             Assert.Equal(2, achievementIndexes.Count);
@@ -77,11 +77,15 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
             Assert.Contains("UX_Achievements_Code", achievementIndexes);
 
             var awardIndexes = await IndexNamesAsync(db, "UserAchievements");
-            Assert.Equal(4, awardIndexes.Count);
+            Assert.Equal(6, awardIndexes.Count);
             Assert.Contains("PK_UserAchievements", awardIndexes);
-            Assert.Contains("UX_UserAchievements_UserId_AchievementId", awardIndexes);
+            Assert.Contains("UX_UserAchievements_Milestone", awardIndexes);
+            Assert.Contains("UX_UserAchievements_CommunityChallenge", awardIndexes);
             Assert.Contains("IX_UserAchievements_AchievementId", awardIndexes);
             Assert.Contains("IX_UserAchievements_XpTransactionId", awardIndexes);
+            Assert.Contains(
+                "IX_UserAchievements_SourceCommunityChallengeId",
+                awardIndexes);
 
             Assert.Equal(
                 "RESTRICT",
@@ -92,6 +96,11 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
             Assert.Equal(
                 "RESTRICT",
                 await DeleteRuleAsync(db, "FK_UserAchievements_XpTransactions_XpTransactionId"));
+            Assert.Equal(
+                "RESTRICT",
+                await DeleteRuleAsync(
+                    db,
+                    "FK_UserAchievements_CommunityChallenges_SourceCommunityChallen~"));
         }
         finally
         {
@@ -108,15 +117,16 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
             await using var db = CreateDbContext(connectionString);
             var migrator = db.GetService<IMigrator>();
             await migrator.MigrateAsync(
+                cancellationToken: TestContext.Current.CancellationToken);
+            var graph = await SeedAwardedGraphAsync(db);
+
+            await migrator.MigrateAsync(
                 PreviousMigration,
                 TestContext.Current.CancellationToken);
 
             Assert.False(await TableExistsAsync(db, "Achievements"));
             Assert.False(await TableExistsAsync(db, "UserAchievements"));
 
-            // Seed a 5B-era awarded graph: user, profile, quest,
-            // participation, verified completion, and its XP row.
-            var graph = await SeedAwardedGraphAsync(db);
             Assert.Equal(1, await db.XpTransactions.CountAsync(
                 TestContext.Current.CancellationToken));
 

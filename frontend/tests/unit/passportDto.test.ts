@@ -8,11 +8,17 @@ function validItem(overrides: Record<string, unknown> = {}) {
     questTitle: 'Harbour restoration day',
     questCategory: 'RestoreNature',
     questStatus: 'Published',
+    coverImage: {
+      id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      imageUrl: '/images/quests/native-planting.svg',
+      altText: 'Volunteers planting native trees',
+    },
     status: 'Verified',
     method: 'CompletionCode',
     completedAtUtc: '2026-07-20T09:00:00.0000000Z',
     verifiedAtUtc: '2026-07-21T09:00:00.0000000Z',
     xpAmount: 50,
+    achievementNames: ['First Step'],
     ...overrides,
   };
 }
@@ -33,7 +39,9 @@ function validPage(overrides: Record<string, unknown> = {}) {
 describe('validatePassportCompletionsPage (F1)', () => {
   it('accepts a valid page, including a null xpAmount reward-pending row', () => {
     expect(validatePassportCompletionsPage(validPage())).toEqual(validPage());
-    const pending = validPage({ items: [validItem({ xpAmount: null })] });
+    const pending = validPage({
+      items: [validItem({ achievementNames: [], xpAmount: null })],
+    });
     expect(validatePassportCompletionsPage(pending)).toEqual(pending);
   });
 
@@ -67,11 +75,11 @@ describe('validatePassportCompletionsPage (F1)', () => {
       }))).toThrow();
     expect(() =>
       validatePassportCompletionsPage(validPage({
-        items: [validItem({ status: 'Pending' })],
+        items: [validItem({ status: 'Unknown' })],
       }))).toThrow();
     expect(() =>
       validatePassportCompletionsPage(validPage({
-        items: [validItem({ method: 'EvidenceClaim' })],
+        items: [validItem({ method: 'Unknown' })],
       }))).toThrow();
   });
 
@@ -91,6 +99,47 @@ describe('validatePassportCompletionsPage (F1)', () => {
     expect(() =>
       validatePassportCompletionsPage(validPage({
         items: [validItem({ verifiedAtUtc: null })],
+      }))).toThrow();
+  });
+
+  it('accepts a non-rewarding self-reported Passport record', () => {
+    const result = validatePassportCompletionsPage(validPage({
+      items: [validItem({
+        status: 'SelfReported',
+        method: 'SelfReported',
+        verifiedAtUtc: null,
+        xpAmount: null,
+        achievementNames: [],
+      })],
+    }));
+    expect(result.items[0]?.status).toBe('SelfReported');
+  });
+
+  it('rejects malformed achievement names', () => {
+    expect(() =>
+      validatePassportCompletionsPage(validPage({
+        items: [validItem({ achievementNames: [''] })],
+      }))).toThrow();
+    expect(() =>
+      validatePassportCompletionsPage(validPage({
+        items: [validItem({ achievementNames: 'First Step' })],
+      }))).toThrow();
+    expect(() =>
+      validatePassportCompletionsPage(validPage({
+        items: [validItem({
+          achievementNames: ['First Step'],
+          method: 'SelfReported',
+          status: 'SelfReported',
+          verifiedAtUtc: null,
+          xpAmount: null,
+        })],
+      }))).toThrow();
+    expect(() =>
+      validatePassportCompletionsPage(validPage({
+        items: [validItem({
+          achievementNames: ['First Step'],
+          xpAmount: null,
+        })],
       }))).toThrow();
   });
 

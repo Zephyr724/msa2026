@@ -7,16 +7,16 @@ export function ManagementForbidden({
   questSpecific?: boolean;
 }) {
   return (
-    <section className="mx-auto max-w-2xl px-4 py-16 text-center">
-      <h1 className="text-3xl font-bold">
+    <section className="kiwi-panel mx-auto my-16 max-w-2xl p-8 text-center">
+      <h1 className="text-3xl">
         {questSpecific ? 'Quest management unavailable' : 'Management unavailable'}
       </h1>
-      <p className="mt-4 text-base-content/70">
+      <p className="mt-4 text-muted-content">
         {questSpecific
           ? "You don't have access to manage this quest."
           : 'Organizer or Admin access is required to manage quests.'}
       </p>
-      <Link className="btn btn-primary mt-6" to="/">
+      <Link className="btn btn-primary mt-6 rounded-full" to="/">
         Back home
       </Link>
     </section>

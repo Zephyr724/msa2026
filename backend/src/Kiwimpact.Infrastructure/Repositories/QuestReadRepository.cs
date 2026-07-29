@@ -22,7 +22,11 @@ public sealed class QuestReadRepository : IQuestReadRepository
             .AsNoTracking()
             .Where(q => q.Status == QuestStatus.Published)
             .Include(q => q.LocationRegion)
-            .Include(q => q.Images);
+                .ThenInclude(region => region!.ParentRegion)
+                    .ThenInclude(region => region!.ParentRegion)
+            .Include(q => q.Images)
+            .Include(q => q.Participations)
+            .AsSplitQuery();
     }
 
     public async Task<(IReadOnlyList<Quest> Items, int TotalCount)> GetPublishedPageAsync(

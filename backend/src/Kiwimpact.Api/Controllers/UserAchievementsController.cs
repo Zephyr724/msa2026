@@ -47,7 +47,7 @@ public sealed class UserAchievementsController : ControllerBase
             {
                 AchievementReadError.NotReady =>
                     ProblemDetailsHelper.ProgressionNotReady(),
-                _ => ProblemDetailsHelper.NotFound(exception.Message),
+                _ => ProblemDetailsHelper.ProfileNotFound(),
             };
             return StatusCode(
                 problem.Status ?? StatusCodes.Status500InternalServerError,

@@ -67,6 +67,13 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 ["XpReconciliation:Enabled"] = "false",
                 // Same for the achievement backfill hosted service.
                 ["AchievementBackfill:Enabled"] = "false",
+                ["EvidencePurge:Enabled"] = "false",
+                ["CommunityChallenges:FinalizerEnabled"] = "false",
+                ["Email:Enabled"] = "false",
+                ["Auth:RequireConfirmedEmail"] = "false",
+                // A developer's untracked Development.local settings must not
+                // inject demo personas/activity into isolated API fixtures.
+                ["Seed:DemoAccounts"] = "false",
             });
         });
 

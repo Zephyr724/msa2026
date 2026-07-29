@@ -3,6 +3,7 @@ using System.Text.Json;
 using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Infrastructure.Data;
+using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
 using Kiwimpact.Infrastructure.Reconciliation;
 using Kiwimpact.IntegrationTests.Persistence;
@@ -15,6 +16,8 @@ public sealed class LeaderboardsApiTests
     : IClassFixture<CustomWebApplicationFactory>
 {
     private const string LeaderboardPath = "/api/v1/leaderboards/people";
+    private const string NzAllTimePath =
+        LeaderboardPath + "?scope=nz&period=allTime";
     private readonly CustomWebApplicationFactory _factory;
 
     public LeaderboardsApiTests(CustomWebApplicationFactory factory)
@@ -34,12 +37,21 @@ public sealed class LeaderboardsApiTests
             QuestDifficulty.Medium);
 
         var response = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await ReadJsonAsync(response);
-        AssertExactKeys(json, "period", "rows", "scope");
+        AssertExactKeys(
+            json,
+            "collectiveProgress",
+            "isPrivacyProtected",
+            "page",
+            "pageSize",
+            "period",
+            "rows",
+            "scope",
+            "totalCount");
         Assert.Equal("nz", json.GetProperty("scope").GetString());
         Assert.Equal("allTime", json.GetProperty("period").GetString());
         var rows = json.GetProperty("rows");
@@ -48,6 +60,7 @@ public sealed class LeaderboardsApiTests
         AssertExactKeys(
             row,
             "displayName",
+            "isCurrentUser",
             "rank",
             "totalXp",
             "verifiedCompletionCount");
@@ -55,6 +68,7 @@ public sealed class LeaderboardsApiTests
         Assert.Equal("Aroha", row.GetProperty("displayName").GetString());
         Assert.Equal(150, row.GetProperty("totalXp").GetInt64());
         Assert.Equal(2, row.GetProperty("verifiedCompletionCount").GetInt64());
+        Assert.False(row.GetProperty("isCurrentUser").GetBoolean());
         Assert.DoesNotContain(
             rankedUserId.ToString("D"),
             json.GetRawText(),
@@ -76,7 +90,7 @@ public sealed class LeaderboardsApiTests
         await SeedProfileOnlyAsync("Still no XP");
 
         var response = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -164,7 +178,7 @@ public sealed class LeaderboardsApiTests
         }
 
         var response = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -180,17 +194,17 @@ public sealed class LeaderboardsApiTests
     }
 
     [Theory]
-    [InlineData("?scope=auckland")]
+    [InlineData("?scope=somewhere")]
     [InlineData("?scope=")]
-    [InlineData("?period=weekly")]
+    [InlineData("?period=daily")]
     [InlineData("?period=")]
-    [InlineData("?page=1")]
     [InlineData("?page=")]
+    [InlineData("?page=0")]
     [InlineData("?page=nope")]
-    [InlineData("?pageSize=10")]
     [InlineData("?pageSize=")]
+    [InlineData("?pageSize=51")]
     [InlineData("?pageSize=nope")]
-    public async Task UnsupportedStagedParametersReturnBoundedBadRequest(string query)
+    public async Task InvalidParametersReturnBoundedBadRequest(string query)
     {
         await ResetLeaderboardDataAsync();
 
@@ -212,7 +226,7 @@ public sealed class LeaderboardsApiTests
         await SeedRankedUserAsync("Known", null, QuestDifficulty.Easy);
 
         var response = await _factory.CreateClient().GetAsync(
-            $"{LeaderboardPath}?future=value",
+            $"{NzAllTimePath}&future=value",
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -234,7 +248,7 @@ public sealed class LeaderboardsApiTests
         }
 
         var pending = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
         await AssertNotReadyAsync(pending);
 
@@ -245,7 +259,7 @@ public sealed class LeaderboardsApiTests
         Assert.True(pass.PassComplete);
 
         var ready = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
         var row = (await ReadJsonAsync(ready)).GetProperty("rows")[0];
@@ -274,11 +288,88 @@ public sealed class LeaderboardsApiTests
         }
 
         var response = await _factory.CreateClient().GetAsync(
-            LeaderboardPath,
+            NzAllTimePath,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty((await ReadJsonAsync(response)).GetProperty("rows").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task CommunityScopeRanksLocalAreasButNzScopeRanksCities()
+    {
+        await ResetLeaderboardDataAsync();
+        var wellingtonId = new Guid("71000000-0000-4000-8000-000000000001");
+        var wellingtonCentralId =
+            new Guid("71000000-0000-4000-8000-000000000101");
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            if (!await db.Regions.AnyAsync(
+                region => region.Id == wellingtonId,
+                TestContext.Current.CancellationToken))
+            {
+                var now = DateTimeOffset.UtcNow;
+                db.Regions.Add(new Region
+                {
+                    Id = wellingtonId,
+                    Name = "Wellington",
+                    Type = RegionType.AdministrativeArea,
+                    ParentRegionId = RegionSeed.NewZealandId,
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+                db.Regions.Add(new Region
+                {
+                    Id = wellingtonCentralId,
+                    Name = "Wellington Central",
+                    Type = RegionType.LocalArea,
+                    ParentRegionId = wellingtonId,
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+                await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+        }
+
+        await SeedCommunityCompletionAsync("Albert member", RegionSeed.AlbertEdenId);
+        await SeedCommunityCompletionAsync(
+            "Henderson member",
+            RegionSeed.HendersonMasseyId);
+        await SeedCommunityCompletionAsync("Wellington member", wellingtonCentralId);
+
+        var client = _factory.CreateClient();
+        var auckland = await ReadJsonAsync(await client.GetAsync(
+            "/api/v1/leaderboards/communities?scope=auckland&period=allTime",
+            TestContext.Current.CancellationToken));
+        Assert.Equal(
+            ["Albert-Eden", "Henderson-Massey"],
+            auckland.GetProperty("rows")
+                .EnumerateArray()
+                .Select(row => row.GetProperty("regionName").GetString()!)
+                .Order(StringComparer.Ordinal)
+                .ToArray());
+
+        var nz = await ReadJsonAsync(await client.GetAsync(
+            "/api/v1/leaderboards/communities?scope=nz&period=allTime",
+            TestContext.Current.CancellationToken));
+        Assert.Equal(
+            ["Auckland", "Wellington"],
+            nz.GetProperty("rows")
+                .EnumerateArray()
+                .Select(row => row.GetProperty("regionName").GetString()!)
+                .Order(StringComparer.Ordinal)
+                .ToArray());
+        Assert.Equal(
+            2,
+            nz.GetProperty("rows")
+                .EnumerateArray()
+                .Single(row =>
+                    row.GetProperty("regionName").GetString() == "Auckland")
+                .GetProperty("verifiedCompletionCount")
+                .GetInt64());
     }
 
     private async Task ResetLeaderboardDataAsync()
@@ -348,6 +439,38 @@ public sealed class LeaderboardsApiTests
 
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         return user.Id;
+    }
+
+    private async Task SeedCommunityCompletionAsync(
+        string displayName,
+        Guid communityRegionId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var user = XpLedgerTestHelpers.NewUser("community-leaderboard-member");
+        var creator = XpLedgerTestHelpers.NewUser("community-leaderboard-creator");
+        var quest = XpLedgerTestHelpers.NewQuest(creator.Id, QuestDifficulty.Easy);
+        var participation = QuestParticipation.CreateActive(
+            user.Id,
+            quest.Id,
+            DateTimeOffset.UtcNow.AddMinutes(-5));
+        var completion = QuestCompletion.CreateVerifiedWithCode(
+            user.Id,
+            quest,
+            participation,
+            communityRegionId,
+            DateTimeOffset.UtcNow);
+        db.Set<ApplicationUser>().AddRange(user, creator);
+        db.UserProfiles.Add(UserProfile.Create(
+            user.Id,
+            displayName,
+            DateTimeOffset.UtcNow));
+        db.Quests.Add(quest);
+        db.QuestParticipations.Add(participation);
+        db.QuestCompletions.Add(completion);
+        db.XpTransactions.Add(
+            XpTransaction.CreateFromVerifiedCompletion(completion));
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private static async Task AssertNotReadyAsync(HttpResponseMessage response)

@@ -58,7 +58,9 @@ public sealed class AchievementAwardService
         // invariant backstop for anything outside the lock protocol.
         var earned = (await _db.UserAchievements
             .AsNoTracking()
-            .Where(award => award.UserId == userId)
+            .Where(award =>
+                award.UserId == userId &&
+                award.SourceCommunityChallengeId == null)
             .Select(award => award.AchievementId)
             .ToListAsync(ct)).ToHashSet();
 
@@ -135,7 +137,8 @@ public sealed class AchievementAwardService
                 .Select(group => group.Key)
                 .Where(userId => !_db.UserAchievements.Any(award =>
                     award.UserId == userId &&
-                    award.AchievementId == achievementId));
+                    award.AchievementId == achievementId &&
+                    award.SourceCommunityChallengeId == null));
 
             candidateQuery = candidateQuery is null
                 ? milestoneCandidates

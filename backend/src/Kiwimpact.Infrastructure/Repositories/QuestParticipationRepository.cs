@@ -194,6 +194,46 @@ public sealed class QuestParticipationRepository : IQuestParticipationRepository
             now);
     }
 
+    public async Task<IReadOnlyList<QuestParticipation>> ListMineAsync(
+        Guid actorId,
+        MyQuestParticipationFilter filter,
+        CancellationToken ct = default)
+    {
+        var history = await _db.QuestParticipations
+            .AsNoTrackingWithIdentityResolution()
+            .Where(item => item.UserId == actorId)
+            .Include(item => item.Quest)
+                .ThenInclude(quest => quest!.Images)
+            .Include(item => item.Quest)
+                .ThenInclude(quest => quest!.LocationRegion)
+                    .ThenInclude(region => region!.ParentRegion)
+                        .ThenInclude(region => region!.ParentRegion)
+            .Include(item => item.Quest)
+                .ThenInclude(quest => quest!.Participations)
+            .AsSplitQuery()
+            .OrderByDescending(item => item.JoinedAt)
+            .ThenByDescending(item => item.Id)
+            .ToListAsync(ct);
+
+        var latestByQuest = history
+            .GroupBy(item => item.QuestId)
+            .Select(group => group
+                .OrderByDescending(item => item.JoinedAt)
+                .ThenByDescending(item => item.Id)
+                .First())
+            .Where(item => filter switch
+            {
+                MyQuestParticipationFilter.Active => item.CancelledAt is null,
+                MyQuestParticipationFilter.Cancelled => item.CancelledAt is not null,
+                _ => true,
+            })
+            .OrderByDescending(item => item.JoinedAt)
+            .ThenByDescending(item => item.Id)
+            .ToArray();
+
+        return latestByQuest;
+    }
+
     private static QuestParticipationException Error(
         QuestParticipationError error,
         string message) => new(error, message);

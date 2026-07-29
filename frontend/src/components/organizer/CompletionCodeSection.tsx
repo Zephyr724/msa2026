@@ -93,12 +93,12 @@ export default function CompletionCodeSection({ quest }: CompletionCodeSectionPr
   return (
     <section
       aria-labelledby="completion-code-heading"
-      className="mt-8 rounded-box bg-base-100 p-4 shadow-sm sm:p-6"
+      className="kiwi-panel mt-8 p-5 sm:p-6"
     >
-      <h2 className="font-semibold" id="completion-code-heading">
+      <h2 className="text-2xl" id="completion-code-heading">
         Completion code
       </h2>
-      <p className="mt-1 text-sm text-base-content/65">
+      <p className="mt-1 text-sm text-muted-content">
         Participants enter this code to mark the Quest as completed.
       </p>
 
@@ -201,7 +201,7 @@ export default function CompletionCodeSection({ quest }: CompletionCodeSectionPr
                   <dd>{formatTimestamp(status.data.createdAtUtc)}</dd>
                 </div>
               </dl>
-              <p className="mt-2 text-sm text-base-content/65">
+              <p className="mt-2 text-sm text-muted-content">
                 For security the code itself cannot be viewed again. Rotate it
                 to replace a lost or shared code.
               </p>
@@ -217,7 +217,7 @@ export default function CompletionCodeSection({ quest }: CompletionCodeSectionPr
                   Rotate code
                 </button>
               ) : (
-                <p className="mt-2 text-sm text-base-content/65">
+                <p className="mt-2 text-sm text-muted-content">
                   {ineligibilityNote(quest)}
                 </p>
               )}
@@ -236,7 +236,7 @@ export default function CompletionCodeSection({ quest }: CompletionCodeSectionPr
                   {pending && !confirmingRotate ? 'Generating…' : 'Generate completion code'}
                 </button>
               ) : (
-                <p className="mt-2 text-sm text-base-content/65">
+                <p className="mt-2 text-sm text-muted-content">
                   {ineligibilityNote(quest)}
                 </p>
               )}

@@ -48,7 +48,7 @@ export default function LevelProgress({
       <p className="mt-2 text-sm">
         {progress.currentLevelXp} / {progress.levelSpanXp} XP toward Level {nextLevel}
       </p>
-      <p className="text-sm text-base-content/70">
+      <p className="text-sm text-muted-content">
         {progress.xpToNextLevel} XP to Level {nextLevel}
       </p>
     </div>

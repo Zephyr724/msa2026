@@ -1,15 +1,20 @@
 import {
   PASSPORT_QUEST_STATUSES,
+  type PassportCommunityParticipation,
   type PassportCompletionsPage,
   type PassportCompletionItem,
+  type PassportSummary,
 } from '../../types/passport.ts';
 import { QUEST_CATEGORIES } from '../../types/quest.ts';
+import { isValidRegionSummaryDto } from './regionDto.ts';
+import { validateMyProgression } from './progressionDto.ts';
 
 const MAX_PAGE_SIZE = 50;
 
 const ITEM_KEYS = [
   'completionId', 'questId', 'questTitle', 'questCategory', 'questStatus',
-  'status', 'method', 'completedAtUtc', 'verifiedAtUtc', 'xpAmount',
+  'coverImage', 'status', 'method', 'completedAtUtc', 'verifiedAtUtc', 'xpAmount',
+  'achievementNames',
 ] as const;
 
 const categories = new Set<string>(QUEST_CATEGORIES);
@@ -49,6 +54,18 @@ function isXpAmount(value: unknown): value is number | null {
   return value === null || (isSafeInteger(value) && value > 0);
 }
 
+function isCoverImage(value: unknown): boolean {
+  return value === null || (
+    isRecord(value)
+    && hasExactKeys(value, ['id', 'imageUrl', 'altText'])
+    && isUuidString(value.id)
+    && isString(value.imageUrl)
+    && value.imageUrl.length > 0
+    && isString(value.altText)
+    && value.altText.length > 0
+  );
+}
+
 function isValidItem(value: unknown): value is PassportCompletionItem {
   return isRecord(value)
     && hasExactKeys(value, ITEM_KEYS)
@@ -59,11 +76,25 @@ function isValidItem(value: unknown): value is PassportCompletionItem {
     && categories.has(value.questCategory)
     && isString(value.questStatus)
     && questStatuses.has(value.questStatus)
-    && value.status === 'Verified'
-    && value.method === 'CompletionCode'
+    && isCoverImage(value.coverImage)
+    && typeof value.status === 'string'
+    && ['Pending', 'Verified', 'Rejected', 'SelfReported'].includes(value.status)
+    && typeof value.method === 'string'
+    && ['CompletionCode', 'EvidenceClaim', 'SelfReported'].includes(value.method)
     && isUtcTimestamp(value.completedAtUtc)
-    && isUtcTimestamp(value.verifiedAtUtc)
-    && isXpAmount(value.xpAmount);
+    && (value.verifiedAtUtc === null || isUtcTimestamp(value.verifiedAtUtc))
+    && isXpAmount(value.xpAmount)
+    && Array.isArray(value.achievementNames)
+    && value.achievementNames.every(
+      (name) => isString(name) && name.trim().length > 0,
+    )
+    && (
+      value.achievementNames.length === 0
+      || (value.status === 'Verified' && value.xpAmount !== null)
+    )
+    && (value.status === 'Verified'
+      ? value.verifiedAtUtc !== null
+      : value.verifiedAtUtc === null && value.xpAmount === null);
 }
 
 /**
@@ -118,4 +149,85 @@ export function validatePassportCompletionsPage(
     hasNextPage: payload.hasNextPage,
     hasPreviousPage: payload.hasPreviousPage,
   };
+}
+
+export function validatePassportSummary(payload: unknown): PassportSummary {
+  if (
+    !isRecord(payload)
+    || !hasExactKeys(payload, [
+      'displayName', 'totalXp', 'level', 'rankTitle', 'homeCommunity',
+      'verifiedCompletionCount', 'selfReportedCompletionCount',
+      'pendingCompletionCount', 'categoryImpact',
+    ])
+    || typeof payload.displayName !== 'string'
+    || payload.displayName.length === 0
+    || (payload.homeCommunity !== null
+      && !isValidRegionSummaryDto(payload.homeCommunity))
+    || !isNonNegativeSafeInteger(payload.verifiedCompletionCount)
+    || !isNonNegativeSafeInteger(payload.selfReportedCompletionCount)
+    || !isNonNegativeSafeInteger(payload.pendingCompletionCount)
+    || !Array.isArray(payload.categoryImpact)
+  ) {
+    throw new Error('Passport summary response is not valid.');
+  }
+  validateMyProgression({
+    totalXp: payload.totalXp,
+    level: payload.level,
+    rankTitle: payload.rankTitle,
+  });
+  const seen = new Set<string>();
+  for (const item of payload.categoryImpact) {
+    if (
+      !isRecord(item)
+      || !hasExactKeys(item, [
+        'category', 'verifiedCompletionCount', 'verifiedXp',
+      ])
+      || typeof item.category !== 'string'
+      || !categories.has(item.category)
+      || seen.has(item.category)
+      || !isNonNegativeSafeInteger(item.verifiedCompletionCount)
+      || !isNonNegativeSafeInteger(item.verifiedXp)
+    ) {
+      throw new Error('Passport category impact response is not valid.');
+    }
+    seen.add(item.category);
+  }
+  return payload as unknown as PassportSummary;
+}
+
+export function validatePassportCommunityParticipation(
+  payload: unknown,
+): PassportCommunityParticipation[] {
+  if (!Array.isArray(payload)) {
+    throw new Error('Passport community participation response is not valid.');
+  }
+  const result: PassportCommunityParticipation[] = [];
+  const seen = new Set<string>();
+  for (const item of payload) {
+    if (
+      !isRecord(item)
+      || !hasExactKeys(item, [
+        'community', 'isCurrentCommunity', 'verifiedCompletionCount',
+        'verifiedXp', 'challengesContributedTo', 'challengeAchievementsEarned',
+        'latestContributionAtUtc',
+      ])
+      || !isValidRegionSummaryDto(item.community)
+      || seen.has(item.community.id)
+      || typeof item.isCurrentCommunity !== 'boolean'
+      || !isNonNegativeSafeInteger(item.verifiedCompletionCount)
+      || !isNonNegativeSafeInteger(item.verifiedXp)
+      || !isNonNegativeSafeInteger(item.challengesContributedTo)
+      || !isNonNegativeSafeInteger(item.challengeAchievementsEarned)
+      || !isUtcTimestamp(item.latestContributionAtUtc)
+    ) {
+      throw new Error('Passport community participation item is not valid.');
+    }
+    seen.add(item.community.id);
+    result.push(item as unknown as PassportCommunityParticipation);
+  }
+  return result;
+}
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return isSafeInteger(value) && value >= 0;
 }

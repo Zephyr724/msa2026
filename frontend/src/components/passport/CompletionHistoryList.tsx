@@ -7,7 +7,7 @@ export default function CompletionHistoryList({
   items: PassportCompletionItem[];
 }) {
   return (
-    <ul className="space-y-3">
+    <ul className="grid gap-4 sm:grid-cols-2">
       {items.map((item) => (
         <CompletionHistoryItem key={item.completionId} item={item} />
       ))}

@@ -11,8 +11,16 @@ import OrganizerQuestEditPage from '../pages/OrganizerQuestEditPage.tsx';
 import RequireManagementAccess from '../components/organizer/RequireManagementAccess.tsx';
 import RequireAuth from '../components/RequireAuth.tsx';
 import PassportPage from '../pages/PassportPage.tsx';
+import MyQuestsPage from '../pages/MyQuestsPage.tsx';
 import LeaderboardPage from '../pages/LeaderboardPage.tsx';
 import AppShell from './AppShell.tsx';
+import {
+  ChangePasswordPage, CheckEmailPage, ConfirmEmailPage,
+  ForgotPasswordPage, ResetPasswordPage,
+} from '../pages/AccountLifecyclePages.tsx';
+import AdminReviewPage from '../pages/AdminReviewPage.tsx';
+import ShareCardBuilderPage from '../pages/ShareCardBuilderPage.tsx';
+import ProfileSettingsPage from '../pages/ProfileSettingsPage.tsx';
 
 export const router = createBrowserRouter([
   {
@@ -23,10 +31,24 @@ export const router = createBrowserRouter([
       { path: '/quests/:questId', element: <QuestDetailPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/check-email', element: <CheckEmailPage /> },
+      { path: '/confirm-email', element: <ConfirmEmailPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/leaderboard', element: <LeaderboardPage /> },
       {
         element: <RequireAuth />,
-        children: [{ path: '/passport', element: <PassportPage /> }],
+        children: [
+          { path: '/passport', element: <PassportPage /> },
+          { path: '/passport/share', element: <ShareCardBuilderPage /> },
+          { path: '/settings/profile', element: <ProfileSettingsPage /> },
+          { path: '/settings/password', element: <ChangePasswordPage /> },
+          { path: '/admin/reviews', element: <AdminReviewPage /> },
+        ],
+      },
+      {
+        element: <RequireAuth />,
+        children: [{ path: '/my-quests', element: <MyQuestsPage /> }],
       },
       {
         element: <RequireManagementAccess />,

@@ -1,3 +1,4 @@
+import { ArrowLeft, FilePlus2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import QuestForm from '../components/organizer/QuestForm';
@@ -41,12 +42,18 @@ export default function OrganizerQuestCreatePage() {
   if (forbidden) return <ManagementForbidden questSpecific />;
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <Link className="btn btn-ghost btn-sm mb-4" to="/organizer/quests">
-        &larr; Back to managed quests
+    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-10 sm:py-14">
+    <main className="kiwi-page max-w-4xl">
+      <Link className="btn btn-ghost btn-sm mb-5 rounded-full" to="/organizer/quests">
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        Back to managed quests
       </Link>
-      <h1 className="text-3xl font-bold">Create quest</h1>
-      <p className="mb-8 mt-2 text-base-content/65">
+      <p className="kiwi-stat-label">Organizer workspace</p>
+      <h1 className="mt-2 flex items-center gap-3 text-4xl">
+        <FilePlus2 aria-hidden="true" className="size-8 text-primary" />
+        Create quest
+      </h1>
+      <p className="mb-8 mt-2 text-muted-content">
         New quests are saved as drafts. You can review and publish after creation.
       </p>
       <QuestForm
@@ -61,5 +68,6 @@ export default function OrganizerQuestCreatePage() {
         submitting={create.isPending}
       />
     </main>
+    </div>
   );
 }

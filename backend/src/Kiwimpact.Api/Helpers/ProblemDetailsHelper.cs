@@ -37,6 +37,17 @@ internal static class ProblemDetailsHelper
         };
     }
 
+    public static ProblemDetails Unauthorized(string detail)
+    {
+        return new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+            Title = "Unauthorized",
+            Status = StatusCodes.Status401Unauthorized,
+            Detail = detail
+        };
+    }
+
     public static ProblemDetails Conflict(string detail)
     {
         return new ProblemDetails
@@ -67,6 +78,17 @@ internal static class ProblemDetailsHelper
             Title = "Progression Not Ready",
             Status = StatusCodes.Status503ServiceUnavailable,
             Detail = "Progression state is not ready yet."
+        };
+    }
+
+    public static ProblemDetails ProfileNotFound()
+    {
+        return new ProblemDetails
+        {
+            Type = "https://kiwimpact.app/problems/profile-not-found",
+            Title = "Profile Not Found",
+            Status = StatusCodes.Status404NotFound,
+            Detail = "Profile not found."
         };
     }
 

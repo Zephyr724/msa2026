@@ -1,3 +1,4 @@
+import { ArrowLeft, PencilLine } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -117,17 +118,22 @@ export default function OrganizerQuestEditPage() {
   const archived = quest.status === 'Archived';
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <Link className="btn btn-ghost btn-sm mb-4" to="/organizer/quests">
-        &larr; Back to managed quests
+    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-10 sm:py-14">
+    <main className="kiwi-page max-w-4xl">
+      <Link className="btn btn-ghost btn-sm mb-5 rounded-full" to="/organizer/quests">
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        Back to managed quests
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold">{archived ? 'View quest' : 'Edit quest'}</h1>
+            <h1 className="flex items-center gap-3 text-4xl">
+              <PencilLine aria-hidden="true" className="size-8 text-primary" />
+              {archived ? 'View quest' : 'Edit quest'}
+            </h1>
             <QuestStatusBadge status={quest.status} />
           </div>
-          <p className="mt-2 text-base-content/65">{quest.title}</p>
+          <p className="mt-2 text-muted-content">{quest.title}</p>
         </div>
         {!archived && (
           <QuestLifecycleActions
@@ -190,6 +196,7 @@ export default function OrganizerQuestEditPage() {
       {/* Keyed so a quest switch resets all local reveal/dialog state. */}
       {!archived && <CompletionCodeSection key={quest.id} quest={quest} />}
     </main>
+    </div>
   );
 }
 
@@ -199,8 +206,8 @@ function ReadOnlyMetadata({
   quest: NonNullable<ReturnType<typeof useOrganizerQuestDetailQuery>['data']>;
 }) {
   return (
-    <section className="mt-6 rounded-box bg-base-100 p-4 shadow-sm" aria-labelledby="management-metadata">
-      <h2 className="font-semibold" id="management-metadata">Server-managed details</h2>
+    <section className="kiwi-panel mt-6 p-5" aria-labelledby="management-metadata">
+      <h2 className="text-xl" id="management-metadata">Server-managed details</h2>
       <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
         <div><dt className="font-medium">Source type</dt><dd>{quest.sourceType}</dd></div>
         <div><dt className="font-medium">XP award</dt><dd>{quest.xpAward}</dd></div>

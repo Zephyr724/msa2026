@@ -1,74 +1,77 @@
 import { describe, expect, it } from 'vitest';
-import { validatePeopleLeaderboard } from '../../src/lib/validation/leaderboardDto.ts';
+import {
+  validateCommunitiesLeaderboard,
+  validatePeopleLeaderboard,
+} from '../../src/lib/validation/leaderboardDto.ts';
 
-function row(overrides: Record<string, unknown> = {}) {
-  return {
+const people = {
+  scope: 'myCommunity',
+  period: 'weekly',
+  page: 1,
+  pageSize: 10,
+  totalCount: 1,
+  isPrivacyProtected: false,
+  collectiveProgress: null,
+  rows: [{
     rank: 1,
     displayName: 'Aroha',
     totalXp: 150,
     verifiedCompletionCount: 2,
-    ...overrides,
-  };
-}
+    isCurrentUser: true,
+  }],
+};
 
-function payload(overrides: Record<string, unknown> = {}) {
-  return {
-    scope: 'nz',
-    period: 'allTime',
-    rows: [row()],
-    ...overrides,
-  };
-}
+describe('leaderboard DTO validation', () => {
+  it('accepts multi-scope people and community contracts', () => {
+    expect(validatePeopleLeaderboard(people)).toEqual(people);
+    const communities = {
+      scope: 'auckland',
+      period: 'monthly',
+      rows: [{
+        rank: 1,
+        regionId: '11111111-1111-4111-8111-111111111111',
+        regionName: 'Albert-Eden',
+        verifiedCompletionCount: 20,
+        activeContributors: 10,
+        completionsPerContributor: 2,
+        isPrivacyProtected: false,
+      }],
+    };
+    expect(validateCommunitiesLeaderboard(communities)).toEqual(communities);
+  });
 
-describe('people leaderboard DTO validation', () => {
-  it('accepts the exact staged response and preserves duplicate names', () => {
-    const value = payload({
-      rows: [
-        row(),
-        row({ rank: 2, displayName: 'Aroha', totalXp: 50 }),
-      ],
-    });
-
-    expect(validatePeopleLeaderboard(value)).toEqual(value);
+  it('accepts a privacy-protected response only without counts or progress', () => {
+    expect(validatePeopleLeaderboard({
+      ...people,
+      totalCount: 0,
+      isPrivacyProtected: true,
+      collectiveProgress: null,
+      rows: [],
+    }).isPrivacyProtected).toBe(true);
   });
 
   it.each([
-    ['non-object envelope', []],
-    ['extra envelope key', payload({ userId: 'leak' })],
-    ['wrong scope', payload({ scope: 'auckland' })],
-    ['wrong period', payload({ period: 'weekly' })],
-    ['non-array rows', payload({ rows: {} })],
-    ['more than ten rows', payload({
-      rows: Array.from({ length: 11 }, (_, index) =>
-        row({ rank: index + 1, displayName: `Member ${index}` })),
-    })],
-    ['extra row key', payload({ rows: [row({ userId: 'leak' })] })],
-    ['missing row key', payload({
-      rows: [{
-        rank: 1,
-        displayName: 'Aroha',
-        totalXp: 50,
-      }],
-    })],
-    ['non-sequential rank', payload({ rows: [row({ rank: 2 })] })],
-    ['empty display name', payload({ rows: [row({ displayName: '' })] })],
-    ['overlong display name', payload({
-      rows: [row({ displayName: 'x'.repeat(101) })],
-    })],
-    ['negative XP', payload({ rows: [row({ totalXp: -1 })] })],
-    ['fractional XP', payload({ rows: [row({ totalXp: 1.5 })] })],
-    ['unsafe XP', payload({
-      rows: [row({ totalXp: Number.MAX_SAFE_INTEGER + 1 })],
-    })],
-    ['zero completion count', payload({
-      rows: [row({ verifiedCompletionCount: 0 })],
-    })],
-    ['fractional completion count', payload({
-      rows: [row({ verifiedCompletionCount: 1.5 })],
-    })],
-  ])('rejects %s', (_name, value) => {
-    expect(() => validatePeopleLeaderboard(value)).toThrow(
-      'People leaderboard response is not valid.',
-    );
+    null,
+    { ...people, scope: 'street' },
+    { ...people, period: 'daily' },
+    { ...people, totalCount: -1 },
+    {
+      ...people,
+      totalCount: 4,
+      isPrivacyProtected: true,
+      collectiveProgress: null,
+      rows: [],
+    },
+    {
+      ...people,
+      totalCount: 0,
+      isPrivacyProtected: true,
+      collectiveProgress: { totalXp: 300, verifiedCompletionCount: 6 },
+      rows: [],
+    },
+    { ...people, rows: [{ ...people.rows[0], totalXp: -1 }] },
+    { ...people, rows: [{ ...people.rows[0], isCurrentUser: 'yes' }] },
+  ])('rejects invalid people payload %#', (value) => {
+    expect(() => validatePeopleLeaderboard(value)).toThrow();
   });
 });

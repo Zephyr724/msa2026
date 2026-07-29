@@ -21,7 +21,9 @@ public sealed record CreateQuestCommand(
     Guid? LocationRegionId,
     string? LocationDescription,
     string? ExternalSourceUrl,
-    QuestCoverImageCommand? CoverImage);
+    QuestCoverImageCommand? CoverImage,
+    decimal? Latitude = null,
+    decimal? Longitude = null);
 
 public sealed record UpdateQuestCommand(
     string? Title,
@@ -36,7 +38,9 @@ public sealed record UpdateQuestCommand(
     string? LocationDescription,
     string? ExternalSourceUrl,
     QuestCoverImageCommand? CoverImage,
-    uint Version);
+    uint Version,
+    decimal? Latitude = null,
+    decimal? Longitude = null);
 
 public enum QuestManagementError
 {

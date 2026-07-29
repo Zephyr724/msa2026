@@ -18,6 +18,13 @@ public sealed class RegionReadService : IRegionReadService
         return _repository.GetActiveLocalAreasAsync(search, ct);
     }
 
+    public Task<IReadOnlyList<Region>> GetActiveAdministrativeAreasAsync(
+        string? search,
+        CancellationToken ct = default)
+    {
+        return _repository.GetActiveAdministrativeAreasAsync(search, ct);
+    }
+
     public Task<Region?> GetActiveRegionAsync(Guid id, CancellationToken ct = default)
     {
         return _repository.GetActiveByIdAsync(id, ct);

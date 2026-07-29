@@ -69,6 +69,70 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.ToTable("Achievements", (string)null);
                 });
 
+            modelBuilder.Entity("Kiwimpact.Core.Entities.CommunityChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LocalAreaRegionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("PeriodEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("PeriodStart")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RewardAchievementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("TargetValue")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LocalAreaRegionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CommunityChallenges_ActiveLocalArea")
+                        .HasFilter("\"Status\" = 'Active'");
+
+                    b.HasIndex("RewardAchievementId")
+                        .HasDatabaseName("IX_CommunityChallenges_RewardAchievementId");
+
+                    b.HasIndex("LocalAreaRegionId", "PeriodStart")
+                        .HasDatabaseName("IX_CommunityChallenges_LocalArea_PeriodStart");
+
+                    b.ToTable("CommunityChallenges", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CommunityChallenges_Period", "\"PeriodEnd\" > \"PeriodStart\"");
+
+                            t.HasCheckConstraint("CK_CommunityChallenges_TargetValue_Positive", "\"TargetValue\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("Kiwimpact.Core.Entities.CompletionCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -119,6 +183,57 @@ namespace Kiwimpact.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Kiwimpact.Core.Entities.EvidenceClaimDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("EvidencePurgeDueAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("EvidencePurgedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EvidenceUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("QuestCompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("UserDeclaration")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvidencePurgeDueAt")
+                        .HasDatabaseName("IX_EvidenceClaimDetails_PurgeDue")
+                        .HasFilter("\"EvidencePurgedAt\" IS NULL");
+
+                    b.HasIndex("QuestCompletionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_EvidenceClaimDetails_QuestCompletionId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.ToTable("EvidenceClaimDetails", (string)null);
+                });
+
             modelBuilder.Entity("Kiwimpact.Core.Entities.Quest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -160,12 +275,20 @@ namespace Kiwimpact.Infrastructure.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("numeric(9,6)");
+
                     b.Property<string>("LocationDescription")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
                     b.Property<Guid?>("LocationRegionId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("numeric(9,6)");
 
                     b.Property<DateTimeOffset?>("NextCheckDueAt")
                         .HasColumnType("timestamp with time zone");
@@ -233,6 +356,12 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.ToTable("Quests", null, t =>
                         {
                             t.HasCheckConstraint("CK_Quests_Capacity_NonNegative", "\"Capacity\" IS NULL OR \"Capacity\" >= 0");
+
+                            t.HasCheckConstraint("CK_Quests_Coordinates_Paired", "(\"Latitude\" IS NULL AND \"Longitude\" IS NULL) OR (\"Latitude\" IS NOT NULL AND \"Longitude\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Quests_Latitude_Range", "\"Latitude\" IS NULL OR \"Latitude\" BETWEEN -90 AND 90");
+
+                            t.HasCheckConstraint("CK_Quests_Longitude_Range", "\"Longitude\" IS NULL OR \"Longitude\" BETWEEN -180 AND 180");
 
                             t.HasCheckConstraint("CK_Quests_XpAward_NonNegative", "\"XpAward\" >= 0");
                         });
@@ -302,6 +431,8 @@ namespace Kiwimpact.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_QuestCompletions_UserId_QuestId_Verified")
                         .HasFilter("\"Status\" = 'Verified'");
+
+                    b.HasIndex("Method", "Status", "CreatedAt");
 
                     b.ToTable("QuestCompletions", (string)null);
                 });
@@ -455,6 +586,9 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("AwardedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("SourceCommunityChallengeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
@@ -466,12 +600,21 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.HasIndex("AchievementId")
                         .HasDatabaseName("IX_UserAchievements_AchievementId");
 
+                    b.HasIndex("SourceCommunityChallengeId")
+                        .HasDatabaseName("IX_UserAchievements_SourceCommunityChallengeId");
+
                     b.HasIndex("XpTransactionId")
                         .HasDatabaseName("IX_UserAchievements_XpTransactionId");
 
                     b.HasIndex("UserId", "AchievementId")
                         .IsUnique()
-                        .HasDatabaseName("UX_UserAchievements_UserId_AchievementId");
+                        .HasDatabaseName("UX_UserAchievements_Milestone")
+                        .HasFilter("\"SourceCommunityChallengeId\" IS NULL");
+
+                    b.HasIndex("UserId", "AchievementId", "SourceCommunityChallengeId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_UserAchievements_CommunityChallenge")
+                        .HasFilter("\"SourceCommunityChallengeId\" IS NOT NULL");
 
                     b.ToTable("UserAchievements", (string)null);
                 });
@@ -766,6 +909,24 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Kiwimpact.Core.Entities.CommunityChallenge", b =>
+                {
+                    b.HasOne("Kiwimpact.Core.Entities.Region", "LocalAreaRegion")
+                        .WithMany()
+                        .HasForeignKey("LocalAreaRegionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Kiwimpact.Core.Entities.Achievement", "RewardAchievement")
+                        .WithMany()
+                        .HasForeignKey("RewardAchievementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("LocalAreaRegion");
+
+                    b.Navigation("RewardAchievement");
+                });
+
             modelBuilder.Entity("Kiwimpact.Core.Entities.CompletionCode", b =>
                 {
                     b.HasOne("Kiwimpact.Infrastructure.Identity.ApplicationUser", null)
@@ -781,6 +942,22 @@ namespace Kiwimpact.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Quest");
+                });
+
+            modelBuilder.Entity("Kiwimpact.Core.Entities.EvidenceClaimDetail", b =>
+                {
+                    b.HasOne("Kiwimpact.Core.Entities.QuestCompletion", "QuestCompletion")
+                        .WithOne("EvidenceClaimDetail")
+                        .HasForeignKey("Kiwimpact.Core.Entities.EvidenceClaimDetail", "QuestCompletionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Kiwimpact.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("QuestCompletion");
                 });
 
             modelBuilder.Entity("Kiwimpact.Core.Entities.Quest", b =>
@@ -875,6 +1052,11 @@ namespace Kiwimpact.Infrastructure.Migrations
                         .HasForeignKey("AchievementId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Kiwimpact.Core.Entities.CommunityChallenge", null)
+                        .WithMany()
+                        .HasForeignKey("SourceCommunityChallengeId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Kiwimpact.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
@@ -986,6 +1168,11 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.Navigation("Images");
 
                     b.Navigation("Participations");
+                });
+
+            modelBuilder.Entity("Kiwimpact.Core.Entities.QuestCompletion", b =>
+                {
+                    b.Navigation("EvidenceClaimDetail");
                 });
 
             modelBuilder.Entity("Kiwimpact.Core.Entities.Region", b =>

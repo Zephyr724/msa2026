@@ -33,22 +33,35 @@ public sealed class UserAchievementConfiguration : IEntityTypeConfiguration<User
             .HasForeignKey(award => award.XpTransactionId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Staged form of the accepted partial unique index while
-        // SourceCommunityChallengeId is omitted: every 6A row is
-        // challenge-less, so a plain unique index is semantically identical.
-        // Also serves as the user-lookup index (leftmost column).
+        builder.HasOne<CommunityChallenge>()
+            .WithMany()
+            .HasForeignKey(award => award.SourceCommunityChallengeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(award => new
             {
                 award.UserId,
                 award.AchievementId,
             })
             .IsUnique()
-            .HasDatabaseName("UX_UserAchievements_UserId_AchievementId");
+            .HasFilter("\"SourceCommunityChallengeId\" IS NULL")
+            .HasDatabaseName("UX_UserAchievements_Milestone");
+        builder.HasIndex(award => new
+            {
+                award.UserId,
+                award.AchievementId,
+                award.SourceCommunityChallengeId,
+            })
+            .IsUnique()
+            .HasFilter("\"SourceCommunityChallengeId\" IS NOT NULL")
+            .HasDatabaseName("UX_UserAchievements_CommunityChallenge");
 
         // Explicit FK lookup indexes: ForeignKeyIndexConvention is removed.
         builder.HasIndex(award => award.AchievementId)
             .HasDatabaseName("IX_UserAchievements_AchievementId");
         builder.HasIndex(award => award.XpTransactionId)
             .HasDatabaseName("IX_UserAchievements_XpTransactionId");
+        builder.HasIndex(award => award.SourceCommunityChallengeId)
+            .HasDatabaseName("IX_UserAchievements_SourceCommunityChallengeId");
     }
 }

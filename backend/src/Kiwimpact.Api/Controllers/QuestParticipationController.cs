@@ -92,8 +92,60 @@ public sealed class QuestParticipationController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// List the authenticated user's latest participation for each Quest.
+    /// </summary>
+    [HttpGet("~/api/v1/users/me/participations")]
+    [ProducesResponseType(
+        typeof(IReadOnlyList<MyQuestParticipationListItemDto>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListMine(
+        [FromQuery] string status = "all",
+        CancellationToken ct = default)
+    {
+        if (!TryGetActor(out var actorId))
+            return Unauthorized();
+        if (!TryParseFilter(status, out var filter))
+        {
+            var problem = ProblemDetailsHelper.Validation(
+                "Status must be one of: active, cancelled, all.");
+            return StatusCode(
+                problem.Status ?? StatusCodes.Status400BadRequest,
+                problem);
+        }
+
+        var participations = await _service.ListMineAsync(actorId, filter, ct);
+        return Ok(participations.Select(item => item.ToListDto()).ToArray());
+    }
+
     private bool TryGetActor(out Guid actorId) =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out actorId);
+
+    private static bool TryParseFilter(
+        string? value,
+        out MyQuestParticipationFilter filter)
+    {
+        switch (value?.Trim().ToLowerInvariant())
+        {
+            case "active":
+                filter = MyQuestParticipationFilter.Active;
+                return true;
+            case "cancelled":
+                filter = MyQuestParticipationFilter.Cancelled;
+                return true;
+            case "all":
+            case "":
+            case null:
+                filter = MyQuestParticipationFilter.All;
+                return true;
+            default:
+                filter = default;
+                return false;
+        }
+    }
 
     private ObjectResult ToProblem(QuestParticipationException exception)
     {

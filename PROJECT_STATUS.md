@@ -1,9 +1,9 @@
 # Project Status
 
-Last reviewed: 2026-07-26
+Last reviewed: 2026-07-27
 
-Current `main` baseline: `a3e7309` (`Merge pull request #19 from
-Zephyr724/feat/slice-8-theme-switching`)
+Current `main` baseline: `73e79fa` (`Merge pull request #20 from
+Zephyr724/fix/slice-8-storage-access`)
 
 ## Current Implementation Status
 
@@ -36,37 +36,84 @@ has occurred.
 
 ## Current Work
 
-### Slice 8A — Storage Availability Correction
+### Slices 9–12 — MVP Product Convergence
 
-- **Branch:** `fix/slice-8-storage-access`
-- **Main baseline:** `a3e7309` (PR #19 merge of Slice 8)
-- **Status:** targeted post-merge correction committed and pushed as
-  `e16b31c`. Storage acquisition now occurs inside the guarded helper and a
-  `SecurityError` getter regression test passes. Targeted tests passed 15/15;
-  final frontend gates passed with clean lint and type-check, 309/309 tests
-  across 34 files, and a successful production build of 1,906 modules.
-  Independent Kimi K3 targeted closure Review 54 reproduced those results and
-  approved the correction with the original Review 53 Major closed.
-- **Git/review chronology:** `e16b31c` was committed and pushed before targeted
-  closure. Reviews 53/54 and the resulting evidence corrections are currently
-  unstaged and uncommitted; no history rewrite is planned.
-- **Boundary:** no backend, API, schema, migration, dependency, authentication,
-  Docker, deployment, accepted-spec, or server-state ownership change.
+- **Slice 9:** committed and pushed as `7cd3b1a` on
+  `codex/feat/slice-9-mvp-ui-convergence`. The production UI now follows the
+  local Figma Make reference; My Quests and the Completion Reward Overlay are
+  included. Kimi K3 Review 55 approved it with 0 Blockers and 0 Majors.
+- **Slice 10:** committed and pushed as `94a129c` on
+  `codex/feat/slice-10-trusted-impact`. Evidence-reviewed and self-reported
+  completion, Admin Review, evidence purge, broader Passport history, and the
+  email/password account lifecycle are included. Kimi K3 Review 56 approved it
+  with 0 Blockers and 0 Majors.
+- **Slice 11 branch:** `codex/feat/slice-11-community-discovery`
+- **Slice 11 baseline:** `94a129c`
+- **Slice 11 status:** production implementation, full local gates and the
+  independent review are complete. Implemented behaviour includes
+  Google Maps Quest discovery with list/input fallback, Home Community,
+  people/community leaderboards with privacy thresholds, verified weekly
+  streak, a privacy-safe PNG Share Card, Community Challenges with idempotent
+  reward finalization, and SignalR query invalidation backed by REST.
+- **Observed Slice 11 gates:** clean frontend lint/type-check; after the Maps
+  runtime correction, 37 frontend test files with 314/314 tests passing;
+  successful frontend production build; clean
+  backend build apart from five pre-existing test-helper EF1002 warnings;
+  247/247 backend unit tests and 284/284 PostgreSQL integration tests passing.
+- **Slice 11 review:** Kimi K3 Review 57 approved the bounded correction with
+  no remaining Blocker or Major finding.
+- **Google Maps runtime correction:** real browser-key and JavaScript map-ID
+  configuration now replace the demo map ID, with load-failure/list/input
+  fallbacks. K3 Review 58 approved the referrer-policy correction with no
+  remaining Blocker or Major. A restricted key and map ID have since been
+  supplied locally and live Google map rendering was observed.
+- **Slice 12 status:** production implementation, full local gates, and
+  independent Kimi K3 Review 59 are complete with no remaining Blocker or
+  Major. The remaining Figma Make
+  experience gap is closed with a dedicated Share Card Builder, the accepted
+  Passport summary/community-participation APIs and full real-data Passport
+  hierarchy, a member-momentum Home, and authoritative Mission Board states.
+  The prototype's fictional category targets and eight-badge catalog were not
+  copied.
+- **Observed Slice 12 gates:** frontend lint/type-check/build passed with
+  326/326 tests; backend build passed apart from five pre-existing test-helper
+  EF1002 warnings, with 247/247 unit and 286/286 PostgreSQL integration tests.
+- **Slice 11A/12 commit:** committed and pushed as `cae199d` on
+  `codex/feat/slice-11-community-discovery` on 2026-07-27.
+- **Known boundary:** Google OAuth/account linking, production email-provider
+  setup, production Google Maps credentials/restrictions, public deployment,
+  and the final submission workflow remain outside Slices 9–12.
+
+### Slice 13 — Local Production Runtime
+
+- **Branch:** `codex/feat/slice-13-dockerized-runtime`
+- **Scope:** provider-neutral Dockerization only. One ASP.NET Core image serves
+  the built React application, API, SignalR, Scalar, OpenAPI, and health paths
+  from a single origin. Compose adds an explicit EF migration job, PostgreSQL,
+  durable Data Protection keys, and optional Mailpit.
+- **Verification status:** complete. Independent Kimi K3 Review 60 approved the
+  corrected code with no remaining Blocker or Major. The final image built,
+  the explicit migration job exited 0, app and PostgreSQL became healthy,
+  single-origin route smokes passed, and database plus Data Protection state
+  survived an app restart. Public hosting provider selection, DNS, billable
+  resources, public deployment, backup/restore, and provider-specific
+  forwarded-header behavior remain outside this Slice.
 
 ### Remaining P0 delivery gaps
 
-- Dockerization and deployment work is paused by explicit human instruction
-  while product-experience direction is reconsidered.
-- Full frontend/backend/PostgreSQL Dockerization with one documented startup
-  path.
 - Same-origin production deployment and observed deployed behaviour.
+- Review and explicitly approve the React Router 8.3 compatibility upgrade
+  before any future adoption of unstable RSC APIs; the current Vite SPA does
+  not use the affected mode.
 - Final full-product verification, README evidence, advanced-requirement
   selection, and a public submission video no longer than six minutes.
 
-Slice 2B account lifecycle, richer achievements, streaks, Cypress and SignalR
-remain P1 work and must not delay these P0 gaps. Google Maps, external-event
-claims, Community Challenge, multi-layer community leaderboards and Share Card
-remain Deferred under the current delivery scope.
+The previously deferred Google Maps, external-event claims, Community
+Challenge, multi-layer community leaderboards, weekly streak, Share Card, and
+SignalR invalidation are implemented on the sequential Slice 10/11 work.
+Slice 12 completes their member-facing composition. They are not represented
+as merged into `main` until the human performs the separate integration
+workflow.
 
 ## Environment Prerequisites
 

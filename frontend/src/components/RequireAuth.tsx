@@ -27,13 +27,13 @@ export default function RequireAuth() {
 
   if (auth.isError) {
     return (
-      <section className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold">We could not restore your session</h1>
-        <p className="mt-4 text-base-content/70" role="alert">
+      <section className="kiwi-panel mx-auto my-16 max-w-2xl p-8 text-center">
+        <h1 className="text-3xl">We could not restore your session</h1>
+        <p className="mt-4 text-muted-content" role="alert">
           Check your connection and try again.
         </p>
         <button
-          className="btn btn-primary mt-6"
+          className="btn btn-primary mt-6 rounded-full"
           onClick={() => void auth.refetch()}
           type="button"
         >

@@ -10,10 +10,13 @@ public sealed record QuestDetailDto(
     string Difficulty,
     int XpAward,
     int? Capacity,
+    int? AvailableSpots,
     string? StartAtUtc,
     string? EndAtUtc,
     QuestLocationRegionDto? LocationRegion,
     string? LocationDescription,
     QuestCoverImageDto? CoverImage,
     string? ExternalSourceUrl,
-    string? SourceCheckedAt);
+    string? SourceCheckedAt,
+    decimal? Latitude = null,
+    decimal? Longitude = null);

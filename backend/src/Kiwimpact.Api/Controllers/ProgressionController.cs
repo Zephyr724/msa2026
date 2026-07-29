@@ -44,7 +44,7 @@ public sealed class ProgressionController : ControllerBase
             var problem = exception.Error switch
             {
                 ProgressionError.NotReady => ProblemDetailsHelper.ProgressionNotReady(),
-                _ => ProblemDetailsHelper.NotFound(exception.Message),
+                _ => ProblemDetailsHelper.ProfileNotFound(),
             };
             return StatusCode(
                 problem.Status ?? StatusCodes.Status500InternalServerError,

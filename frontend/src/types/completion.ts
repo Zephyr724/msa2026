@@ -3,8 +3,12 @@
 // (QuestCompletionContracts.cs). Do not model fields the backend does
 // not expose: plaintext exists only on GeneratedCompletionCodeDto.
 
-export const MY_COMPLETION_STATUSES = ['None', 'Verified'] as const;
-export const COMPLETION_METHODS = ['CompletionCode'] as const;
+export const MY_COMPLETION_STATUSES = [
+  'None', 'Pending', 'Verified', 'Rejected', 'SelfReported',
+] as const;
+export const COMPLETION_METHODS = [
+  'CompletionCode', 'EvidenceClaim', 'SelfReported',
+] as const;
 
 export type MyCompletionStatus = (typeof MY_COMPLETION_STATUSES)[number];
 export type CompletionMethod = (typeof COMPLETION_METHODS)[number];
@@ -36,4 +40,31 @@ export interface MyQuestCompletionDto {
   method: CompletionMethod | null;
   completedAtUtc: string | null;
   verifiedAtUtc: string | null;
+}
+
+export interface EvidenceClaimInput {
+  description: string;
+  evidenceUrl: string | null;
+  userDeclaration: boolean;
+  completedAtUtc: string;
+}
+
+export interface EvidenceClaimSummary {
+  claimId: string;
+  userId: string;
+  questId: string;
+  questTitle: string;
+  status: 'Pending' | 'Verified' | 'Rejected';
+  completedAtUtc: string;
+  createdAtUtc: string;
+  reviewedAtUtc: string | null;
+}
+
+export interface EvidenceClaim extends EvidenceClaimSummary {
+  description: string | null;
+  evidenceUrl: string | null;
+  userDeclaration: boolean;
+  reviewNote: string | null;
+  reviewedByUserId: string | null;
+  evidencePurgedAtUtc: string | null;
 }

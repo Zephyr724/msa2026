@@ -28,4 +28,13 @@ public interface IPassportRepository
             int page,
             int pageSize,
             CancellationToken ct = default);
+
+    Task<PassportSummary?> GetSummaryAsync(
+        Guid userId,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<PassportCommunityParticipation>>
+        GetCommunityParticipationAsync(
+            Guid userId,
+            CancellationToken ct = default);
 }

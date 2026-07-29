@@ -7,6 +7,8 @@ import AchievementCard from './AchievementCard.tsx';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
+const PROFILE_NOT_FOUND_TYPE =
+  'https://kiwimpact.app/problems/profile-not-found';
 
 function isNotReady(error: unknown): boolean {
   return error instanceof ApiError
@@ -15,7 +17,9 @@ function isNotReady(error: unknown): boolean {
 }
 
 function isMissingProfile(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 404;
+  return error instanceof ApiError
+    && error.status === 404
+    && error.problem?.type === PROFILE_NOT_FOUND_TYPE;
 }
 
 function AchievementsSkeleton() {
@@ -91,8 +95,8 @@ export default function AchievementsSection() {
     );
   } else if (catalog.data.length === 0) {
     content = (
-      <div className="rounded-box border border-base-300 bg-base-100 p-6 text-center">
-        <p className="text-base-content/70">No achievements available yet.</p>
+      <div className="kiwi-panel p-8 text-center">
+        <p className="text-muted-content">No achievements available yet.</p>
       </div>
     );
   } else {
@@ -100,7 +104,7 @@ export default function AchievementsSection() {
       earned.data.map((item) => [item.achievementId, item]),
     );
     content = (
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {catalog.data.map((catalogItem) => {
           const earnedItem = earnedById.get(catalogItem.id);
           return earnedItem === undefined ? (
@@ -122,10 +126,9 @@ export default function AchievementsSection() {
   }
 
   return (
-    <section aria-labelledby="passport-achievements-heading" className="mt-6">
-      <h2 className="text-xl font-semibold" id="passport-achievements-heading">
-        Achievements
-      </h2>
+    <section aria-labelledby="passport-achievements-heading" className="mt-10">
+      <p className="kiwi-stat-label">Milestones</p>
+      <h2 className="mt-1 text-2xl" id="passport-achievements-heading">Achievements</h2>
       <div className="mt-4">{content}</div>
     </section>
   );

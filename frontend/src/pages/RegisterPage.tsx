@@ -41,7 +41,7 @@ export default function RegisterPage() {
         password,
         passwordConfirmation,
       });
-      navigate('/login?registered=1');
+      navigate(`/check-email?email=${encodeURIComponent(email.trim())}`);
     } catch {
       // The mutation error is rendered below.
     }
@@ -57,57 +57,57 @@ export default function RegisterPage() {
     <AuthCard title="Create your account" intro="Join local eco quests and track your impact.">
       <form className="space-y-4" noValidate onSubmit={handleSubmit}>
         <label className="form-control block">
-          <span className="label-text mb-1 block">Display name</span>
+          <span className="mb-2 block text-sm font-bold">Display name</span>
           <input
             autoComplete="name"
-            className="input input-bordered w-full"
+            className="input input-bordered h-12 w-full rounded-2xl"
             maxLength={100}
             onChange={(event) => setDisplayName(event.target.value)}
             value={displayName}
           />
         </label>
         <label className="form-control block">
-          <span className="label-text mb-1 block">Email</span>
+          <span className="mb-2 block text-sm font-bold">Email</span>
           <input
             autoComplete="email"
-            className="input input-bordered w-full"
+            className="input input-bordered h-12 w-full rounded-2xl"
             onChange={(event) => setEmail(event.target.value)}
             type="email"
             value={email}
           />
         </label>
         <label className="form-control block">
-          <span className="label-text mb-1 block">Password</span>
+          <span className="mb-2 block text-sm font-bold">Password</span>
           <input
             aria-describedby="password-guidance"
             autoComplete="new-password"
-            className="input input-bordered w-full"
+            className="input input-bordered h-12 w-full rounded-2xl"
             onChange={(event) => setPassword(event.target.value)}
             type="password"
             value={password}
           />
-          <span id="password-guidance" className="mt-1 text-xs text-base-content/60">
+          <span id="password-guidance" className="mt-1 text-xs text-muted-content">
             Use at least 12 characters with upper and lowercase letters, a number,
             and a symbol.
           </span>
         </label>
         <label className="form-control block">
-          <span className="label-text mb-1 block">Confirm password</span>
+          <span className="mb-2 block text-sm font-bold">Confirm password</span>
           <input
             autoComplete="new-password"
-            className="input input-bordered w-full"
+            className="input input-bordered h-12 w-full rounded-2xl"
             onChange={(event) => setPasswordConfirmation(event.target.value)}
             type="password"
             value={passwordConfirmation}
           />
         </label>
         {(validationError || errorMessage) && (
-          <div className="alert alert-error" role="alert">
+          <div className="alert alert-error rounded-2xl" role="alert">
             {validationError ?? errorMessage}
           </div>
         )}
         <button
-          className="btn btn-success w-full"
+          className="btn btn-primary h-12 w-full rounded-2xl"
           disabled={register.isPending}
           type="submit"
         >
@@ -116,7 +116,7 @@ export default function RegisterPage() {
       </form>
       <p className="text-center text-sm">
         Already have an account?{' '}
-        <Link className="link link-success" to="/login">
+        <Link className="link link-primary font-bold" to="/login">
           Sign in
         </Link>
       </p>

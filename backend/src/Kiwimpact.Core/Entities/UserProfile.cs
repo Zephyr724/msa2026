@@ -25,15 +25,7 @@ public sealed class UserProfile
 
     public static UserProfile Create(Guid userId, string displayName, DateTimeOffset now)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
-
-        var normalizedDisplayName = displayName.Trim();
-        if (normalizedDisplayName.Length > MaxDisplayNameLength)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(displayName),
-                $"Display name must be at most {MaxDisplayNameLength} characters.");
-        }
+        var normalizedDisplayName = NormalizeDisplayName(displayName);
 
         return new UserProfile
         {
@@ -47,6 +39,12 @@ public sealed class UserProfile
             CreatedAt = now,
             UpdatedAt = now,
         };
+    }
+
+    public void UpdateDisplayName(string displayName, DateTimeOffset now)
+    {
+        DisplayName = NormalizeDisplayName(displayName);
+        UpdatedAt = now.ToUniversalTime();
     }
 
     /// <summary>
@@ -71,5 +69,48 @@ public sealed class UserProfile
         TotalXp = newTotal;
         Level = ProgressionRules.ComputeLevel(newTotal);
         UpdatedAt = now.ToUniversalTime();
+    }
+
+    public void UpdateCommunity(
+        Guid? homeCommunityRegionId,
+        bool showCommunityOnPassport,
+        DateTimeOffset now,
+        TimeSpan changeCooldown)
+    {
+        var timestamp = now.ToUniversalTime();
+        var selectionChanged = HomeCommunityRegionId != homeCommunityRegionId;
+        if (selectionChanged &&
+            HomeCommunityRegionId.HasValue &&
+            LastCommunityChangeAt.HasValue &&
+            timestamp < LastCommunityChangeAt.Value + changeCooldown)
+        {
+            throw new InvalidOperationException(
+                "Home Community can be changed once every 30 days.");
+        }
+
+        if (selectionChanged)
+        {
+            HomeCommunityRegionId = homeCommunityRegionId;
+            LastCommunityChangeAt = timestamp;
+        }
+
+        ShowCommunityOnPassport =
+            homeCommunityRegionId.HasValue && showCommunityOnPassport;
+        UpdatedAt = timestamp;
+    }
+
+    private static string NormalizeDisplayName(string displayName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+
+        var normalizedDisplayName = displayName.Trim();
+        if (normalizedDisplayName.Length > MaxDisplayNameLength)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(displayName),
+                $"Display name must be at most {MaxDisplayNameLength} characters.");
+        }
+
+        return normalizedDisplayName;
     }
 }

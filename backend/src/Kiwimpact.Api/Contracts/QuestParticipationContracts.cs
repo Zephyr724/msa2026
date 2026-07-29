@@ -12,3 +12,10 @@ public sealed record MyQuestParticipationDto(
     bool CanJoin,
     string? IneligibilityReason,
     bool CapacityFull);
+
+public sealed record MyQuestParticipationListItemDto(
+    Guid ParticipationId,
+    string Status,
+    string JoinedAtUtc,
+    string? CancelledAtUtc,
+    QuestListItemDto Quest);

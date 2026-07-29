@@ -6,12 +6,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Kiwimpact.Infrastructure.Data.Seeds;
 
+public sealed record DemoAccountSeedPersona(
+    string Email,
+    string DisplayName,
+    string Role);
+
 public sealed record DemoAccountSeedOptions(
     bool Enabled,
-    string? OrganizerEmail,
-    string? OrganizerPassword,
-    string? AdminEmail,
-    string? AdminPassword);
+    string? Password,
+    IReadOnlyList<DemoAccountSeedPersona> Accounts)
+{
+    public static readonly IReadOnlyList<DemoAccountSeedPersona> StandardPersonas =
+    [
+        new("member1@kiwimpact.test", "Test Member 1", AppRoles.Member),
+        new("member2@kiwimpact.test", "Test Member 2", AppRoles.Member),
+        new("member3@kiwimpact.test", "Test Member 3", AppRoles.Member),
+        new("external1@kiwimpact.test", "External Organizer 1", AppRoles.Organizer),
+        new("external2@kiwimpact.test", "External Organizer 2", AppRoles.Organizer),
+        new("external3@kiwimpact.test", "External Organizer 3", AppRoles.Organizer),
+        new("admin1@kiwimpact.test", "Test Admin 1", AppRoles.Admin),
+        new("admin2@kiwimpact.test", "Test Admin 2", AppRoles.Admin),
+        new("admin3@kiwimpact.test", "Test Admin 3", AppRoles.Admin),
+    ];
+}
 
 public static class IdentitySeed
 {
@@ -51,40 +68,34 @@ public static class IdentitySeed
             return;
         }
 
-        await SeedDemoAccountAsync(
-            db,
-            userManager,
-            options.OrganizerEmail,
-            options.OrganizerPassword,
-            "Demo Organizer",
-            AppRoles.Organizer,
-            cancellationToken);
+        if (string.IsNullOrWhiteSpace(options.Password))
+        {
+            throw new InvalidOperationException(
+                "Development demo-account seeding requires DemoAccounts:Password.");
+        }
 
-        await SeedDemoAccountAsync(
-            db,
-            userManager,
-            options.AdminEmail,
-            options.AdminPassword,
-            "Demo Admin",
-            AppRoles.Admin,
-            cancellationToken);
+        foreach (var account in options.Accounts)
+        {
+            await SeedDemoAccountAsync(
+                db,
+                userManager,
+                account,
+                options.Password,
+                cancellationToken);
+        }
     }
 
     private static async Task SeedDemoAccountAsync(
         KiwimpactDbContext db,
         UserManager<ApplicationUser> userManager,
-        string? email,
-        string? password,
-        string displayName,
-        string elevatedRole,
+        DemoAccountSeedPersona account,
+        string password,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
-        {
-            return;
-        }
+        if (!AppRoles.All.Contains(account.Role, StringComparer.Ordinal))
+            throw new InvalidOperationException("Configured demo account role is invalid.");
 
-        var normalizedEmail = email.Trim();
+        var normalizedEmail = account.Email.Trim();
         var user = await userManager.FindByEmailAsync(normalizedEmail);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -104,8 +115,47 @@ public static class IdentitySeed
                 var createResult = await userManager.CreateAsync(user, password);
                 EnsureSucceeded(createResult, "Unable to create a configured demo account.");
             }
+            else
+            {
+                if (!user.EmailConfirmed)
+                {
+                    user.EmailConfirmed = true;
+                    EnsureSucceeded(
+                        await userManager.UpdateAsync(user),
+                        "Unable to confirm a configured demo account.");
+                }
 
-            foreach (var role in new[] { AppRoles.Member, elevatedRole })
+                if (!await userManager.CheckPasswordAsync(user, password))
+                {
+                    if (await userManager.HasPasswordAsync(user))
+                    {
+                        EnsureSucceeded(
+                            await userManager.RemovePasswordAsync(user),
+                            "Unable to rotate a configured demo password.");
+                    }
+                    EnsureSucceeded(
+                        await userManager.AddPasswordAsync(user, password),
+                        "Unable to set a configured demo password.");
+                }
+            }
+
+            IReadOnlyList<string> desiredRoles = account.Role == AppRoles.Member
+                ? [AppRoles.Member]
+                : [AppRoles.Member, account.Role];
+            var currentRoles = await userManager.GetRolesAsync(user);
+            var rolesToRemove = currentRoles
+                .Where(role =>
+                    AppRoles.All.Contains(role, StringComparer.Ordinal)
+                    && !desiredRoles.Contains(role, StringComparer.Ordinal))
+                .ToArray();
+            if (rolesToRemove.Length > 0)
+            {
+                EnsureSucceeded(
+                    await userManager.RemoveFromRolesAsync(user, rolesToRemove),
+                    "Unable to remove an obsolete configured demo role.");
+            }
+
+            foreach (var role in desiredRoles)
             {
                 if (!await userManager.IsInRoleAsync(user, role))
                 {
@@ -114,16 +164,24 @@ public static class IdentitySeed
                 }
             }
 
-            if (!await db.UserProfiles.AnyAsync(
-                    profile => profile.Id == user.Id,
-                    cancellationToken))
+            var profile = await db.UserProfiles.SingleOrDefaultAsync(
+                item => item.Id == user.Id,
+                cancellationToken);
+            if (profile is null)
             {
                 db.UserProfiles.Add(UserProfile.Create(
                     user.Id,
-                    displayName,
+                    account.DisplayName,
                     DateTimeOffset.UtcNow));
-                await db.SaveChangesAsync(cancellationToken);
             }
+            else if (!string.Equals(
+                profile.DisplayName,
+                account.DisplayName.Trim(),
+                StringComparison.Ordinal))
+            {
+                profile.UpdateDisplayName(account.DisplayName, DateTimeOffset.UtcNow);
+            }
+            await db.SaveChangesAsync(cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
         }

@@ -20,6 +20,43 @@ public sealed class PassportController : ControllerBase
         _service = service;
     }
 
+    [HttpGet("passport")]
+    [ProducesResponseType(typeof(PassportSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMyPassport(CancellationToken ct = default)
+    {
+        if (!TryGetActorId(out var actorId))
+            return Unauthorized();
+        try
+        {
+            var summary = await _service.GetMySummaryAsync(actorId, ct);
+            return Ok(new PassportSummaryDto(
+                summary.DisplayName,
+                summary.TotalXp,
+                summary.Level,
+                summary.RankTitle,
+                summary.HomeCommunity is null
+                    ? null
+                    : new RegionSummaryDto(
+                        summary.HomeCommunity.Id,
+                        summary.HomeCommunity.Name,
+                        summary.HomeCommunity.Type,
+                        summary.HomeCommunity.ParentRegionId),
+                summary.VerifiedCompletionCount,
+                summary.SelfReportedCompletionCount,
+                summary.PendingCompletionCount,
+                summary.CategoryImpact.Select(item => new PassportCategoryImpactDto(
+                    item.Category.ToString(),
+                    item.VerifiedCompletionCount,
+                    item.VerifiedXp)).ToList()));
+        }
+        catch (PassportException exception)
+        {
+            return PassportProblem(exception);
+        }
+    }
+
     /// <summary>
     /// Read the authenticated user's own Verified completion history, newest
     /// verification first. Returns 404 when the caller has no profile and
@@ -36,7 +73,7 @@ public sealed class PassportController : ControllerBase
         [FromQuery] int pageSize = 12,
         CancellationToken ct = default)
     {
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var actorId))
+        if (!TryGetActorId(out var actorId))
             return Unauthorized();
 
         try
@@ -68,11 +105,59 @@ public sealed class PassportController : ControllerBase
             var problem = exception.Error switch
             {
                 PassportError.NotReady => ProblemDetailsHelper.ProgressionNotReady(),
-                _ => ProblemDetailsHelper.NotFound(exception.Message),
+                _ => ProblemDetailsHelper.ProfileNotFound(),
             };
             return StatusCode(
                 problem.Status ?? StatusCodes.Status500InternalServerError,
                 problem);
         }
+    }
+
+    [HttpGet("passport/community-participation")]
+    [ProducesResponseType(
+        typeof(IReadOnlyList<PassportCommunityParticipationDto>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMyCommunityParticipation(
+        CancellationToken ct = default)
+    {
+        if (!TryGetActorId(out var actorId))
+            return Unauthorized();
+        try
+        {
+            var items = await _service.GetMyCommunityParticipationAsync(actorId, ct);
+            return Ok(items.Select(item => new PassportCommunityParticipationDto(
+                new RegionSummaryDto(
+                    item.Community.Id,
+                    item.Community.Name,
+                    item.Community.Type,
+                    item.Community.ParentRegionId),
+                item.IsCurrentCommunity,
+                item.VerifiedCompletionCount,
+                item.VerifiedXp,
+                item.ChallengesContributedTo,
+                item.ChallengeAchievementsEarned,
+                item.LatestContributionAtUtc.ToString("O"))));
+        }
+        catch (PassportException exception)
+        {
+            return PassportProblem(exception);
+        }
+    }
+
+    private bool TryGetActorId(out Guid actorId) =>
+        Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out actorId);
+
+    private ObjectResult PassportProblem(PassportException exception)
+    {
+        var problem = exception.Error switch
+        {
+            PassportError.NotReady => ProblemDetailsHelper.ProgressionNotReady(),
+            _ => ProblemDetailsHelper.ProfileNotFound(),
+        };
+        return StatusCode(
+            problem.Status ?? StatusCodes.Status500InternalServerError,
+            problem);
     }
 }

@@ -12,6 +12,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Text;
+using Microsoft.Extensions.Options;
 
 namespace Kiwimpact.IntegrationTests.Api;
 
@@ -30,6 +33,19 @@ public sealed class AuthApiTests : IClassFixture<CustomWebApplicationFactory>
     {
         using var host = CreateIsolatedHost();
         var client = host.CreateClient();
+        using (var optionsScope = host.Services.CreateScope())
+        {
+            Assert.Equal(
+                TimeSpan.FromHours(24),
+                optionsScope.ServiceProvider
+                    .GetRequiredService<IOptions<DataProtectionTokenProviderOptions>>()
+                    .Value.TokenLifespan);
+            Assert.Equal(
+                TimeSpan.FromMinutes(45),
+                optionsScope.ServiceProvider
+                    .GetRequiredService<IOptions<PasswordResetTokenProviderOptions>>()
+                    .Value.TokenLifespan);
+        }
         var email = UniqueEmail();
         var token = await GetCsrfTokenAsync(client);
 
@@ -254,6 +270,13 @@ public sealed class AuthApiTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task RoleAndConfiguredDemoSeeding_IsIdempotentAndRequiresExplicitValues()
     {
+        Assert.Equal(9, DemoAccountSeedOptions.StandardPersonas.Count);
+        Assert.All(
+            new[] { AppRoles.Member, AppRoles.Organizer, AppRoles.Admin },
+            role => Assert.Equal(
+                3,
+                DemoAccountSeedOptions.StandardPersonas.Count(account => account.Role == role)));
+
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
@@ -263,49 +286,180 @@ public sealed class AuthApiTests : IClassFixture<CustomWebApplicationFactory>
         await IdentitySeed.SeedRolesAsync(roleManager, TestContext.Current.CancellationToken);
         Assert.Equal(3, await db.Roles.CountAsync(TestContext.Current.CancellationToken));
 
+        var memberEmail = UniqueEmail();
         var organizerEmail = UniqueEmail();
         var adminEmail = UniqueEmail();
         var runtimePassword = $"{Guid.NewGuid():N}aA1!";
+        var personas = new[]
+        {
+            new DemoAccountSeedPersona(memberEmail, "Seeded member", AppRoles.Member),
+            new DemoAccountSeedPersona(organizerEmail, "Seeded external organizer", AppRoles.Organizer),
+            new DemoAccountSeedPersona(adminEmail, "Seeded admin", AppRoles.Admin),
+        };
         await IdentitySeed.SeedDemoAccountsAsync(
             db,
             userManager,
             new DemoAccountSeedOptions(
                 Enabled: false,
-                organizerEmail,
-                runtimePassword,
-                adminEmail,
-                runtimePassword),
+                Password: runtimePassword,
+                Accounts: personas),
             TestContext.Current.CancellationToken);
+        Assert.Null(await userManager.FindByEmailAsync(memberEmail));
         Assert.Null(await userManager.FindByEmailAsync(organizerEmail));
         Assert.Null(await userManager.FindByEmailAsync(adminEmail));
 
         var enabled = new DemoAccountSeedOptions(
             Enabled: true,
-            organizerEmail,
-            runtimePassword,
-            adminEmail,
-            runtimePassword);
-        await IdentitySeed.SeedDemoAccountsAsync(
-            db, userManager, enabled, TestContext.Current.CancellationToken);
+            Password: runtimePassword,
+            Accounts: personas);
         await IdentitySeed.SeedDemoAccountsAsync(
             db, userManager, enabled, TestContext.Current.CancellationToken);
 
+        var seededOrganizer = await userManager.FindByEmailAsync(organizerEmail);
+        Assert.NotNull(seededOrganizer);
+        var staleOrganizerProfile = await db.UserProfiles.SingleAsync(
+            profile => profile.Id == seededOrganizer.Id,
+            TestContext.Current.CancellationToken);
+        staleOrganizerProfile.UpdateDisplayName(
+            "Stale organizer display name",
+            DateTimeOffset.UtcNow);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        await IdentitySeed.SeedDemoAccountsAsync(
+            db, userManager, enabled, TestContext.Current.CancellationToken);
+
+        var member = await userManager.FindByEmailAsync(memberEmail);
         var organizer = await userManager.FindByEmailAsync(organizerEmail);
         var admin = await userManager.FindByEmailAsync(adminEmail);
+        Assert.NotNull(member);
         Assert.NotNull(organizer);
         Assert.NotNull(admin);
+        Assert.True(member.EmailConfirmed);
+        Assert.True(organizer.EmailConfirmed);
+        Assert.True(admin.EmailConfirmed);
+        Assert.True(await userManager.CheckPasswordAsync(member, runtimePassword));
+        Assert.True(await userManager.CheckPasswordAsync(organizer, runtimePassword));
+        Assert.True(await userManager.CheckPasswordAsync(admin, runtimePassword));
+        Assert.Equal(
+            new[] { AppRoles.Member },
+            (await userManager.GetRolesAsync(member)).Order().ToArray());
         Assert.Equal(
             new[] { AppRoles.Member, AppRoles.Organizer },
             (await userManager.GetRolesAsync(organizer)).Order().ToArray());
         Assert.Equal(
             new[] { AppRoles.Admin, AppRoles.Member },
             (await userManager.GetRolesAsync(admin)).Order().ToArray());
+        Assert.Equal(
+            "Seeded external organizer",
+            (await db.UserProfiles.SingleAsync(
+                profile => profile.Id == organizer.Id,
+                TestContext.Current.CancellationToken)).DisplayName);
+        Assert.Equal(1, await db.UserProfiles.CountAsync(
+            profile => profile.Id == member.Id,
+            TestContext.Current.CancellationToken));
         Assert.Equal(1, await db.UserProfiles.CountAsync(
             profile => profile.Id == organizer.Id,
             TestContext.Current.CancellationToken));
         Assert.Equal(1, await db.UserProfiles.CountAsync(
             profile => profile.Id == admin.Id,
             TestContext.Current.CancellationToken));
+
+        await IdentitySeed.SeedDemoAccountsAsync(
+            db,
+            userManager,
+            new DemoAccountSeedOptions(
+                Enabled: true,
+                Password: runtimePassword,
+                Accounts:
+                [
+                    new DemoAccountSeedPersona(
+                        organizerEmail,
+                        "Seeded external organizer",
+                        AppRoles.Member),
+                ]),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(
+            new[] { AppRoles.Member },
+            (await userManager.GetRolesAsync(organizer)).Order().ToArray());
+    }
+
+    [Fact]
+    public async Task ConfirmationResetAndPasswordChangeUseIdentityTokens()
+    {
+        using var host = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, config) =>
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Auth:RequireConfirmedEmail"] = "true",
+                })));
+        var client = host.CreateClient();
+        var email = UniqueEmail();
+        Assert.Equal(HttpStatusCode.Created, (await RegisterAsync(client, email)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await LoginAsync(client, email, ValidPassword)).StatusCode);
+
+        string confirmationToken;
+        using (var scope = host.Services.CreateScope())
+        {
+            var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = Assert.IsType<ApplicationUser>(await manager.FindByEmailAsync(email));
+            confirmationToken = Encode(await manager.GenerateEmailConfirmationTokenAsync(user));
+        }
+        var csrf = await GetCsrfTokenAsync(client);
+        var confirmation = await PostJsonWithCsrfAsync(
+            client, "/api/v1/auth/confirm-email",
+            new ConfirmEmailRequest { UserId = await UserIdAsync(host, email), Token = confirmationToken },
+            csrf);
+        Assert.Equal(HttpStatusCode.OK, confirmation.StatusCode);
+        Assert.Equal(HttpStatusCode.OK,
+            (await LoginAsync(client, email, ValidPassword)).StatusCode);
+
+        string resetToken;
+        using (var scope = host.Services.CreateScope())
+        {
+            var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = Assert.IsType<ApplicationUser>(await manager.FindByEmailAsync(email));
+            resetToken = Encode(await manager.GeneratePasswordResetTokenAsync(user));
+        }
+        const string resetPassword = "ResetPass!5678";
+        csrf = await GetCsrfTokenAsync(client);
+        var reset = await PostJsonWithCsrfAsync(
+            client, "/api/v1/auth/reset-password",
+            new ResetPasswordRequest
+            {
+                Email = email, Token = resetToken,
+                Password = resetPassword, PasswordConfirmation = resetPassword,
+            }, csrf);
+        Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
+
+        const string changedPassword = "ChangedPass!9012";
+        csrf = await GetCsrfTokenAsync(client);
+        var changed = await PostJsonWithCsrfAsync(
+            client, "/api/v1/auth/change-password",
+            new ChangePasswordRequest
+            {
+                CurrentPassword = resetPassword,
+                NewPassword = changedPassword,
+                NewPasswordConfirmation = changedPassword,
+            }, csrf);
+        Assert.Equal(HttpStatusCode.OK, changed.StatusCode);
+        Assert.Equal(HttpStatusCode.OK,
+            (await LoginAsync(client, email, changedPassword)).StatusCode);
+    }
+
+    [Fact]
+    public async Task RecoveryResponsesDoNotRevealAccountExistence()
+    {
+        using var host = CreateIsolatedHost();
+        var client = host.CreateClient();
+        var known = UniqueEmail();
+        Assert.Equal(HttpStatusCode.Created, (await RegisterAsync(client, known)).StatusCode);
+
+        var knownResult = await LifecycleResponseAsync(
+            client, "/api/v1/auth/forgot-password", known);
+        var unknownResult = await LifecycleResponseAsync(
+            client, "/api/v1/auth/forgot-password", UniqueEmail());
+        Assert.Equal(knownResult, unknownResult);
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -314,6 +468,27 @@ public sealed class AuthApiTests : IClassFixture<CustomWebApplicationFactory>
         _factory.WithWebHostBuilder(_ => { });
 
     private static string UniqueEmail() => $"auth-{Guid.NewGuid():N}@example.test";
+
+    private static string Encode(string token) =>
+        WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+    private static async Task<Guid> UserIdAsync(
+        WebApplicationFactory<Program> host, string email)
+    {
+        using var scope = host.Services.CreateScope();
+        var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        return Assert.IsType<ApplicationUser>(await manager.FindByEmailAsync(email)).Id;
+    }
+
+    private static async Task<string> LifecycleResponseAsync(
+        HttpClient client, string path, string email)
+    {
+        var csrf = await GetCsrfTokenAsync(client);
+        var response = await PostJsonWithCsrfAsync(
+            client, path, new EmailOnlyRequest { Email = email }, csrf);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+    }
 
     private static async Task<HttpResponseMessage> RegisterAsync(HttpClient client, string email)
     {

@@ -26,4 +26,9 @@
     <ProjectReference Include="..\Kiwimpact.Infrastructure\Kiwimpact.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="appsettings.Development.json"
+             CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>
