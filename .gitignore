@@ -31,6 +31,9 @@ obj/
 *.log
 logs/
 
+# Browser automation artifacts
+.playwright-mcp/
+
 # OS files
 .DS_Store
 Thumbs.db

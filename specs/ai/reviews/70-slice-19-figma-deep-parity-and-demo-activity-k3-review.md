@@ -46,4 +46,3 @@ original findings and reported:
 - Visual evidence Minor: **Closed**
 - Final classification: **Blocker 0 / Major 0 / Minor 0**
 - Commit readiness: **Ready to commit**
-

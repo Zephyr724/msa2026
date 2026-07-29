@@ -56,4 +56,3 @@ not the Member page design.
   as a product defect in the parity report.
 - Full-page screenshots include the Make export's demo toolbar. That toolbar
   is a prototype control and is explicitly excluded from production parity.
-

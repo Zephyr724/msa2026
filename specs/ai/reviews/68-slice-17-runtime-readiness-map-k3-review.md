@@ -79,4 +79,3 @@ The same independent reviewer checked only the original findings and reported:
 - unresolved original Blocker/Major: 0.
 
 Slice 17 satisfies the bounded independent-review gate.
-

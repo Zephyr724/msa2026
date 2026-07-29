@@ -68,4 +68,3 @@ closure checks are:
 - `git diff --check` passes;
 - no user-owned Make or browser artifact is added to the proposed tracked
   change set.
-

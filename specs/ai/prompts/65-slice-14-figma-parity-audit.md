@@ -37,4 +37,3 @@ The audit must:
 
 Do not present hard-coded prototype people, XP, rankings, challenge totals,
 achievement targets, or remote Unsplash images as production data.
-

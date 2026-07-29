@@ -560,4 +560,3 @@ production screenshots for every target page at desktop and mobile sizes and
 recognize the same composition, hierarchy, density, art language, and
 interaction state—while all displayed values still come from real production
 contracts.
-
