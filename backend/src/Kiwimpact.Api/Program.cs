@@ -190,6 +190,18 @@ builder.Services.AddAntiforgery(options =>
 var registerLimit = builder.Configuration.GetValue("Auth:RateLimits:RegisterPermitLimit", 5);
 var loginLimit = builder.Configuration.GetValue("Auth:RateLimits:LoginPermitLimit", 10);
 var rateLimitWindowMinutes = builder.Configuration.GetValue("Auth:RateLimits:WindowMinutes", 15);
+var socialRateLimitWindowMinutes = builder.Configuration.GetValue(
+    "Social:RateLimits:WindowMinutes",
+    1);
+var socialPublishPermitLimit = builder.Configuration.GetValue(
+    "Social:RateLimits:PublishPermitLimit",
+    6);
+var socialCommentPermitLimit = builder.Configuration.GetValue(
+    "Social:RateLimits:CommentPermitLimit",
+    30);
+var socialReactionPermitLimit = builder.Configuration.GetValue(
+    "Social:RateLimits:ReactionPermitLimit",
+    120);
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -236,6 +248,36 @@ builder.Services.AddRateLimiter(options =>
                 AutoReplenishment = true,
             });
     });
+    options.AddPolicy(SocialRateLimitPolicies.Publish, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            SocialRateLimitPolicies.ActorPartitionKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = socialPublishPermitLimit,
+                Window = TimeSpan.FromMinutes(socialRateLimitWindowMinutes),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+    options.AddPolicy(SocialRateLimitPolicies.Comment, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            SocialRateLimitPolicies.ActorPartitionKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = socialCommentPermitLimit,
+                Window = TimeSpan.FromMinutes(socialRateLimitWindowMinutes),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+    options.AddPolicy(SocialRateLimitPolicies.Reaction, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            SocialRateLimitPolicies.ActorPartitionKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = socialReactionPermitLimit,
+                Window = TimeSpan.FromMinutes(socialRateLimitWindowMinutes),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
     options.OnRejected = (context, _) =>
     {
         if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
@@ -258,6 +300,7 @@ builder.Services.AddScoped<IProgressionService, ProgressionService>();
 builder.Services.AddScoped<IPassportService, PassportService>();
 builder.Services.AddScoped<IAchievementService, AchievementService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+builder.Services.AddScoped<ISocialFeedService, SocialFeedService>();
 
 var app = builder.Build();
 

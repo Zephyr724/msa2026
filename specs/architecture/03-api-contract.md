@@ -434,6 +434,40 @@ Share Card rules enforced by the data returned:
 - Never include email, user ID, evidence, claim text, review note.
 - `Show my display name` toggle respected (off = display name omitted from Share Card data).
 
+### 2.18 Social Posts Feed
+
+This bounded endpoint group was explicitly approved by the product owner on
+2026-07-31. It does not add public profiles, follows, friends, chat,
+notifications, file upload, or moderation tooling.
+
+| Method | Route | Auth | Purpose |
+| ------ | ----- | ---- | ------- |
+| `GET` | `/api/v1/social/posts` | None | Newest-first post feed. Supports case-insensitive `search` over content and author display name, plus `page` (1–10,000) and `pageSize` (maximum 24). |
+| `POST` | `/api/v1/social/posts` | Member+ | Publish required text with optional HTTPS image URL and required alternative text. |
+| `PUT` | `/api/v1/social/posts/{postId}/like` | Member+ | Idempotently set the caller's like. Returns authoritative aggregate count and caller state. |
+| `DELETE` | `/api/v1/social/posts/{postId}/like` | Member+ | Idempotently remove the caller's like. Returns authoritative aggregate count and caller state. |
+| `GET` | `/api/v1/social/posts/{postId}/comments` | None | Page top-level comments (page 1–10,000; maximum 20 roots) and include at most the first 20 direct replies per root. Each root reports authoritative `replyCount` and `hasMoreReplies`. |
+| `POST` | `/api/v1/social/posts/{postId}/comments` | Member+ | Create a root comment or a direct reply using optional `parentCommentId`. |
+
+**Privacy and validation rules:**
+
+- Responses include `authorDisplayName` but never user ID, email, Home
+  Community, evidence, claim data, or other private profile fields.
+- If an internal author profile is exceptionally absent, public responses use
+  the neutral `Community member` display label.
+- A reply parent must exist on the same post and must be a top-level comment.
+  Replying to a reply returns 400.
+- Reply previews are deliberately bounded to 20 per returned root so a public
+  read cannot produce an unbounded response body. Slice 25 does not expose
+  independent reply pagination.
+- Post content is 1–2000 characters after trimming. Comment content is
+  1–1000 characters after trimming. Search is at most 100 characters.
+- Optional image URLs must be absolute HTTPS URLs without embedded
+  credentials. Alternative text is required exactly when an image is present.
+- All writes require the existing antiforgery token and actor-partitioned rate
+  limiting. Anonymous writes return 401.
+- The backend does not fetch, proxy, upload, or moderate linked images.
+
 ## 3. SignalR Hubs
 
 ### 3.1 Leaderboard Hub
@@ -459,8 +493,8 @@ Share Card rules enforced by the data returned:
 
 | Role      | Abilities                                                                                                                        |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Guest     | Public quest discovery, leaderboards (Auckland/NZ), regions, achievements catalog, community challenges                          |
-| Member    | All Guest abilities + self-profile, participation, completion, Passport, achievements, Share Card                                |
+| Guest     | Public quest discovery, leaderboards (Auckland/NZ), regions, achievements catalog, community challenges, social feed and comments read |
+| Member    | All Guest abilities + self-profile, participation, completion, Passport, achievements, Share Card, publish/like/comment/reply |
 | Organizer | All Member abilities + CRUD for owned quests, completion codes, images for owned quests                                          |
 | Admin     | All Organizer abilities + manage all quests, review claims, manage external sources, manage community challenges, manage regions |
 
@@ -486,6 +520,9 @@ The following endpoints require rate limiting:
 | `/api/v1/auth/forgot-password`     | 3     | per IP per 15 minutes |
 | `/api/v1/auth/reset-password`      | 3     | per IP per 15 minutes |
 | `/api/v1/auth/resend-confirmation` | 3     | per IP per 15 minutes |
+| `POST /api/v1/social/posts` | 6 | per authenticated user per minute |
+| `POST /api/v1/social/posts/{postId}/comments` | 30 | per authenticated user per minute |
+| `PUT/DELETE /api/v1/social/posts/{postId}/like` | 120 | per authenticated user per minute |
 
 Exact rate limit values are initial defaults and may be tuned during implementation.
 

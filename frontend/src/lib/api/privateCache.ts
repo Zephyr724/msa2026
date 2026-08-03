@@ -15,6 +15,7 @@ export const PRIVATE_SERVER_QUERY_KEYS = [
   ['passport'],
   ['achievements'],
   ['participations'],
+  ['social'],
 ] as const;
 
 /**
