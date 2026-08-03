@@ -32,6 +32,26 @@ public sealed class OpenApiOperationTests
         var responses = earned.GetProperty("responses");
         foreach (var status in new[] { "200", "401", "404", "503" })
             Assert.True(responses.TryGetProperty(status, out _), $"Missing {status}.");
+
+        var stats = paths
+            .GetProperty("/api/v1/achievement-stats")
+            .GetProperty("get");
+        foreach (var status in new[] { "200", "503" })
+        {
+            Assert.True(
+                stats.GetProperty("responses").TryGetProperty(status, out _),
+                $"Achievement stats is missing {status}.");
+        }
+
+        var profile = paths
+            .GetProperty("/api/v1/users/me/achievement-profile")
+            .GetProperty("get");
+        foreach (var status in new[] { "200", "401", "404", "503" })
+        {
+            Assert.True(
+                profile.GetProperty("responses").TryGetProperty(status, out _),
+                $"Achievement profile is missing {status}.");
+        }
     }
 
     [Fact]

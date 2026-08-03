@@ -1,8 +1,11 @@
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLoginMutation } from '../hooks/useAuth.ts';
+import { googleLoginUrl } from '../lib/api/auth.ts';
 import { ApiError } from '../lib/api/apiFetch.ts';
-import { Award, CheckCircle2, IdCard, Leaf, Zap } from 'lucide-react';
+import {
+  Award, CheckCircle2, IdCard, Leaf, Zap,
+} from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -34,6 +37,7 @@ export default function LoginPage() {
     : login.isError
       ? 'The email or password is incorrect.'
       : null;
+  const externalError = externalLoginErrorMessage(searchParams.get('externalError'));
 
   return (
     <AuthCard title="Welcome back" intro="Sign in to continue your impact journey.">
@@ -63,9 +67,9 @@ export default function LoginPage() {
             value={password}
           />
         </label>
-        {(validationError || errorMessage) && (
+        {(validationError || errorMessage || externalError) && (
           <div className="alert alert-error rounded-2xl" role="alert">
-            {validationError ?? errorMessage}
+            {validationError ?? errorMessage ?? externalError}
           </div>
         )}
         <button
@@ -79,6 +83,18 @@ export default function LoginPage() {
           Forgot password?
         </Link>
       </form>
+      <div className="flex items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 bg-base-300" />
+        <span className="text-xs font-bold uppercase tracking-wider text-muted-content">or</span>
+        <span className="h-px flex-1 bg-base-300" />
+      </div>
+      <a
+        className="btn btn-outline h-12 w-full rounded-2xl"
+        href={googleLoginUrl('/')}
+      >
+        <GoogleMark />
+        Continue with Google
+      </a>
       <p className="text-center text-sm">
         New to Kiwimpact?{' '}
         <Link className="link link-primary font-bold" to="/register">
@@ -86,6 +102,45 @@ export default function LoginPage() {
         </Link>
       </p>
     </AuthCard>
+  );
+}
+
+function externalLoginErrorMessage(error: string | null): string | null {
+  switch (error) {
+    case 'account_exists':
+      return 'An account already uses that email. Sign in with your password, then link Google in Profile Settings.';
+    case 'locked':
+      return 'This account is temporarily locked. Please wait and try again.';
+    case 'unverified_email':
+      return 'Google did not provide a verified email address.';
+    case 'provider':
+    case 'unavailable':
+      return 'Google sign-in could not be completed. Please try again.';
+    default:
+      return null;
+  }
+}
+
+function GoogleMark() {
+  return (
+    <svg aria-hidden="true" className="size-5" viewBox="0 0 24 24">
+      <path
+        d="M21.6 12.23c0-.71-.06-1.4-.18-2.06H12v3.9h5.38a4.6 4.6 0 0 1-2 3.02v2.53h3.24c1.9-1.75 2.98-4.33 2.98-7.39Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 22c2.7 0 4.98-.9 6.64-2.42l-3.24-2.53c-.9.6-2.05.96-3.4.96-2.61 0-4.83-1.76-5.62-4.13H3.03v2.6A10 10 0 0 0 12 22Z"
+        fill="#34A853"
+      />
+      <path
+        d="M6.38 13.88A6.02 6.02 0 0 1 6.07 12c0-.65.11-1.29.31-1.88v-2.6H3.03A10 10 0 0 0 2 12c0 1.61.39 3.14 1.03 4.48l3.35-2.6Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 5.99c1.47 0 2.79.5 3.82 1.5l2.88-2.88A9.66 9.66 0 0 0 12 2a10 10 0 0 0-8.97 5.52l3.35 2.6C7.17 7.75 9.39 5.99 12 5.99Z"
+        fill="#EA4335"
+      />
+    </svg>
   );
 }
 

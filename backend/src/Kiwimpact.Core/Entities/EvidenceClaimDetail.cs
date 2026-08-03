@@ -65,6 +65,8 @@ public sealed class EvidenceClaimDetail
         ReviewNote = Optional(reviewNote, MaxReviewNoteLength, "Review note");
         ReviewedByUserId = reviewerId;
         ReviewedAt = timestamp;
+        // Sensitive evidence is retained only long enough to support review
+        // and a bounded follow-up period.
         EvidencePurgeDueAt = timestamp.AddDays(90);
     }
 
@@ -72,6 +74,7 @@ public sealed class EvidenceClaimDetail
     {
         if (!EvidencePurgeDueAt.HasValue || EvidencePurgeDueAt.Value > now.ToUniversalTime())
             throw new InvalidOperationException("Evidence is not due for purge.");
+        // Preserve the audit timestamps while removing user-supplied content.
         Description = null;
         EvidenceUrl = null;
         ReviewNote = null;

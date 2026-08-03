@@ -1,4 +1,5 @@
 import { Lock } from 'lucide-react';
+import type { AchievementTrophyTier } from '../../types/achievement.ts';
 
 const RANK_COLOURS: Record<string, { base: string; glow: string; mark: string }> = {
   Adventurer: { base: '#D4A020', glow: '#F4C840', mark: '#FFE599' },
@@ -75,6 +76,102 @@ export function MedalArtwork({
       <text x="22" y="38.5" textAnchor="middle" fontSize="13" fontWeight="700" fill={palette.text} fontFamily="Fredoka, system-ui, sans-serif">
         {position}
       </text>
+    </svg>
+  );
+}
+
+const TROPHY_PALETTES: Record<
+  AchievementTrophyTier,
+  { dark: string; mid: string; light: string; gem: string }
+> = {
+  Locked: {
+    dark: '#7A8C84',
+    mid: '#AAB6B0',
+    light: '#D8DFD9',
+    gem: '#EEF2EF',
+  },
+  Bronze: {
+    dark: '#8A4528',
+    mid: '#C87040',
+    light: '#F0B184',
+    gem: '#FFD2B3',
+  },
+  Silver: {
+    dark: '#64736C',
+    mid: '#9DB5A4',
+    light: '#E0ECE5',
+    gem: '#F7FFFA',
+  },
+  Gold: {
+    dark: '#9C6B00',
+    mid: '#D4A020',
+    light: '#FFE08A',
+    gem: '#FFF4C2',
+  },
+  Platinum: {
+    dark: '#55727E',
+    mid: '#8FB2BE',
+    light: '#D8F0F3',
+    gem: '#F2FFFF',
+  },
+  Diamond: {
+    dark: '#4654A3',
+    mid: '#7B8FF0',
+    light: '#C6F4FF',
+    gem: '#FFFFFF',
+  },
+};
+
+export function TrophyArtwork({
+  tier,
+  size = 52,
+}: {
+  tier: AchievementTrophyTier;
+  size?: number;
+}) {
+  const palette = TROPHY_PALETTES[tier];
+  const lit = tier !== 'Locked';
+
+  return (
+    <svg
+      aria-label={`${tier} achievement trophy${lit ? '' : ', locked'}`}
+      height={size}
+      role="img"
+      viewBox="0 0 56 56"
+      width={size}
+    >
+      <path
+        d="M16 8h24v8c0 10-5 17-12 17S16 26 16 16Z"
+        fill={palette.mid}
+      />
+      <path
+        d="M19 11h18v5c0 8-3.8 13.5-9 13.5S19 24 19 16Z"
+        fill={palette.light}
+        opacity=".72"
+      />
+      <path
+        d="M16 12H9v5c0 7 4 11 10 11M40 12h7v5c0 7-4 11-10 11"
+        fill="none"
+        stroke={palette.dark}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="3"
+      />
+      <path d="M25 32h6v8h-6z" fill={palette.dark} />
+      <path d="M18 47c0-4 3-7 7-7h6c4 0 7 3 7 7Z" fill={palette.mid} />
+      <path
+        d="m28 12 5 6-5 7-5-7Z"
+        fill={lit ? palette.gem : palette.light}
+        stroke={palette.dark}
+        strokeWidth="1.2"
+      />
+      {tier === 'Diamond' && (
+        <path
+          d="m28 6 3 4-3 4-3-4Z"
+          fill="#fff"
+          opacity=".9"
+        />
+      )}
     </svg>
   );
 }

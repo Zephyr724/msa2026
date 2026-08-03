@@ -82,6 +82,8 @@ public sealed class Quest
             UpdatedAt = timestamp,
         };
 
+        // The aggregate is never valid without exactly one initial cover;
+        // create both objects before the repository begins tracking it.
         var cover = QuestImage.CreateCover(questId, coverImage);
         cover.Quest = quest;
         quest.Images.Add(cover);
@@ -110,6 +112,8 @@ public sealed class Quest
 
         if (coverImage is not null)
         {
+            // Deterministic ordering makes legacy data with multiple flagged
+            // covers behave consistently while preserving the aggregate.
             var cover = Images
                 .Where(image => image.IsCover)
                 .OrderBy(image => image.SortOrder)
@@ -146,6 +150,8 @@ public sealed class Quest
     public void Archive(DateTimeOffset now)
     {
         var timestamp = now.ToUniversalTime();
+        // Published Quests remain discoverable through their scheduled end;
+        // cancellation is the explicit early path to archival.
         var canArchive = Status == QuestStatus.Cancelled ||
             (Status == QuestStatus.Published && EndAtUtc.HasValue && EndAtUtc.Value < timestamp);
         if (!canArchive)
@@ -204,6 +210,8 @@ public sealed class Quest
 
     private void EnsureServerInvariants()
     {
+        // Client-editable details must never overwrite ownership, source, or
+        // reward fields controlled by the server.
         if (CreatedByUserId == Guid.Empty || !Enum.IsDefined(SourceType) || XpAward < 0)
             throw new InvalidOperationException("Quest server-controlled fields are invalid.");
     }

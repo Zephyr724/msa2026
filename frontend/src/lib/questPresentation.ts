@@ -98,6 +98,8 @@ export const REGISTRATION_TONES: Record<QuestRegistrationMode, string> = {
 };
 
 export function questHighlightTone(label: string): string {
+  // Highlights originate from several workflow surfaces, so presentation is
+  // selected from semantic wording instead of duplicating a second status enum.
   if (label.toLowerCase().includes('almost full')) {
     return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
   }
@@ -138,6 +140,8 @@ export function questLocationTrail(
   region: import('../types/quest.ts').QuestLocationRegionDto | null,
 ): string[] {
   if (!region) return [];
+  // A Country or Administrative Area may repeat an ancestor name; de-duplicate
+  // while preserving the user-facing hierarchy order.
   return [
     region.name,
     region.administrativeAreaName,

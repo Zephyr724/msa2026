@@ -26,6 +26,7 @@ export function useThemeSync(): void {
     };
 
     applySystemTheme();
+    // Keep `system` live rather than resolving it once at application start.
     systemTheme.addEventListener('change', applySystemTheme);
 
     return () => {

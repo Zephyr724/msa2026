@@ -45,6 +45,8 @@ export function QuestMap({
   }
 
   if (!isConfigured || !apiKey || !mapId || loadFailed) {
+    // Discovery remains complete without Google Maps; the list is the
+    // authoritative navigation surface and never depends on map availability.
     return (
       <div className="grid min-h-64 place-items-center rounded-3xl border border-dashed border-base-300 bg-base-100 p-8 text-center">
         <div>
@@ -144,6 +146,8 @@ function FitMappedQuests({
     if (!map || quests.length === 0) return;
     const selected = quests.find((quest) => quest.id === selectedQuestId);
     if (selected) {
+      // Preserve the user's broader bounds until a marker is selected, then
+      // bring that Quest into a useful detail zoom.
       map.panTo({ lat: selected.latitude!, lng: selected.longitude! });
       if ((map.getZoom() ?? 0) < 12) map.setZoom(12);
       return;
@@ -155,6 +159,8 @@ function FitMappedQuests({
     }
     const latitudes = quests.map((quest) => quest.latitude!);
     const longitudes = quests.map((quest) => quest.longitude!);
+    // Refit whenever filtered results change so every visible marker remains
+    // represented, rather than retaining bounds from the previous query.
     map.fitBounds({
       north: Math.max(...latitudes),
       south: Math.min(...latitudes),

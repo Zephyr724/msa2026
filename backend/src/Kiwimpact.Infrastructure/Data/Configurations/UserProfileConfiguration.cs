@@ -1,3 +1,4 @@
+using Kiwimpact.Core.Achievements;
 using Kiwimpact.Core.Entities;
 using Kiwimpact.Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,9 @@ public sealed class UserProfileConfiguration : IEntityTypeConfiguration<UserProf
             table.HasCheckConstraint(
                 "CK_UserProfiles_Level_Range",
                 "\"Level\" BETWEEN 1 AND 99");
+            table.HasCheckConstraint(
+                "CK_UserProfiles_AchievementEvaluationVersion_NonNegative",
+                "\"AchievementEvaluationVersion\" >= 0");
         });
 
         builder.HasKey(profile => profile.Id);
@@ -37,6 +41,10 @@ public sealed class UserProfileConfiguration : IEntityTypeConfiguration<UserProf
             .IsRequired()
             .HasDefaultValue(1);
 
+        builder.Property(profile => profile.AchievementEvaluationVersion)
+            .IsRequired()
+            .HasDefaultValue(AchievementCatalog.CurrentEvaluationVersion);
+
         builder.HasOne<ApplicationUser>()
             .WithOne()
             .HasForeignKey<UserProfile>(profile => profile.Id)
@@ -48,5 +56,6 @@ public sealed class UserProfileConfiguration : IEntityTypeConfiguration<UserProf
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(profile => profile.HomeCommunityRegionId);
+        builder.HasIndex(profile => profile.AchievementEvaluationVersion);
     }
 }

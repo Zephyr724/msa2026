@@ -38,6 +38,8 @@ export default function TrustedCompletionPanel({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    // The API expects an instant, so encode the date at a fixed UTC time
+    // instead of relying on browser-specific parsing of a date-only string.
     const completedAtUtc = new Date(`${completedDate}T12:00:00Z`).toISOString();
     if (selectedMode === 'claim') {
       await claim.mutateAsync({

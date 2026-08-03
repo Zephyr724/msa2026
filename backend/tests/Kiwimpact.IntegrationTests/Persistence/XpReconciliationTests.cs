@@ -147,11 +147,14 @@ public sealed class XpReconciliationTests : IClassFixture<TestDatabaseFixture>
             INSERT INTO "QuestCompletions"
                 ("Id", "UserId", "QuestId", "ParticipationId", "Method", "Status",
                  "CompletedAt", "VerifiedAtUtc", "RewardDifficultySnapshot",
+                 "QuestCategorySnapshot",
                  "CommunityRegionIdAtCompletion", "CreatedAt", "UpdatedAt")
             VALUES
                 ({impossibleId}, {impossibleGraph.Actor.Id}, {impossibleGraph.Quest.Id},
                  {impossibleGraph.Participation.Id}, 'CompletionCode', 'Verified',
-                 {now}, NULL, 'Easy', NULL, {now}, {now})
+                 {now}, NULL, 'Easy',
+                 {impossibleGraph.Quest.Category.ToString()},
+                 NULL, {now}, {now})
             """, TestContext.Current.CancellationToken);
 
         try

@@ -4,6 +4,7 @@ using Kiwimpact.Core.Security;
 using Kiwimpact.Core.Services;
 using Kiwimpact.Infrastructure.Achievements;
 using Kiwimpact.Infrastructure.Data;
+using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
 using Kiwimpact.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,9 @@ public sealed class TrustedCompletionPersistenceTests(
     {
         using var scope = await fixture.CreateSeededScopeAsync();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        await AchievementSeed.SeedAndValidateAsync(
+            db,
+            TestContext.Current.CancellationToken);
         var now = DateTimeOffset.Parse("2026-07-27T00:00:00Z");
         var organizer = User();
         var member = User();
@@ -65,6 +69,9 @@ public sealed class TrustedCompletionPersistenceTests(
                 "https://example.test/private-evidence", true, now),
             now, TestContext.Current.CancellationToken);
         Assert.Equal(QuestCompletionStatus.Pending, claim.Status);
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE \"Quests\" SET \"Category\" = {QuestCategory.LearnShare.ToString()} WHERE \"Id\" = {quest.Id}",
+            TestContext.Current.CancellationToken);
 
         var approved = await repository.ReviewClaimAsync(
             claim.ClaimId, reviewer.Id, true, "Evidence is sufficient.",
@@ -75,6 +82,18 @@ public sealed class TrustedCompletionPersistenceTests(
         Assert.Equal(100, (await db.UserProfiles.SingleAsync(
             item => item.Id == member.Id,
             TestContext.Current.CancellationToken)).TotalXp);
+        var award = Assert.Single(await db.UserAchievements
+            .Where(item => item.UserId == member.Id)
+            .ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(
+            Kiwimpact.Core.Achievements.AchievementCatalog.FirstSteps.Id,
+            award.AchievementId);
+        var verifiedCompletion = await db.QuestCompletions.SingleAsync(
+            item => item.Id == claim.ClaimId,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(
+            QuestCategory.RestoreNature,
+            verifiedCompletion.QuestCategorySnapshot);
 
         var passport = new PassportRepository(db);
         var (items, total) = await passport.GetCompletionPageAsync(
@@ -82,6 +101,12 @@ public sealed class TrustedCompletionPersistenceTests(
         Assert.Equal(1, total);
         Assert.Equal(QuestCompletionStatus.Verified, Assert.Single(items).Status);
         Assert.Equal(CompletionMethod.EvidenceClaim, items[0].Method);
+        Assert.Equal(QuestCategory.LearnShare, items[0].QuestCategory);
+        var summary = await passport.GetSummaryAsync(
+            member.Id,
+            TestContext.Current.CancellationToken);
+        var categoryImpact = Assert.Single(summary!.CategoryImpact);
+        Assert.Equal(QuestCategory.RestoreNature, categoryImpact.Category);
     }
 
     private static ApplicationUser User() => new()

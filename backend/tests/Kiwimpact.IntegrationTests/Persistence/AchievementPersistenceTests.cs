@@ -35,7 +35,7 @@ public sealed class AchievementPersistenceTests : IClassFixture<TestDatabaseFixt
             .AsNoTracking()
             .OrderBy(achievement => achievement.Code)
             .ToListAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(3, rows.Count);
+        Assert.Equal(AchievementCatalog.Definitions.Count, rows.Count);
         foreach (var definition in AchievementCatalog.Definitions)
         {
             var row = Assert.Single(
@@ -84,7 +84,7 @@ public sealed class AchievementPersistenceTests : IClassFixture<TestDatabaseFixt
             AchievementSeed.SeedAndValidateAsync(dbA, TestContext.Current.CancellationToken),
             AchievementSeed.SeedAndValidateAsync(dbB, TestContext.Current.CancellationToken));
 
-        Assert.Equal(3, await seedDb.Achievements.CountAsync(
+        Assert.Equal(AchievementCatalog.Definitions.Count, await seedDb.Achievements.CountAsync(
             TestContext.Current.CancellationToken));
     }
 
@@ -100,11 +100,11 @@ public sealed class AchievementPersistenceTests : IClassFixture<TestDatabaseFixt
             null, first.Category, isActive: true, DateTimeOffset.UtcNow));
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        // Must not throw: the missing two rows are inserted and the complete
+        // Must not throw: the missing rows are inserted and the complete
         // catalog validates.
         await AchievementSeed.SeedAndValidateAsync(db, TestContext.Current.CancellationToken);
 
-        Assert.Equal(3, await db.Achievements.CountAsync(
+        Assert.Equal(AchievementCatalog.Definitions.Count, await db.Achievements.CountAsync(
             TestContext.Current.CancellationToken));
     }
 

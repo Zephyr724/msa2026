@@ -57,9 +57,13 @@ public sealed record AuthSessionDto(
     Guid UserId,
     string DisplayName,
     string Email,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    bool HasPassword = true,
+    IReadOnlyList<string>? LinkedProviders = null);
 
 public sealed record AntiforgeryTokenDto(string Token);
+
+public sealed record ExternalAuthStartDto(string RedirectUrl);
 
 public sealed class EmailOnlyRequest
 {

@@ -5,10 +5,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   achievementKeys,
   useAchievementCatalog,
+  useAchievementNationwideStats,
+  useMyAchievementProfile,
   useMyAchievements,
 } from '../../src/hooks/useAchievements.ts';
 import {
   fetchAchievementCatalog,
+  fetchAchievementNationwideStats,
+  fetchMyAchievementProfile,
   fetchMyAchievements,
 } from '../../src/lib/api/achievements.ts';
 import { authQueryKey } from '../../src/lib/api/privateCache.ts';
@@ -21,6 +25,36 @@ const catalogItem = {
   description: 'Complete one verified quest.',
   iconUrl: null,
   category: 'Milestone',
+};
+
+const nationwideStat = {
+  achievementId: catalogItem.id,
+  nationwideEarnedCount: 1,
+  nationwideMemberCount: 100,
+  earnedPercentage: 1,
+  rarity: 'UltraRare',
+  calculatedAtUtc: '2026-07-30T00:00:00.0000000Z',
+};
+
+const achievementProfile = {
+  earnedDistinctCount: 0,
+  activeAchievementCount: 45,
+  trophy: {
+    tier: 'Locked',
+    requiredCount: 0,
+    nextTier: 'Bronze',
+    nextRequiredCount: 5,
+    nationwideEarnedCount: 0,
+    nationwideMemberCount: 100,
+    earnedPercentage: 0,
+    rarity: 'Unawarded',
+    calculatedAtUtc: '2026-07-30T00:00:00.0000000Z',
+  },
+  cosmetics: {
+    passportBorderStyle: null,
+    avatarFrameStyle: null,
+    badgeStampStyles: [],
+  },
 };
 
 function createQueryClient() {
@@ -50,6 +84,42 @@ describe('achievement transport and hooks', () => {
     expect(achievementKeys.all).toEqual(['achievements']);
     expect(achievementKeys.catalog).toEqual(['achievements', 'catalog']);
     expect(achievementKeys.mine).toEqual(['achievements', 'me']);
+    expect(achievementKeys.stats).toEqual(['achievements', 'stats']);
+    expect(achievementKeys.profile).toEqual(
+      ['achievements', 'profile', 'me'],
+    );
+  });
+
+  it('fetches anonymous stats with a five-minute stale time', async () => {
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve(jsonResponse([nationwideStat]))));
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () => useAchievementNationwideStats(),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual([nationwideStat]);
+    expect(queryClient.getQueryCache().find({
+      queryKey: achievementKeys.stats,
+    })?.options.staleTime).toBe(300_000);
+  });
+
+  it('fetches the private trophy profile with a one-minute stale time', async () => {
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve(jsonResponse(achievementProfile))));
+    const queryClient = createQueryClient();
+    const { result } = renderHook(
+      () => useMyAchievementProfile(),
+      { wrapper: wrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(achievementProfile);
+    expect(queryClient.getQueryCache().find({
+      queryKey: achievementKeys.profile,
+    })?.options.staleTime).toBe(60_000);
   });
 
   it('fetches and validates the catalog with a 24-hour stale time', async () => {
@@ -142,6 +212,21 @@ describe('achievement transport and hooks', () => {
     expect(queryClient.getQueriesData({ queryKey: achievementKeys.all })).toEqual([]);
   });
 
+  it('uses the same private-session cleanup for a trophy-profile 401', async () => {
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve(jsonResponse({ title: 'Unauthorized' }, 401))));
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(authQueryKey, { userId: 'user-a' });
+    queryClient.setQueryData(achievementKeys.profile, achievementProfile);
+
+    await expect(fetchMyAchievementProfile({ queryClient }))
+      .rejects.toMatchObject({ status: 401 });
+
+    expect(queryClient.getQueryData(authQueryKey)).toBeNull();
+    expect(queryClient.getQueriesData({ queryKey: achievementKeys.all }))
+      .toEqual([]);
+  });
+
   it('keeps the anonymous catalog transport outside private-session cleanup', async () => {
     vi.stubGlobal('fetch', vi.fn(() =>
       Promise.resolve(jsonResponse({ title: 'Server error' }, 500))));
@@ -149,6 +234,8 @@ describe('achievement transport and hooks', () => {
     queryClient.setQueryData(authQueryKey, { userId: 'user-a' });
 
     await expect(fetchAchievementCatalog()).rejects.toMatchObject({ status: 500 });
+    await expect(fetchAchievementNationwideStats())
+      .rejects.toMatchObject({ status: 500 });
     expect(queryClient.getQueryData(authQueryKey)).toEqual({ userId: 'user-a' });
   });
 });

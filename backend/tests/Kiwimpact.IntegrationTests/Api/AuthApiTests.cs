@@ -7,8 +7,10 @@ using Kiwimpact.Core.Authorization;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -145,9 +147,15 @@ public sealed class AuthApiTests : IClassFixture<CustomWebApplicationFactory>
         var json = await me.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);
         Assert.Equal(
-            new[] { "displayName", "email", "roles", "userId" },
+            new[]
+            {
+                "displayName", "email", "hasPassword",
+                "linkedProviders", "roles", "userId",
+            },
             json.EnumerateObject().Select(property => property.Name).Order().ToArray());
         Assert.Equal(email, json.GetProperty("email").GetString());
+        Assert.True(json.GetProperty("hasPassword").GetBoolean());
+        Assert.Empty(json.GetProperty("linkedProviders").EnumerateArray());
 
         token = await GetCsrfTokenAsync(client);
         var logout = await PostWithCsrfAsync(client, "/api/v1/auth/logout", token);
@@ -462,10 +470,301 @@ public sealed class AuthApiTests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal(knownResult, unknownResult);
     }
 
+    [Fact]
+    public async Task GoogleLogin_CreatesGoogleOnlyMemberAndSession()
+    {
+        var email = UniqueEmail();
+        using var host = CreateGoogleHost(email, "google-new-member");
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+        });
+
+        var providerCallback = await client.GetAsync(
+            "/api/v1/auth/external-login/google?returnUrl=%2Fpassport",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Redirect, providerCallback.StatusCode);
+
+        var completed = await client.GetAsync(
+            Assert.IsType<Uri>(providerCallback.Headers.Location),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Redirect, completed.StatusCode);
+        Assert.Equal(
+            "http://localhost:5173/passport",
+            completed.Headers.Location?.AbsoluteUri);
+
+        var me = await client.GetFromJsonAsync<AuthSessionDto>(
+            "/api/v1/auth/me",
+            TestContext.Current.CancellationToken);
+        Assert.NotNull(me);
+        Assert.Equal(email, me.Email);
+        Assert.False(me.HasPassword);
+        Assert.Equal(["Google"], me.LinkedProviders);
+        Assert.Equal([AppRoles.Member], me.Roles);
+
+        var csrf = await GetCsrfTokenAsync(client);
+        var passwordChange = await PostJsonWithCsrfAsync(
+            client,
+            "/api/v1/auth/change-password",
+            new ChangePasswordRequest
+            {
+                CurrentPassword = ValidPassword,
+                NewPassword = "AnotherPass!5678",
+                NewPasswordConfirmation = "AnotherPass!5678",
+            },
+            csrf);
+        Assert.Equal(HttpStatusCode.Forbidden, passwordChange.StatusCode);
+
+        using var scope = host.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = Assert.IsType<ApplicationUser>(await userManager.FindByEmailAsync(email));
+        Assert.True(user.EmailConfirmed);
+        Assert.False(await userManager.HasPasswordAsync(user));
+        Assert.Single(await userManager.GetLoginsAsync(user));
+    }
+
+    [Fact]
+    public async Task GoogleLogin_DoesNotAutomaticallyLinkMatchingEmail()
+    {
+        var email = UniqueEmail();
+        using var host = CreateGoogleHost(email, "google-existing-email");
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+        });
+        Assert.Equal(HttpStatusCode.Created, (await RegisterAsync(client, email)).StatusCode);
+
+        var providerCallback = await client.GetAsync(
+            "/api/v1/auth/external-login/google",
+            TestContext.Current.CancellationToken);
+        var completed = await client.GetAsync(
+            Assert.IsType<Uri>(providerCallback.Headers.Location),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Redirect, completed.StatusCode);
+        Assert.Contains(
+            "externalError=account_exists",
+            completed.Headers.Location?.Query,
+            StringComparison.Ordinal);
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            (await client.GetAsync(
+                "/api/v1/auth/me",
+                TestContext.Current.CancellationToken)).StatusCode);
+
+        using var scope = host.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = Assert.IsType<ApplicationUser>(await userManager.FindByEmailAsync(email));
+        Assert.Empty(await userManager.GetLoginsAsync(user));
+    }
+
+    [Fact]
+    public async Task GoogleLogin_RejectsUnverifiedEmailWithoutCreatingAccount()
+    {
+        var email = UniqueEmail();
+        using var host = CreateGoogleHost(
+            email,
+            "google-unverified-email",
+            emailVerified: false);
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+        });
+
+        var providerCallback = await client.GetAsync(
+            "/api/v1/auth/external-login/google",
+            TestContext.Current.CancellationToken);
+        var completed = await client.GetAsync(
+            Assert.IsType<Uri>(providerCallback.Headers.Location),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Redirect, completed.StatusCode);
+        Assert.Contains(
+            "externalError=unverified_email",
+            completed.Headers.Location?.Query,
+            StringComparison.Ordinal);
+        using var scope = host.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        Assert.Null(await userManager.FindByEmailAsync(email));
+    }
+
+    [Fact]
+    public async Task GoogleLogin_RejectsExternalReturnUrlAndHandlesUnconfiguredProvider()
+    {
+        using (var unconfiguredHost = CreateIsolatedHost())
+        {
+            var unconfiguredClient = unconfiguredHost.CreateClient(
+                new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            var unavailable = await unconfiguredClient.GetAsync(
+                "/api/v1/auth/external-login/google",
+                TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.Redirect, unavailable.StatusCode);
+            Assert.Equal(
+                "http://localhost:5173/login?externalError=unavailable",
+                unavailable.Headers.Location?.AbsoluteUri);
+        }
+
+        using var host = CreateGoogleHost(UniqueEmail(), "google-safe-return");
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+        });
+        var providerCallback = await client.GetAsync(
+            "/api/v1/auth/external-login/google?returnUrl=https%3A%2F%2Fevil.example",
+            TestContext.Current.CancellationToken);
+        var completed = await client.GetAsync(
+            Assert.IsType<Uri>(providerCallback.Headers.Location),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Redirect, completed.StatusCode);
+        Assert.Equal("http://localhost:5173/", completed.Headers.Location?.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task GoogleLink_RequiresAuthenticatedCsrfFlowAndLinksCurrentAccount()
+    {
+        var email = UniqueEmail();
+        using var host = CreateGoogleHost(
+            "different-google-email@example.test",
+            "google-link-key");
+        var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+        });
+        Assert.Equal(HttpStatusCode.Created, (await RegisterAsync(client, email)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(client, email, ValidPassword)).StatusCode);
+
+        var missingCsrf = await client.PostAsync(
+            "/api/v1/auth/link/google",
+            content: null,
+            TestContext.Current.CancellationToken);
+        await AssertCsrfFailureAsync(missingCsrf);
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            (await client.GetAsync(
+                "/api/v1/auth/link/google/start",
+                TestContext.Current.CancellationToken)).StatusCode);
+
+        var csrf = await GetCsrfTokenAsync(client);
+        var start = await PostWithCsrfAsync(client, "/api/v1/auth/link/google", csrf);
+        Assert.Equal(HttpStatusCode.OK, start.StatusCode);
+        var startBody = await start.Content.ReadFromJsonAsync<ExternalAuthStartDto>(
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            (await client.GetAsync(
+                $"{Assert.IsType<string>(startBody?.RedirectUrl)}tampered",
+                TestContext.Current.CancellationToken)).StatusCode);
+
+        var providerCallback = await client.GetAsync(
+            Assert.IsType<string>(startBody?.RedirectUrl),
+            TestContext.Current.CancellationToken);
+        var completed = await client.GetAsync(
+            Assert.IsType<Uri>(providerCallback.Headers.Location),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Redirect, completed.StatusCode);
+        Assert.Contains(
+            "googleLinked=1",
+            completed.Headers.Location?.Query,
+            StringComparison.Ordinal);
+
+        var me = await client.GetFromJsonAsync<AuthSessionDto>(
+            "/api/v1/auth/me",
+            TestContext.Current.CancellationToken);
+        Assert.NotNull(me);
+        Assert.True(me.HasPassword);
+        Assert.Equal(["Google"], me.LinkedProviders);
+
+        using var scope = host.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = Assert.IsType<ApplicationUser>(await userManager.FindByEmailAsync(email));
+        Assert.Single(await userManager.GetLoginsAsync(user));
+    }
+
+    [Fact]
+    public async Task GoogleLink_RejectsProviderAlreadyLinkedToAnotherAccount()
+    {
+        using var host = CreateGoogleHost(
+            "google-owner@example.test",
+            "google-shared-provider-key");
+        var ownerClient = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+        });
+        var ownerProviderCallback = await ownerClient.GetAsync(
+            "/api/v1/auth/external-login/google",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(
+            HttpStatusCode.Redirect,
+            (await ownerClient.GetAsync(
+                Assert.IsType<Uri>(ownerProviderCallback.Headers.Location),
+                TestContext.Current.CancellationToken)).StatusCode);
+
+        var memberClient = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+        });
+        var memberEmail = UniqueEmail();
+        Assert.Equal(
+            HttpStatusCode.Created,
+            (await RegisterAsync(memberClient, memberEmail)).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.OK,
+            (await LoginAsync(memberClient, memberEmail, ValidPassword)).StatusCode);
+        var csrf = await GetCsrfTokenAsync(memberClient);
+        var start = await PostWithCsrfAsync(
+            memberClient,
+            "/api/v1/auth/link/google",
+            csrf);
+        var startBody = await start.Content.ReadFromJsonAsync<ExternalAuthStartDto>(
+            TestContext.Current.CancellationToken);
+        var providerCallback = await memberClient.GetAsync(
+            Assert.IsType<string>(startBody?.RedirectUrl),
+            TestContext.Current.CancellationToken);
+        var completed = await memberClient.GetAsync(
+            Assert.IsType<Uri>(providerCallback.Headers.Location),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Redirect, completed.StatusCode);
+        Assert.Contains(
+            "googleError=already_linked",
+            completed.Headers.Location?.Query,
+            StringComparison.Ordinal);
+        using var scope = host.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var member = Assert.IsType<ApplicationUser>(
+            await userManager.FindByEmailAsync(memberEmail));
+        Assert.Empty(await userManager.GetLoginsAsync(member));
+    }
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private WebApplicationFactory<Program> CreateIsolatedHost() =>
         _factory.WithWebHostBuilder(_ => { });
+
+    private WebApplicationFactory<Program> CreateGoogleHost(
+        string email,
+        string providerKey,
+        bool emailVerified = true) =>
+        _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+                services
+                    .AddAuthentication()
+                    .AddScheme<FakeGoogleOptions, FakeGoogleHandler>(
+                        "Google",
+                        options =>
+                        {
+                            options.Email = email;
+                            options.ProviderKey = providerKey;
+                            options.EmailVerified = emailVerified;
+                        })));
 
     private static string UniqueEmail() => $"auth-{Guid.NewGuid():N}@example.test";
 

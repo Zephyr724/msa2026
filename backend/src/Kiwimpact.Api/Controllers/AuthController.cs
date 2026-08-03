@@ -5,8 +5,11 @@ using Kiwimpact.Core.Authorization;
 using Kiwimpact.Core.Entities;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Identity;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -14,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Text;
 using System.Security.Claims;
+using System.Security.Cryptography;
 
 namespace Kiwimpact.Api.Controllers;
 
@@ -30,6 +34,8 @@ public sealed class AuthController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IAccountEmailSender _emailSender;
+    private readonly IAuthenticationSchemeProvider _schemeProvider;
+    private readonly ITimeLimitedDataProtector _googleLinkProtector;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
 
@@ -39,6 +45,8 @@ public sealed class AuthController : ControllerBase
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         IAccountEmailSender emailSender,
+        IAuthenticationSchemeProvider schemeProvider,
+        IDataProtectionProvider dataProtectionProvider,
         IConfiguration configuration,
         ILogger<AuthController> logger)
     {
@@ -47,6 +55,10 @@ public sealed class AuthController : ControllerBase
         _userManager = userManager;
         _signInManager = signInManager;
         _emailSender = emailSender;
+        _schemeProvider = schemeProvider;
+        _googleLinkProtector = dataProtectionProvider
+            .CreateProtector("Kiwimpact.GoogleLinkStart.v1")
+            .ToTimeLimitedDataProtector();
         _configuration = configuration;
         _logger = logger;
     }
@@ -101,6 +113,8 @@ public sealed class AuthController : ControllerBase
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         try
         {
+            // Identity, role membership, and the domain profile form one
+            // account boundary and must either all commit or all roll back.
             var createResult = await _userManager.CreateAsync(user, request.Password);
             if (!createResult.Succeeded)
             {
@@ -133,7 +147,9 @@ public sealed class AuthController : ControllerBase
             user.Id,
             displayName,
             email,
-            [AppRoles.Member]);
+            [AppRoles.Member],
+            HasPassword: true,
+            LinkedProviders: []);
         return Created("/api/v1/auth/me", response);
     }
 
@@ -163,6 +179,8 @@ public sealed class AuthController : ControllerBase
         [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken,
         CancellationToken ct)
     {
+        // Always return the same response so this endpoint cannot be used to
+        // discover whether an email address has an account.
         var user = await _userManager.FindByEmailAsync(request.Email.Trim());
         if (user is not null && !await _userManager.IsEmailConfirmedAsync(user))
             await SendConfirmationAsync(user, ct);
@@ -178,6 +196,8 @@ public sealed class AuthController : ControllerBase
         [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken,
         CancellationToken ct)
     {
+        // Eligibility affects email delivery only; the HTTP response remains
+        // indistinguishable for unknown, unconfirmed, and confirmed accounts.
         var user = await _userManager.FindByEmailAsync(request.Email.Trim());
         if (user is not null && await _userManager.IsEmailConfirmedAsync(user))
         {
@@ -221,6 +241,13 @@ public sealed class AuthController : ControllerBase
         var user = await _userManager.GetUserAsync(User);
         if (user is null)
             return Unauthorized();
+        if (!await _userManager.HasPasswordAsync(user))
+        {
+            return Problem(
+                title: "Local password unavailable",
+                detail: "Add a local password before using password change.",
+                statusCode: StatusCodes.Status403Forbidden);
+        }
         var result = await _userManager.ChangePasswordAsync(
             user, request.CurrentPassword, request.NewPassword);
         if (!result.Succeeded)
@@ -232,6 +259,234 @@ public sealed class AuthController : ControllerBase
         }
         await _signInManager.RefreshSignInAsync(user);
         return Ok(new AccountLifecycleResultDto("Password changed."));
+    }
+
+    /// <summary>Start Google sign-in through the configured OAuth handler.</summary>
+    [HttpGet("external-login/google")]
+    [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimitPolicies.Login)]
+    public async Task<IActionResult> GoogleLogin([FromQuery] string? returnUrl = null)
+    {
+        if (!await IsGoogleConfiguredAsync())
+            return RedirectToLoginError("unavailable");
+
+        var safeReturnUrl = NormalizeFrontendPath(returnUrl);
+        var callbackUrl = Url.Action(
+            nameof(GoogleLoginCallback),
+            values: new { returnUrl = safeReturnUrl });
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+            GoogleDefaults.AuthenticationScheme,
+            callbackUrl!);
+        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+
+    /// <summary>Complete Google sign-in after the provider middleware callback.</summary>
+    [HttpGet("external-login/google/callback")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GoogleLoginCallback(
+        [FromQuery] string? returnUrl = null,
+        [FromQuery] string? remoteError = null,
+        CancellationToken cancellationToken = default)
+    {
+        var safeReturnUrl = NormalizeFrontendPath(returnUrl);
+        if (!string.IsNullOrWhiteSpace(remoteError))
+            return RedirectToLoginError("provider");
+
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info is null ||
+            !string.Equals(
+                info.LoginProvider,
+                GoogleDefaults.AuthenticationScheme,
+                StringComparison.Ordinal))
+        {
+            return RedirectToLoginError("provider");
+        }
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        var signInResult = await _signInManager.ExternalLoginSignInAsync(
+            info.LoginProvider,
+            info.ProviderKey,
+            isPersistent: false,
+            bypassTwoFactor: true);
+        if (signInResult.Succeeded)
+            return Redirect(BuildFrontendUrl(safeReturnUrl));
+        if (signInResult.IsLockedOut)
+            return RedirectToLoginError("locked");
+
+        var email = info.Principal.FindFirstValue(ClaimTypes.Email)?.Trim();
+        var emailVerified = string.Equals(
+            info.Principal.FindFirstValue("urn:google:email_verified"),
+            bool.TrueString,
+            StringComparison.OrdinalIgnoreCase);
+        if (!emailVerified || string.IsNullOrWhiteSpace(email))
+            return RedirectToLoginError("unverified_email");
+
+        // An email match is deliberately not enough to link accounts. The
+        // owner must authenticate the existing Kiwimpact account and use the
+        // explicit settings flow below.
+        if (await _userManager.FindByEmailAsync(email) is not null)
+            return RedirectToLoginError("account_exists");
+
+        if (!await _db.Roles.AnyAsync(
+                role => role.NormalizedName == AppRoles.Member.ToUpperInvariant(),
+                cancellationToken))
+        {
+            return RedirectToLoginError("unavailable");
+        }
+
+        var displayName = ResolveGoogleDisplayName(info.Principal, email);
+        var user = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            LockoutEnabled = true,
+        };
+
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var createResult = await _userManager.CreateAsync(user);
+            var roleResult = createResult.Succeeded
+                ? await _userManager.AddToRoleAsync(user, AppRoles.Member)
+                : IdentityResult.Failed();
+            var loginResult = roleResult.Succeeded
+                ? await _userManager.AddLoginAsync(user, info)
+                : IdentityResult.Failed();
+            if (!createResult.Succeeded || !roleResult.Succeeded || !loginResult.Succeeded)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return RedirectToLoginError("unavailable");
+            }
+
+            _db.UserProfiles.Add(UserProfile.Create(
+                user.Id,
+                displayName,
+                DateTimeOffset.UtcNow));
+            await _db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return RedirectToLoginError("unavailable");
+        }
+
+        await _signInManager.SignInAsync(user, isPersistent: false);
+        return Redirect(BuildFrontendUrl(safeReturnUrl));
+    }
+
+    /// <summary>Authorize the authenticated account-linking redirect.</summary>
+    [HttpPost("link/google")]
+    [Authorize]
+    [EnableRateLimiting(AuthRateLimitPolicies.Login)]
+    [ProducesResponseType(typeof(ExternalAuthStartDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> LinkGoogle(
+        [FromHeader(Name = "X-CSRF-TOKEN"), Required] string csrfToken)
+    {
+        if (!await IsGoogleConfiguredAsync())
+            return GoogleUnavailable();
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+            return Unauthorized();
+
+        var existingLogins = await _userManager.GetLoginsAsync(user);
+        if (existingLogins.Any(login =>
+                string.Equals(
+                    login.LoginProvider,
+                    GoogleDefaults.AuthenticationScheme,
+                    StringComparison.Ordinal)))
+        {
+            return Ok(new ExternalAuthStartDto(
+                BuildFrontendUrl("/settings/profile", ("googleLinked", "1"))));
+        }
+
+        var token = _googleLinkProtector.Protect(
+            user.Id.ToString(),
+            TimeSpan.FromMinutes(5));
+        return Ok(new ExternalAuthStartDto(
+            Url.Action(nameof(LinkGoogleStart), values: new { token })!));
+    }
+
+    /// <summary>Start the provider challenge for an authenticated link request.</summary>
+    [HttpGet("link/google/start")]
+    [Authorize]
+    public async Task<IActionResult> LinkGoogleStart([FromQuery] string? token)
+    {
+        if (!await IsGoogleConfiguredAsync())
+            return GoogleUnavailable();
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+            return Unauthorized();
+        if (string.IsNullOrWhiteSpace(token) ||
+            !TryValidateGoogleLinkToken(token, user.Id))
+        {
+            return Problem(
+                title: "Invalid Google link request",
+                detail: "Start Google linking again from Profile Settings.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var callbackUrl = Url.Action(nameof(LinkGoogleCallback));
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+            GoogleDefaults.AuthenticationScheme,
+            callbackUrl!,
+            user.Id.ToString());
+        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+
+    /// <summary>Attach the verified Google identity to the current account.</summary>
+    [HttpGet("link/google/callback")]
+    [Authorize]
+    public async Task<IActionResult> LinkGoogleCallback([FromQuery] string? remoteError = null)
+    {
+        if (!string.IsNullOrWhiteSpace(remoteError))
+            return RedirectToLinkResult("provider");
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+            return Unauthorized();
+
+        var info = await _signInManager.GetExternalLoginInfoAsync(user.Id.ToString());
+        if (info is null ||
+            !string.Equals(
+                info.LoginProvider,
+                GoogleDefaults.AuthenticationScheme,
+                StringComparison.Ordinal))
+        {
+            return RedirectToLinkResult("provider");
+        }
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        var linkedUser = await _userManager.FindByLoginAsync(
+            info.LoginProvider,
+            info.ProviderKey);
+        if (linkedUser is not null && linkedUser.Id != user.Id)
+            return RedirectToLinkResult("already_linked");
+
+        if (linkedUser is null)
+        {
+            try
+            {
+                var result = await _userManager.AddLoginAsync(user, info);
+                if (!result.Succeeded)
+                    return RedirectToLinkResult("unavailable");
+            }
+            catch (DbUpdateException)
+            {
+                // The provider-login primary key remains authoritative when
+                // two accounts race to link the same Google identity.
+                return RedirectToLinkResult("unavailable");
+            }
+        }
+
+        await _signInManager.RefreshSignInAsync(user);
+        return Redirect(BuildFrontendUrl(
+            "/settings/profile",
+            ("googleLinked", "1")));
     }
 
     /// <summary>Issue the Identity application cookie for valid credentials.</summary>
@@ -318,11 +573,17 @@ public sealed class AuthController : ControllerBase
         }
 
         var roles = await _userManager.GetRolesAsync(user);
+        var logins = await _userManager.GetLoginsAsync(user);
         return new AuthSessionDto(
             user.Id,
             profile.DisplayName,
             user.Email,
-            roles.Order(StringComparer.Ordinal).ToArray());
+            roles.Order(StringComparer.Ordinal).ToArray(),
+            await _userManager.HasPasswordAsync(user),
+            logins
+                .Select(login => login.LoginProvider)
+                .Order(StringComparer.Ordinal)
+                .ToArray());
     }
 
     private ObjectResult RegistrationFailure()
@@ -358,6 +619,8 @@ public sealed class AuthController : ControllerBase
         }
         catch (Exception exception)
         {
+            // Registration remains successful even when delivery is
+            // temporarily unavailable; the member can request another email.
             _logger.LogError(
                 exception,
                 "Confirmation email delivery failed for account {UserId}.",
@@ -392,6 +655,61 @@ public sealed class AuthController : ControllerBase
         var root = (_configuration["Auth:FrontendBaseUrl"] ?? "http://localhost:5173")
             .TrimEnd('/');
         return FrontendAccountLinkBuilder.Build(root, path, query);
+    }
+
+    private async Task<bool> IsGoogleConfiguredAsync() =>
+        await _schemeProvider.GetSchemeAsync(GoogleDefaults.AuthenticationScheme) is not null;
+
+    private ObjectResult GoogleUnavailable() =>
+        Problem(
+            title: "Google sign-in unavailable",
+            detail: "Google sign-in is not configured for this environment.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    private RedirectResult RedirectToLoginError(string error) =>
+        Redirect(BuildFrontendUrl("/login", ("externalError", error)));
+
+    private RedirectResult RedirectToLinkResult(string error) =>
+        Redirect(BuildFrontendUrl("/settings/profile", ("googleError", error)));
+
+    private string NormalizeFrontendPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) ||
+            !Url.IsLocalUrl(path) ||
+            !path.StartsWith("/", StringComparison.Ordinal) ||
+            path.StartsWith("//", StringComparison.Ordinal) ||
+            path.Contains('\\'))
+        {
+            return "/";
+        }
+
+        return path;
+    }
+
+    private bool TryValidateGoogleLinkToken(string token, Guid userId)
+    {
+        try
+        {
+            var protectedUserId = _googleLinkProtector.Unprotect(
+                token,
+                out _);
+            return Guid.TryParse(protectedUserId, out var parsedUserId) &&
+                parsedUserId == userId;
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
+    }
+
+    private static string ResolveGoogleDisplayName(ClaimsPrincipal principal, string email)
+    {
+        var candidate = principal.FindFirstValue(ClaimTypes.Name)?.Trim();
+        if (string.IsNullOrWhiteSpace(candidate))
+            candidate = email.Split('@', 2)[0];
+        return candidate.Length <= UserProfile.MaxDisplayNameLength
+            ? candidate
+            : candidate[..UserProfile.MaxDisplayNameLength];
     }
 
     private static bool TryDecodeToken(string encoded, out string token)

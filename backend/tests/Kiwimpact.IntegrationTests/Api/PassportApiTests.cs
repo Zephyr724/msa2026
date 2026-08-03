@@ -581,6 +581,13 @@ public sealed class PassportApiTests
             QuestDifficulty.Easy,
             communityRegionId: regionId);
         await AwardAsync(completion);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE \"Quests\" SET \"Category\" = {QuestCategory.LearnShare.ToString()} WHERE \"Id\" = {completion.QuestId}",
+                TestContext.Current.CancellationToken);
+        }
 
         var response = await actor.Client.GetAsync(
             "/api/v1/users/me/passport",
@@ -734,11 +741,13 @@ public sealed class PassportApiTests
             INSERT INTO "QuestCompletions"
                 ("Id", "UserId", "QuestId", "ParticipationId", "Method", "Status",
                  "CompletedAt", "VerifiedAtUtc", "RewardDifficultySnapshot",
+                 "QuestCategorySnapshot",
                  "CommunityRegionIdAtCompletion", "CreatedAt", "UpdatedAt")
             VALUES
                 ({completionId}, {userId}, {quest.Id},
                  {participation.Id}, {method}, 'Verified',
-                 {now}, {verifiedAtUtc}, 'Easy', NULL, {now}, {now})
+                 {now}, {verifiedAtUtc}, 'Easy', {quest.Category.ToString()},
+                 NULL, {now}, {now})
             """, TestContext.Current.CancellationToken);
         return completionId;
     }

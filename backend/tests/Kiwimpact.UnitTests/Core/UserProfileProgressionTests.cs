@@ -1,3 +1,4 @@
+using Kiwimpact.Core.Achievements;
 using Kiwimpact.Core.Entities;
 
 namespace Kiwimpact.UnitTests.Core;
@@ -14,6 +15,41 @@ public sealed class UserProfileProgressionTests
 
         Assert.Equal(0, profile.TotalXp);
         Assert.Equal(1, profile.Level);
+        Assert.Equal(
+            AchievementCatalog.CurrentEvaluationVersion,
+            profile.AchievementEvaluationVersion);
+    }
+
+    [Fact]
+    public void AchievementEvaluationVersionAdvancesMonotonicallyToCurrent()
+    {
+        var profile = UserProfile.Create(Guid.NewGuid(), "Tester", Now);
+        SetInternal(profile, nameof(UserProfile.AchievementEvaluationVersion), 0);
+
+        profile.MarkAchievementsEvaluated(1);
+        Assert.Equal(1, profile.AchievementEvaluationVersion);
+
+        profile.MarkAchievementsEvaluated(
+            AchievementCatalog.CurrentEvaluationVersion);
+        Assert.Equal(
+            AchievementCatalog.CurrentEvaluationVersion,
+            profile.AchievementEvaluationVersion);
+    }
+
+    [Fact]
+    public void AchievementEvaluationVersionRejectsRegressionAndFutureVersions()
+    {
+        var profile = UserProfile.Create(Guid.NewGuid(), "Tester", Now);
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => profile.MarkAchievementsEvaluated(
+                AchievementCatalog.CurrentEvaluationVersion - 1));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => profile.MarkAchievementsEvaluated(
+                AchievementCatalog.CurrentEvaluationVersion + 1));
+        Assert.Equal(
+            AchievementCatalog.CurrentEvaluationVersion,
+            profile.AchievementEvaluationVersion);
     }
 
     [Fact]

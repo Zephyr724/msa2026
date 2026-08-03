@@ -28,6 +28,10 @@ public sealed class QuestCompletionConfiguration
             .IsRequired()
             .HasMaxLength(50)
             .HasConversion<string>();
+        builder.Property(completion => completion.QuestCategorySnapshot)
+            .IsRequired()
+            .HasMaxLength(50)
+            .HasConversion<string>();
         builder.Property(completion => completion.CreatedAt)
             .IsRequired();
         builder.Property(completion => completion.UpdatedAt)
@@ -73,6 +77,14 @@ public sealed class QuestCompletionConfiguration
 
         builder.HasIndex(completion => completion.QuestId);
         builder.HasIndex(completion => completion.CommunityRegionIdAtCompletion);
+        builder.HasIndex(completion => new
+            {
+                completion.UserId,
+                completion.QuestCategorySnapshot,
+                completion.VerifiedAtUtc,
+            })
+            .HasDatabaseName(
+                "IX_QuestCompletions_UserId_CategorySnapshot_VerifiedAtUtc");
         builder.HasIndex(completion => new { completion.Method, completion.Status, completion.CreatedAt });
     }
 }

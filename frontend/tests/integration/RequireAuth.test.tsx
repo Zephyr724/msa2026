@@ -31,7 +31,32 @@ const emptyHistory = {
   hasPreviousPage: false,
 };
 
-const PRIVATE_URLS = ['/v1/users/me/progression', '/v1/users/me/passport/completions'];
+const achievementProfile = {
+  earnedDistinctCount: 0,
+  activeAchievementCount: 45,
+  trophy: {
+    tier: 'Locked',
+    requiredCount: 0,
+    nextTier: 'Bronze',
+    nextRequiredCount: 5,
+    nationwideEarnedCount: 0,
+    nationwideMemberCount: 0,
+    earnedPercentage: 0,
+    rarity: 'Unawarded',
+    calculatedAtUtc: '2026-07-30T00:00:00.0000000Z',
+  },
+  cosmetics: {
+    passportBorderStyle: null,
+    avatarFrameStyle: null,
+    badgeStampStyles: [],
+  },
+};
+
+const PRIVATE_URLS = [
+  '/v1/users/me/progression',
+  '/v1/users/me/passport/completions',
+  '/v1/users/me/achievement-profile',
+];
 
 function privateCalls(fetchMock: ReturnType<typeof vi.fn>) {
   return fetchMock.mock.calls.filter(([url]) =>
@@ -104,6 +129,9 @@ describe('RequireAuth guard (F6/F7/F8)', () => {
       if (url.includes('/v1/users/me/passport/completions')) {
         return Promise.resolve(jsonResponse(emptyHistory));
       }
+      if (url.endsWith('/v1/users/me/achievement-profile')) {
+        return Promise.resolve(jsonResponse(achievementProfile));
+      }
       return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
     });
     renderGuardedPassport(fetchMock);
@@ -118,7 +146,7 @@ describe('RequireAuth guard (F6/F7/F8)', () => {
 
     expect(await screen.findByRole('heading', { name: 'Aroha — Passport' }))
       .toBeInTheDocument();
-    await waitFor(() => expect(privateCalls(fetchMock).length).toBe(2));
+    await waitFor(() => expect(privateCalls(fetchMock).length).toBe(3));
   });
 
   it('F8: renders children for an authenticated session and fires private fetches only then', async () => {
@@ -133,6 +161,9 @@ describe('RequireAuth guard (F6/F7/F8)', () => {
       if (url.includes('/v1/users/me/passport/completions')) {
         return Promise.resolve(jsonResponse(emptyHistory));
       }
+      if (url.endsWith('/v1/users/me/achievement-profile')) {
+        return Promise.resolve(jsonResponse(achievementProfile));
+      }
       return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
     });
     renderGuardedPassport(fetchMock);
@@ -140,6 +171,6 @@ describe('RequireAuth guard (F6/F7/F8)', () => {
     expect(await screen.findByRole('heading', { name: 'Aroha — Passport' }))
       .toBeInTheDocument();
     expect(screen.queryByText('Sign in page')).not.toBeInTheDocument();
-    await waitFor(() => expect(privateCalls(fetchMock).length).toBe(2));
+    await waitFor(() => expect(privateCalls(fetchMock).length).toBe(3));
   });
 });

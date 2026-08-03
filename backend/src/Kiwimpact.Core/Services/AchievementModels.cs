@@ -1,3 +1,5 @@
+using Kiwimpact.Core.Achievements;
+
 namespace Kiwimpact.Core.Services;
 
 public enum AchievementReadError
@@ -33,3 +35,33 @@ public sealed record EarnedAchievementItem(
     string? IconUrl,
     string Category,
     DateTimeOffset AwardedAt);
+
+public sealed record AchievementNationwideStat(
+    Guid AchievementId,
+    int NationwideEarnedCount,
+    int NationwideMemberCount,
+    decimal EarnedPercentage,
+    AchievementRarity Rarity,
+    DateTimeOffset CalculatedAtUtc);
+
+public sealed record AchievementCosmetics(
+    string? PassportBorderStyle,
+    string? AvatarFrameStyle,
+    IReadOnlyList<string> BadgeStampStyles);
+
+public sealed record AchievementTrophyProfile(
+    AchievementTrophyTier Tier,
+    int RequiredCount,
+    AchievementTrophyTier? NextTier,
+    int? NextRequiredCount,
+    int NationwideEarnedCount,
+    int NationwideMemberCount,
+    decimal EarnedPercentage,
+    AchievementRarity Rarity,
+    DateTimeOffset CalculatedAtUtc);
+
+public sealed record AchievementProfile(
+    int EarnedDistinctCount,
+    int ActiveAchievementCount,
+    AchievementTrophyProfile Trophy,
+    AchievementCosmetics Cosmetics);

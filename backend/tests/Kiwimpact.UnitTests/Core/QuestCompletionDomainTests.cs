@@ -159,7 +159,10 @@ public sealed class QuestCompletionDomainTests
             Now);
 
         quest.UpdateDetails(
-            CreateDetails(RegistrationMode.Native, QuestDifficulty.Hard),
+            CreateDetails(
+                RegistrationMode.Native,
+                QuestDifficulty.Hard,
+                QuestCategory.LearnShare),
             null,
             Now.AddHours(1));
 
@@ -167,8 +170,46 @@ public sealed class QuestCompletionDomainTests
         Assert.Equal(CompletionMethod.CompletionCode, completion.Method);
         Assert.Equal(participation.Id, completion.ParticipationId);
         Assert.Equal(QuestDifficulty.Easy, completion.RewardDifficultySnapshot);
+        Assert.Equal(
+            QuestCategory.RestoreNature,
+            completion.QuestCategorySnapshot);
         Assert.Equal(communityId, completion.CommunityRegionIdAtCompletion);
         Assert.Equal(completion.CompletedAt, completion.VerifiedAtUtc);
+    }
+
+    [Fact]
+    public void ClaimFactoriesCaptureImmutableCategorySnapshots()
+    {
+        var quest = CreateQuest(Guid.NewGuid(), RegistrationMode.Native);
+        var userId = Guid.NewGuid();
+        var evidence = QuestCompletion.CreateEvidenceClaim(
+            userId,
+            quest,
+            null,
+            null,
+            Now,
+            Now);
+        var selfReported = QuestCompletion.CreateSelfReported(
+            userId,
+            quest,
+            null,
+            Now,
+            Now);
+
+        quest.UpdateDetails(
+            CreateDetails(
+                RegistrationMode.Native,
+                QuestDifficulty.Hard,
+                QuestCategory.LearnShare),
+            null,
+            Now.AddHours(1));
+
+        Assert.Equal(
+            QuestCategory.RestoreNature,
+            evidence.QuestCategorySnapshot);
+        Assert.Equal(
+            QuestCategory.RestoreNature,
+            selfReported.QuestCategorySnapshot);
     }
 
     [Fact]
@@ -199,11 +240,12 @@ public sealed class QuestCompletionDomainTests
 
     private static QuestDetails CreateDetails(
         RegistrationMode registrationMode,
-        QuestDifficulty difficulty) =>
+        QuestDifficulty difficulty,
+        QuestCategory category = QuestCategory.RestoreNature) =>
         new(
             "Completion test Quest",
             "A focused Quest for completion domain behavior.",
-            QuestCategory.RestoreNature,
+            category,
             registrationMode,
             difficulty,
             10,

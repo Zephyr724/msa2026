@@ -39,6 +39,7 @@ export default function ShareCardBuilderPage() {
   );
   const [theme, setTheme] = useState<ShareCardTheme>('forest');
   const [overlay, setOverlay] = useState<ShareCardOverlay>('dark');
+  // Names are opt-in because the generated PNG may be shared outside the app.
   const [showName, setShowName] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -50,6 +51,8 @@ export default function ShareCardBuilderPage() {
     ?? verified[0];
 
   useEffect(() => {
+    // A stale or manually edited completionId falls back to the newest
+    // verified item rather than leaving the canvas with no selection.
     if (
       verified[0]
       && !verified.some((item) => item.completionId === selectedId)
@@ -71,6 +74,8 @@ export default function ShareCardBuilderPage() {
   }, [auth.data, overlay, progression.data, selected, showName, theme]);
 
   function createBlob(): Promise<Blob | null> {
+    // Canvas encoding is callback-based; wrapping it keeps download and Web
+    // Share paths on the same asynchronous failure boundary.
     return new Promise((resolve) => {
       canvasRef.current?.toBlob(resolve, 'image/png');
     });
@@ -88,6 +93,7 @@ export default function ShareCardBuilderPage() {
     link.download = 'kiwimpact-share-card.png';
     link.href = url;
     link.click();
+    // The object URL is needed only long enough to initiate the browser save.
     URL.revokeObjectURL(url);
     setMessage('Share Card downloaded.');
   }

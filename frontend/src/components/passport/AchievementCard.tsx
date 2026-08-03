@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type {
   AchievementCatalogItem,
+  AchievementNationwideStat,
+  AchievementRarity,
   EarnedAchievement,
 } from '../../types/achievement.ts';
 import { AchievementBadgeArt } from '../game/GameArtwork.tsx';
@@ -57,15 +59,24 @@ function AchievementIcon({
 type AchievementCardProps =
   | {
       achievement: AchievementCatalogItem;
+      rarityUnavailable?: boolean;
+      stat?: AchievementNationwideStat;
       unlocked: false;
     }
   | {
       achievement: EarnedAchievement;
+      rarityUnavailable?: boolean;
+      stat?: AchievementNationwideStat;
       unlocked: true;
     };
 
 export default function AchievementCard(props: AchievementCardProps) {
-  const { achievement, unlocked } = props;
+  const {
+    achievement,
+    rarityUnavailable = false,
+    stat,
+    unlocked,
+  } = props;
 
   return (
     <li className={`kiwi-card-hover card overflow-hidden border bg-base-100 ${
@@ -104,7 +115,57 @@ export default function AchievementCard(props: AchievementCardProps) {
             </time>
           )}
         </div>
+        <div className="border-t border-base-300/70 pt-3">
+          {stat === undefined ? (
+            <p className="text-xs text-muted-content">
+              {rarityUnavailable
+                ? 'Nationwide rarity is unavailable.'
+                : 'Nationwide rarity is being calculated…'}
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-content">
+                {stat.nationwideEarnedCount === 0
+                  ? 'No members nationwide yet'
+                  : `${stat.nationwideEarnedCount.toLocaleString()} ${
+                    stat.nationwideEarnedCount === 1 ? 'member' : 'members'
+                  } nationwide`}
+                {' · '}
+                {formatPercentage(
+                  stat.nationwideEarnedCount,
+                  stat.earnedPercentage,
+                )}
+              </p>
+              <span className={`badge badge-sm ${RARITY_STYLES[stat.rarity]}`}>
+                {RARITY_LABELS[stat.rarity]}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </li>
   );
+}
+
+const RARITY_LABELS: Record<AchievementRarity, string> = {
+  Unawarded: 'Unawarded',
+  UltraRare: 'Ultra rare',
+  Rare: 'Rare',
+  Uncommon: 'Uncommon',
+  Common: 'Common',
+};
+
+const RARITY_STYLES: Record<AchievementRarity, string> = {
+  Unawarded: 'badge-ghost',
+  UltraRare: 'border-violet-400 bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200',
+  Rare: 'border-amber-400 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  Uncommon: 'border-sky-300 bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200',
+  Common: 'badge-outline',
+};
+
+function formatPercentage(earnedCount: number, percentage: number): string {
+  if (earnedCount > 0 && percentage < 0.01) return '<0.01%';
+  return `${percentage.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })}%`;
 }

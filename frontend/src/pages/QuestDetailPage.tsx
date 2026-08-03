@@ -80,6 +80,8 @@ export default function QuestDetailPage() {
   const quest = questQuery.data;
   const category = CATEGORY_PRESENTATION[quest.category];
   const cover = quest.coverImage?.imageUrl;
+  // Public detail remains visually complete when the optional gallery request
+  // is empty by projecting the cover into a one-item fallback gallery.
   const galleryItems = images.data?.length
     ? images.data
     : [{
@@ -96,6 +98,8 @@ export default function QuestDetailPage() {
   const locationTrail = questLocationTrail(quest.locationRegion);
   const supportsCompletionCode = quest.sourceType === 'OrganizerOwned'
     && quest.registrationMode === 'Native';
+  // Completion guidance is derived from source and registration authority so
+  // the page never advertises a method the backend will reject.
   const completionBriefing = supportsCompletionCode
     ? 'Use the organizer’s completion code, or keep a clearly labelled self-report.'
     : quest.sourceType === 'OrganizerOwned'

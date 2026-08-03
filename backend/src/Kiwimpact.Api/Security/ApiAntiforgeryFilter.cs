@@ -18,6 +18,8 @@ public sealed class ApiAntiforgeryFilter : IAsyncAuthorizationFilter
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         var request = context.HttpContext.Request;
+        // Cookie-authenticated API mutations require antiforgery validation;
+        // safe methods and non-API middleware paths remain untouched.
         if (!request.Path.StartsWithSegments("/api") ||
             HttpMethods.IsGet(request.Method) ||
             HttpMethods.IsHead(request.Method) ||
@@ -33,6 +35,8 @@ public sealed class ApiAntiforgeryFilter : IAsyncAuthorizationFilter
         }
         catch (AntiforgeryValidationException)
         {
+            // A stable problem type allows the SPA transport to refresh its
+            // request token and replay a replay-safe mutation once.
             context.Result = new ObjectResult(new ProblemDetails
             {
                 Type = ProblemType,

@@ -5,6 +5,8 @@ namespace Kiwimpact.Core.Security;
 
 public sealed class CompletionCodeProtector
 {
+    // Ambiguous glyphs are intentionally omitted so codes remain easy to read
+    // when displayed on-site or copied from a printed sign.
     public const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     public const int CodeLength = 10;
     public const int EntropyBits = 50;
@@ -96,6 +98,8 @@ public sealed class CompletionCodeProtector
     public bool Verify(Guid questId, string? submittedCode, string? storedHash)
     {
         var isWellFormed = TryNormalize(submittedCode, out var normalized);
+        // Hash a safe dummy for malformed input so invalid formats do not take
+        // an observably shorter verification path than well-formed guesses.
         var computed = ComputeHashBytes(questId, isWellFormed ? normalized : SafeDummyCode);
 
         byte[] stored;
@@ -115,6 +119,8 @@ public sealed class CompletionCodeProtector
 
     private byte[] ComputeHashBytes(Guid questId, string normalizedCode)
     {
+        // Binding the digest to the Quest prevents the same visible code from
+        // being reusable against another Quest with a matching HMAC key.
         var canonicalQuestId = questId.ToString("D");
         var input = Encoding.UTF8.GetBytes($"{canonicalQuestId}:{normalizedCode}");
         return HMACSHA256.HashData(_key, input);

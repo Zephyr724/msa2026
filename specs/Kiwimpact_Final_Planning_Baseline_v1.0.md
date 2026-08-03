@@ -268,6 +268,11 @@ Every ten-level boundary triggers a stronger Rank Up reveal.
 - Personal Impact Passport
 - no invented carbon-equivalent claims
 
+**Superseded implementation note (2026-07-30):** Product-owner-approved
+Slice 23 replaces the initial 6–8-item direction with a 45-definition typed
+catalog, national rarity, derived trophies, and non-economic
+achievement-unlocked cosmetics.
+
 ## 9. Gameful UX
 
 Direction:

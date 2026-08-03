@@ -15,7 +15,17 @@ public interface IAchievementRepository
         Guid userId,
         CancellationToken ct = default);
 
-    Task<bool> HasMissingEarnedMilestoneAsync(
+    Task<bool> HasOutdatedAchievementEvaluationAsync(
+        Guid userId,
+        CancellationToken ct = default);
+
+    Task<bool> IsGlobalAchievementEvaluationReadyAsync(
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<AchievementNationwideStat>> GetNationwideStatsAsync(
+        CancellationToken ct = default);
+
+    Task<AchievementProfile?> GetAchievementProfileAsync(
         Guid userId,
         CancellationToken ct = default);
 

@@ -1,10 +1,14 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type {
   AchievementCatalogItem,
+  AchievementNationwideStat,
+  AchievementProfile,
   EarnedAchievement,
 } from '../../types/achievement.ts';
 import {
   validateAchievementCatalog,
+  validateAchievementNationwideStats,
+  validateAchievementProfile,
   validateEarnedAchievements,
 } from '../validation/achievementDto.ts';
 import { ApiError, apiFetch } from './apiFetch.ts';
@@ -18,6 +22,15 @@ export async function fetchAchievementCatalog(options?: {
     signal: options?.signal,
   });
   return validateAchievementCatalog(payload);
+}
+
+export async function fetchAchievementNationwideStats(options?: {
+  signal?: AbortSignal;
+}): Promise<AchievementNationwideStat[]> {
+  const payload = await apiFetch<unknown>('/v1/achievement-stats', {
+    signal: options?.signal,
+  });
+  return validateAchievementNationwideStats(payload);
 }
 
 /**
@@ -34,6 +47,24 @@ export async function fetchMyAchievements(options: {
       signal: options.signal,
     });
     return validateEarnedAchievements(payload);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      await expirePrivateSession(options.queryClient);
+    }
+    throw error;
+  }
+}
+
+export async function fetchMyAchievementProfile(options: {
+  queryClient: QueryClient;
+  signal?: AbortSignal;
+}): Promise<AchievementProfile> {
+  try {
+    const payload = await apiFetch<unknown>(
+      '/v1/users/me/achievement-profile',
+      { signal: options.signal },
+    );
+    return validateAchievementProfile(payload);
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       await expirePrivateSession(options.queryClient);

@@ -32,6 +32,8 @@ internal static class DtoMapping
 
     private static QuestLocationRegionDto ToQuestLocation(this Region region)
     {
+        // The API flattens the stored region hierarchy so clients can present
+        // Local Area, city, and country labels without reconstructing parents.
         var administrativeAreaName = region.Type switch
         {
             RegionType.AdministrativeArea => region.Name,
@@ -59,6 +61,7 @@ internal static class DtoMapping
         if (!quest.Capacity.HasValue)
             return null;
 
+        // Cancelled rows remain audit history but release their place.
         var activeParticipants = quest.Participations.Count(
             participation => !participation.CancelledAt.HasValue);
         return Math.Max(quest.Capacity.Value - activeParticipants, 0);
@@ -90,6 +93,8 @@ internal static class DtoMapping
             quest.AvailableSpots(),
             quest.StartAtUtc?.ToString("O"),
             quest.EndAtUtc?.ToString("O"),
+            // Inactive regions are retained internally for history but are not
+            // advertised as current public discovery locations.
             quest.LocationRegion is { IsActive: true }
                 ? quest.LocationRegion.ToQuestLocation()
                 : null,
@@ -297,6 +302,39 @@ internal static class DtoMapping
             item.IconUrl,
             item.Category,
             item.AwardedAt.ToString("O"));
+    }
+
+    public static AchievementNationwideStatDto ToDto(
+        this AchievementNationwideStat item)
+    {
+        return new AchievementNationwideStatDto(
+            item.AchievementId,
+            item.NationwideEarnedCount,
+            item.NationwideMemberCount,
+            item.EarnedPercentage,
+            item.Rarity.ToString(),
+            item.CalculatedAtUtc.ToString("O"));
+    }
+
+    public static AchievementProfileDto ToDto(this AchievementProfile profile)
+    {
+        return new AchievementProfileDto(
+            profile.EarnedDistinctCount,
+            profile.ActiveAchievementCount,
+            new AchievementTrophyProfileDto(
+                profile.Trophy.Tier.ToString(),
+                profile.Trophy.RequiredCount,
+                profile.Trophy.NextTier?.ToString(),
+                profile.Trophy.NextRequiredCount,
+                profile.Trophy.NationwideEarnedCount,
+                profile.Trophy.NationwideMemberCount,
+                profile.Trophy.EarnedPercentage,
+                profile.Trophy.Rarity.ToString(),
+                profile.Trophy.CalculatedAtUtc.ToString("O")),
+            new AchievementCosmeticsDto(
+                profile.Cosmetics.PassportBorderStyle,
+                profile.Cosmetics.AvatarFrameStyle,
+                profile.Cosmetics.BadgeStampStyles));
     }
 
     public static CreateQuestCommand ToCommand(this CreateQuestRequest request) => new(

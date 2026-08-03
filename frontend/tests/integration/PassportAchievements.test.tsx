@@ -45,21 +45,59 @@ const earned = {
   awardedAt: '2026-07-26T01:23:45.0000000Z',
 };
 
+const stats = catalog.map((item, index) => ({
+  achievementId: item.id,
+  nationwideEarnedCount: index === 0 ? 1 : 0,
+  nationwideMemberCount: 20_000,
+  earnedPercentage: index === 0 ? 0.005 : 0,
+  rarity: index === 0 ? 'UltraRare' : 'Unawarded',
+  calculatedAtUtc: '2026-07-30T00:00:00.0000000Z',
+}));
+
+const lockedProfile = {
+  earnedDistinctCount: 1,
+  activeAchievementCount: 45,
+  trophy: {
+    tier: 'Locked',
+    requiredCount: 0,
+    nextTier: 'Bronze',
+    nextRequiredCount: 5,
+    nationwideEarnedCount: 0,
+    nationwideMemberCount: 20_000,
+    earnedPercentage: 0,
+    rarity: 'Unawarded',
+    calculatedAtUtc: '2026-07-30T00:00:00.0000000Z',
+  },
+  cosmetics: {
+    passportBorderStyle: null,
+    avatarFrameStyle: null,
+    badgeStampStyles: [],
+  },
+};
+
 type ResponseFactory = () => Promise<Response>;
 
 function stubAchievementApi({
   catalogResponse = () => Promise.resolve(jsonResponse(catalog)),
   earnedResponse = () => Promise.resolve(jsonResponse([earned])),
+  statsResponse = () => Promise.resolve(jsonResponse(stats)),
+  profileResponse = () => Promise.resolve(jsonResponse(lockedProfile)),
   includePassport = false,
 }: {
   catalogResponse?: ResponseFactory;
   earnedResponse?: ResponseFactory;
+  statsResponse?: ResponseFactory;
+  profileResponse?: ResponseFactory;
   includePassport?: boolean;
 } = {}) {
   const fetchMock = vi.fn((input: RequestInfo | URL): Promise<Response> => {
     const url = String(input);
     if (url.endsWith('/v1/achievements')) return catalogResponse();
+    if (url.endsWith('/v1/achievement-stats')) return statsResponse();
     if (url.endsWith('/v1/users/me/achievements')) return earnedResponse();
+    if (url.endsWith('/v1/users/me/achievement-profile')) {
+      return profileResponse();
+    }
     if (includePassport && url.endsWith('/v1/users/me/progression')) {
       return Promise.resolve(jsonResponse({
         totalXp: 120,
@@ -112,6 +150,60 @@ describe('Passport achievements section', () => {
     expect(time).toHaveAttribute('dateTime', earned.awardedAt);
     expect(screen.getByText(/Unlocked \d/)).toBeInTheDocument();
     expect(container.querySelectorAll('time')).toHaveLength(1);
+    expect(screen.getByText(/1 member nationwide/)).toBeInTheDocument();
+    expect(screen.getByText(/<0\.01%/)).toBeInTheDocument();
+    expect(screen.getByText('Ultra rare')).toBeInTheDocument();
+  });
+
+  it('keeps the first unlock date for repeated Community Challenge awards', async () => {
+    const later = {
+      ...earned,
+      awardedAt: '2026-07-29T01:23:45.0000000Z',
+    };
+    stubAchievementApi({
+      earnedResponse: () => Promise.resolve(jsonResponse([earned, later])),
+    });
+    const { container } = renderSection();
+
+    await screen.findByText('First Steps');
+    expect(container.querySelector('time'))
+      .toHaveAttribute('dateTime', earned.awardedAt);
+  });
+
+  it('renders achievement families in the fixed product order', async () => {
+    const unorderedCatalog = [
+      ['Community', 'Community Spark'],
+      ['Streak', 'Keeping the Spark'],
+      ['Milestone', 'First Steps'],
+      ['Progression', 'Rising Contributor'],
+      ['Specialist', 'Habitat Helper'],
+      ['Explorer', 'Eco Explorer'],
+    ].map(([category, name], index) => ({
+      id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      code: `family-${String(category).toLowerCase()}`,
+      name,
+      description: `${name} description.`,
+      iconUrl: null,
+      category,
+    }));
+    stubAchievementApi({
+      catalogResponse: () => Promise.resolve(jsonResponse(unorderedCatalog)),
+      earnedResponse: () => Promise.resolve(jsonResponse([])),
+      statsResponse: () => Promise.resolve(jsonResponse([])),
+    });
+    const { container } = renderSection();
+
+    await screen.findByText('Community Spark');
+    expect([...container.querySelectorAll('h3[id^="achievement-group-"]')]
+      .map((heading) => heading.textContent))
+      .toEqual([
+        'Verified impact milestones',
+        'Category specialists',
+        'Whole-system explorers',
+        'Consistency streaks',
+        'Level progression',
+        'Community challenges',
+      ]);
   });
 
   it('uses the earned row for every unlocked display field and keeps catalog slot order', async () => {
@@ -348,4 +440,37 @@ describe('Passport achievements section', () => {
     await screen.findByText('We could not load this section.');
     expect(within(achievementsRegion()).getAllByRole('alert')).toHaveLength(1);
   });
+
+  it.each([
+    [
+      503,
+      {
+        type: 'https://kiwimpact.app/problems/progression-not-ready',
+        title: 'Progression Not Ready',
+      },
+      'Nationwide rarity is still being calculated.',
+      'Nationwide rarity is being calculated…',
+    ],
+    [
+      500,
+      { title: 'Server error' },
+      'Nationwide rarity is unavailable.',
+      'Nationwide rarity is unavailable.',
+    ],
+  ])(
+    'bounds a stats %s without hiding catalog or earned cards',
+    async (status, problem, banner, cardCopy) => {
+      stubAchievementApi({
+        statsResponse: () => Promise.resolve(jsonResponse(problem, status)),
+      });
+      renderSection();
+
+      expect(await screen.findByText('First Steps')).toBeInTheDocument();
+      expect(within(achievementsRegion()).getByRole('status'))
+        .toHaveTextContent(banner);
+      for (const card of within(achievementsRegion()).getAllByRole('listitem')) {
+        expect(within(card).getByText(cardCopy)).toBeInTheDocument();
+      }
+    },
+  );
 });

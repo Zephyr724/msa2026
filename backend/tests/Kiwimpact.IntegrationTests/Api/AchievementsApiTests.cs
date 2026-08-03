@@ -53,7 +53,7 @@ public sealed class AchievementsApiTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await ReadJsonAsync(response);
         var items = json.EnumerateArray().ToArray();
-        Assert.Equal(3, items.Length);
+        Assert.Equal(AchievementCatalog.Definitions.Count, items.Length);
         Assert.Equal(
             AchievementCatalog.Definitions
                 .Select(definition => definition.Code)
@@ -69,7 +69,13 @@ public sealed class AchievementsApiTests
                 "iconUrl",
                 "id",
                 "name");
-            Assert.Equal("Milestone", item.GetProperty("category").GetString());
+            var definition = Assert.Single(
+                AchievementCatalog.Definitions,
+                candidate =>
+                    candidate.Id == item.GetProperty("id").GetGuid());
+            Assert.Equal(
+                definition.Category,
+                item.GetProperty("category").GetString());
             Assert.Equal(JsonValueKind.Null, item.GetProperty("iconUrl").ValueKind);
         }
 
@@ -79,11 +85,14 @@ public sealed class AchievementsApiTests
             var activeOnly = await ReadJsonAsync(await client.GetAsync(
                 CatalogPath,
                 TestContext.Current.CancellationToken));
-            Assert.Equal(2, activeOnly.GetArrayLength());
+            Assert.Equal(
+                AchievementCatalog.Definitions.Count - 1,
+                activeOnly.GetArrayLength());
             Assert.DoesNotContain(
                 AchievementCatalog.FirstSteps.Code,
-                activeOnly.GetRawText(),
-                StringComparison.Ordinal);
+                activeOnly
+                    .EnumerateArray()
+                    .Select(item => item.GetProperty("code").GetString()));
         }
         finally
         {
@@ -174,6 +183,9 @@ public sealed class AchievementsApiTests
             var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
             db.XpTransactions.Add(XpTransaction.CreateFromVerifiedCompletion(completion));
             await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await XpLedgerTestHelpers.MarkAchievementEvaluationStaleAsync(
+                db,
+                actor.UserId);
         }
 
         var response = await actor.Client.GetAsync(
@@ -218,10 +230,12 @@ public sealed class AchievementsApiTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await ReadJsonAsync(response);
         var items = json.EnumerateArray().ToArray();
-        Assert.Equal(3, items.Length);
+        Assert.Equal(5, items.Length);
         Assert.Equal(
             [
                 AchievementCatalog.BuildingMomentum.Code,
+                "level-5",
+                "restore-nature-3",
                 AchievementCatalog.FirstSteps.Code,
                 AchievementCatalog.CommittedContributor.Code,
             ],
@@ -229,6 +243,8 @@ public sealed class AchievementsApiTests
         var expectedAwardedAt = new[]
         {
             earlierAwardedAt,
+            tiedAwardedAt,
+            tiedAwardedAt,
             tiedAwardedAt,
             tiedAwardedAt,
         };
@@ -264,11 +280,12 @@ public sealed class AchievementsApiTests
             var activeOnly = await ReadJsonAsync(await actor.Client.GetAsync(
                 EarnedPath,
                 TestContext.Current.CancellationToken));
-            Assert.Equal(2, activeOnly.GetArrayLength());
+            Assert.Equal(4, activeOnly.GetArrayLength());
             Assert.DoesNotContain(
                 AchievementCatalog.FirstSteps.Code,
-                activeOnly.GetRawText(),
-                StringComparison.Ordinal);
+                activeOnly
+                    .EnumerateArray()
+                    .Select(item => item.GetProperty("code").GetString()));
         }
         finally
         {

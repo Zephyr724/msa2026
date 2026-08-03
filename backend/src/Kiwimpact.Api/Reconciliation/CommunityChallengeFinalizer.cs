@@ -1,3 +1,4 @@
+using Kiwimpact.Core.Achievements;
 using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Infrastructure.Data;
@@ -28,11 +29,41 @@ public sealed class CommunityChallengeFinalizer
                 item.Status == ChallengeStatus.Active &&
                 item.PeriodEnd <= now)
             .OrderBy(item => item.PeriodEnd)
+            // Bound each pass so one delayed deployment cannot monopolize the
+            // hosted service scope while catching up.
             .Take(100)
             .ToListAsync(ct);
+        var approvedCommunityRewardIds = AchievementCatalog.Definitions
+            .Where(definition =>
+                definition.RuleKind ==
+                    AchievementRuleKind.CommunityChallengeReward)
+            .Select(definition => definition.Id)
+            .ToArray();
+        var activeCommunityRewardIds = await db.Achievements
+            .AsNoTracking()
+            .Where(achievement =>
+                achievement.IsActive &&
+                approvedCommunityRewardIds.Contains(achievement.Id))
+            .Select(achievement => achievement.Id)
+            .ToHashSetAsync(ct);
         var finalized = 0;
         foreach (var challenge in challenges)
         {
+            if (challenge.RewardAchievementId is Guid rewardAchievementId &&
+                !activeCommunityRewardIds.Contains(rewardAchievementId))
+            {
+                // Legacy challenges predate the typed reward restriction.
+                // Never reinterpret or silently clear their persisted reward:
+                // leave the challenge Active for explicit Admin cancellation
+                // and fail closed before changing status or issuing an award.
+                _logger.LogError(
+                    "Community challenge {ChallengeId} has invalid reward " +
+                    "{AchievementId}; finalization was skipped.",
+                    challenge.Id,
+                    rewardAchievementId);
+                continue;
+            }
+
             var eligible = db.XpTransactions.AsNoTracking().Where(item =>
                 item.CommunityRegionIdAtAward == challenge.LocalAreaRegionId &&
                 item.CreatedAt >= challenge.PeriodStart &&
@@ -53,6 +84,8 @@ public sealed class CommunityChallengeFinalizer
                         item.AchievementId == challenge.RewardAchievementId.Value)
                     .Select(item => item.UserId)
                     .ToListAsync(ct);
+                // Repeated finalizer passes are safe: only contributors without
+                // an existing award receive a staged row.
                 foreach (var userId in userIds.Except(alreadyAwarded))
                 {
                     db.UserAchievements.Add(

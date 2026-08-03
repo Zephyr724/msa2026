@@ -1,6 +1,7 @@
 using Kiwimpact.Api.Contracts;
 using Kiwimpact.Api.Mapping;
 using Kiwimpact.Core.Authorization;
+using Kiwimpact.Core.Achievements;
 using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Services;
@@ -102,6 +103,8 @@ public sealed class CommunityChallengesController : ControllerBase
         CancellationToken ct)
     {
         var progress = await ReadProgressAsync(challenge, ct);
+        // Use the same privacy threshold as leaderboards so related community
+        // surfaces cannot reveal a protected contributor count indirectly.
         var protectedCount =
             progress.Contributors < LeaderboardService.PrivacyThreshold;
         return new CommunityChallengeDto(
@@ -124,6 +127,8 @@ public sealed class CommunityChallengesController : ControllerBase
         CommunityChallenge challenge,
         CancellationToken ct)
     {
+        // Community attribution is the immutable award-time snapshot, and the
+        // half-open period prevents a boundary award counting twice.
         var query = _db.XpTransactions.AsNoTracking().Where(item =>
             item.CommunityRegionIdAtAward == challenge.LocalAreaRegionId &&
             item.CreatedAt >= challenge.PeriodStart &&
@@ -189,6 +194,8 @@ public sealed class AdminCommunityChallengesController : ControllerBase
         }
         catch (DbUpdateException)
         {
+            // The database constraint remains authoritative if concurrent
+            // create requests both pass the friendly preflight check.
             return ConflictProblem("The challenge conflicts with an existing Active challenge.");
         }
     }
@@ -279,15 +286,22 @@ public sealed class AdminCommunityChallengesController : ControllerBase
         if (localArea is null || localArea.Type != RegionType.LocalArea)
             return ValidationProblemResult(
                 "Challenge region must be an active Local Area.");
-        if (request.RewardAchievementId.HasValue &&
-            !await _db.Achievements.AsNoTracking().AnyAsync(
-                item =>
-                    item.Id == request.RewardAchievementId.Value &&
-                    item.IsActive,
-                ct))
+        if (request.RewardAchievementId.HasValue)
         {
-            return ValidationProblemResult(
-                "Reward achievement must be active.");
+            var rewardDefinition = AchievementCatalog.Definitions
+                .SingleOrDefault(definition =>
+                    definition.Id == request.RewardAchievementId.Value);
+            if (rewardDefinition?.RuleKind !=
+                    AchievementRuleKind.CommunityChallengeReward ||
+                !await _db.Achievements.AsNoTracking().AnyAsync(
+                    item =>
+                        item.Id == request.RewardAchievementId.Value &&
+                        item.IsActive,
+                    ct))
+            {
+                return ValidationProblemResult(
+                    "Reward achievement must be an active Community achievement.");
+            }
         }
         return null;
     }

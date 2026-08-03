@@ -40,6 +40,9 @@ public sealed class PassportRepository : IPassportRepository
             int pageSize,
             CancellationToken ct = default)
     {
+        // A completion may join to both an XP transaction and a cover image;
+        // materializing once allows the precedence rules below to select a
+        // single Passport entry per Quest.
         var rows = await _db.QuestCompletions
             .AsNoTracking()
             .Where(completion => completion.UserId == userId)
@@ -72,6 +75,8 @@ public sealed class PassportRepository : IPassportRepository
                 })
             .ToListAsync(ct);
 
+        // Prefer the strongest state for each Quest, then the newest attempt
+        // within that state, so rejected history cannot hide verified impact.
         var primary = rows
             .GroupBy(row => row.completion.QuestId)
             .Select(group => group
@@ -175,10 +180,14 @@ public sealed class PassportRepository : IPassportRepository
             .AsNoTracking()
             .Where(item => item.UserId == userId)
             .Join(
-                _db.Quests.AsNoTracking(),
-                transaction => transaction.QuestId,
-                quest => quest.Id,
-                (transaction, quest) => new { transaction, quest.Category })
+                _db.QuestCompletions.AsNoTracking(),
+                transaction => transaction.SourceCompletionId,
+                completion => completion.Id,
+                (transaction, completion) => new
+                {
+                    transaction,
+                    Category = completion.QuestCategorySnapshot,
+                })
             .GroupBy(item => item.Category)
             .Select(group => new
             {
@@ -291,6 +300,8 @@ public sealed class PassportRepository : IPassportRepository
             .Select(group =>
             {
                 var region = regions[group.Key];
+                // Challenge participation is inferred from an XP award inside
+                // the challenge window; it does not require winning the reward.
                 var contributedChallenges = challenges.Count(challenge =>
                     challenge.LocalAreaRegionId == group.Key &&
                     group.Any(contribution =>

@@ -40,6 +40,8 @@ export function CoordinatePicker({
               onClick={(event) => {
                 const point = event.detail.latLng;
                 if (point) {
+                  // Six decimal places are precise enough for a Quest venue
+                  // while avoiding noisy floating-point strings in the form.
                   onChange(
                     point.lat.toFixed(6),
                     point.lng.toFixed(6),
@@ -62,6 +64,8 @@ export function CoordinatePicker({
           </p>
         </APIProvider>
       ) : (
+        // Manual fields are always available as the accessible and
+        // configuration-independent path for choosing coordinates.
         <p className="rounded-2xl border border-dashed border-base-300 p-4 text-sm text-muted-content">
           Map selection is unavailable, but coordinates can still be entered below.
         </p>

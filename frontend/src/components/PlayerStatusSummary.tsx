@@ -22,6 +22,8 @@ export default function PlayerStatusSummary() {
   const communityLeaderboard = usePeopleLeaderboard(
     'myCommunity',
     'weekly',
+    // Avoid an unauthorized or meaningless community request until the
+    // profile confirms that the member has selected a Home Community.
     Boolean(profile.data?.homeCommunity),
   );
   const aucklandLeaderboard = usePeopleLeaderboard('auckland', 'weekly');

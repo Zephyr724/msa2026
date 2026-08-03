@@ -124,7 +124,11 @@ public sealed record CompletionCodeValidity(
     {
         var generated = generatedAtUtc.ToUniversalTime();
         var start = questStartAtUtc?.ToUniversalTime();
+        // A code generated before the Quest starts remains dormant until the
+        // activity window opens; rotating later makes it valid immediately.
         var validFrom = start.HasValue && start.Value > generated ? start.Value : generated;
+        // The seven-day grace period lets organizers verify attendees shortly
+        // after an activity ends without leaving codes permanently valid.
         var validTo = questEndAtUtc?.ToUniversalTime().AddDays(7);
         if (validTo.HasValue && validFrom >= validTo.Value)
             throw new QuestCompletionException(
@@ -142,6 +146,7 @@ public static class QuestCompletionEligibility
         if (quest.CreatedByUserId == actorId)
             throw Error(QuestCompletionError.OwnQuest, "You cannot complete a Quest you created.");
         if (quest.Status == QuestStatus.Draft)
+            // Conceal unpublished Quest existence from non-management flows.
             throw Error(QuestCompletionError.NotFound, "Quest not found.");
         if (quest.Status is QuestStatus.Cancelled or QuestStatus.Archived)
             throw Error(

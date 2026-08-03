@@ -48,6 +48,8 @@ export function drawShareCard(
   const context = canvas.getContext('2d');
   if (!context) return false;
 
+  // Render at a fixed square resolution so the exported image is independent
+  // of the responsive preview size and remains sharp on high-density screens.
   const size = 1080;
   canvas.width = size;
   canvas.height = size;
@@ -61,6 +63,8 @@ export function drawShareCard(
     ? 'rgba(255,255,255,0.16)'
     : 'rgba(255,255,255,0.64)';
 
+  // Each overlay defines a coordinated contrast set rather than merely adding
+  // a tint, keeping text legible across all decorative theme scenes.
   const gradient = context.createLinearGradient(0, 0, size, size);
   gradient.addColorStop(0, palette.backgroundStart);
   gradient.addColorStop(1, palette.backgroundEnd);
@@ -375,6 +379,8 @@ function drawWrappedText(
 
   const consumedWords = lines.join(' ').split(/\s+/).length;
   if (consumedWords < words.length) {
+    // Truncate only the final visible line so long Quest titles cannot collide
+    // with the date and verification badges below.
     let finalLine = `${lines.at(-1) ?? ''}…`;
     while (context.measureText(finalLine).width > maxWidth && finalLine.length > 2) {
       finalLine = `${finalLine.slice(0, -2)}…`;

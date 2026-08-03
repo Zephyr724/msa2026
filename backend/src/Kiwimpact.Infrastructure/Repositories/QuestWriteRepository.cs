@@ -88,8 +88,12 @@ public sealed class QuestWriteRepository : IQuestWriteRepository
 
     public async Task ReloadAsync(Quest quest, CancellationToken ct = default)
     {
+        // Reload the database-generated concurrency version before returning
+        // the mutation result to the next client request.
         await _db.Entry(quest).ReloadAsync(ct);
 
+        // Reload does not populate navigation properties, so reconstruct the
+        // management DTO graph explicitly on the tracked aggregate.
         var locationRegion = _db.Entry(quest).Reference(item => item.LocationRegion);
         locationRegion.CurrentValue = quest.LocationRegionId.HasValue
             ? await _db.Regions.SingleAsync(

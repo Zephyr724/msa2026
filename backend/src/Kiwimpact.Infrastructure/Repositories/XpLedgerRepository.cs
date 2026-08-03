@@ -84,12 +84,11 @@ public sealed class XpLedgerRepository : IXpLedgerRepository
                 ?? throw new InvalidOperationException(
                     "A Verified completion has no user profile row.");
             profile.ApplyXpAward(xp.XpAmount, now);
-            // Achievement hook: the XP row was flushed into this
-            // transaction at flush #1, so it is visible to the snapshot
-            // queries on this connection. The service re-reads existing
-            // awards under the held profile lock and stages only missing
-            // milestones.
-            await _achievementAwards.StageMissingMilestoneAwardsAsync(xp.UserId, null, ct);
+            await _achievementAwards.StageMissingAutomaticAwardsAsync(
+                profile,
+                stagedXp: null,
+                stagedCategory: null,
+                ct);
 
             // Flush #2: the progression projection and the achievement
             // inserts. One commit covers all writes — the XP row, the

@@ -390,6 +390,11 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.Property<Guid?>("ParticipationId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("QuestCategorySnapshot")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<Guid>("QuestId")
                         .HasColumnType("uuid");
 
@@ -433,6 +438,9 @@ namespace Kiwimpact.Infrastructure.Migrations
                         .HasFilter("\"Status\" = 'Verified'");
 
                     b.HasIndex("Method", "Status", "CreatedAt");
+
+                    b.HasIndex("UserId", "QuestCategorySnapshot", "VerifiedAtUtc")
+                        .HasDatabaseName("IX_QuestCompletions_UserId_CategorySnapshot_VerifiedAtUtc");
 
                     b.ToTable("QuestCompletions", (string)null);
                 });
@@ -725,6 +733,11 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AchievementEvaluationVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(2);
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -759,10 +772,14 @@ namespace Kiwimpact.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AchievementEvaluationVersion");
+
                     b.HasIndex("HomeCommunityRegionId");
 
                     b.ToTable("UserProfiles", null, t =>
                         {
+                            t.HasCheckConstraint("CK_UserProfiles_AchievementEvaluationVersion_NonNegative", "\"AchievementEvaluationVersion\" >= 0");
+
                             t.HasCheckConstraint("CK_UserProfiles_Level_Range", "\"Level\" BETWEEN 1 AND 99");
 
                             t.HasCheckConstraint("CK_UserProfiles_TotalXp_NonNegative", "\"TotalXp\" >= 0");

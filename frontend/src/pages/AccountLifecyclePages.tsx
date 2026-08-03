@@ -18,6 +18,8 @@ export function ConfirmEmailPage() {
   const [state, setState] = useState<'pending' | 'success' | 'error'>('pending');
   const confirmationAttempted = useRef(false);
   useEffect(() => {
+    // React Strict Mode may run effects twice in development; consume the
+    // single-use Identity token only once per mounted page.
     if (confirmationAttempted.current) return;
     confirmationAttempted.current = true;
     const userId = params.get('userId');
