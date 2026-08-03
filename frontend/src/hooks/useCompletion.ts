@@ -19,6 +19,7 @@ import {
   reviewEvidenceClaim,
 } from '../lib/api/completion';
 import { ApiError } from '../lib/api/apiFetch';
+import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
 import type { EvidenceClaimInput, GeneratedCompletionCodeDto } from '../types/completion';
 
 export const completionCodeKeys = {
@@ -36,7 +37,10 @@ export const completionKeys = {
 export function useCompletionCodeStatusQuery(questId: string) {
   return useQuery({
     queryKey: completionCodeKeys.status(questId),
-    queryFn: () => fetchCompletionCodeStatus(questId),
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, completionCodeKeys.status(questId), signal,
+      (signal) => fetchCompletionCodeStatus(questId, signal),
+    ),
     enabled: Boolean(questId),
     retry: false,
   });
@@ -46,7 +50,10 @@ export function useMyQuestCompletionQuery(questId: string) {
   const auth = useAuthQuery();
   return useQuery({
     queryKey: completionKeys.detail(questId),
-    queryFn: () => fetchMyQuestCompletion(questId),
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, completionKeys.detail(questId), signal,
+      (signal) => fetchMyQuestCompletion(questId, signal),
+    ),
     enabled: Boolean(questId && auth.data),
     retry: false,
   });
@@ -55,7 +62,10 @@ export function useMyQuestCompletionQuery(questId: string) {
 export function useSubmitEvidenceClaim(questId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: EvidenceClaimInput) => submitEvidenceClaim(questId, input),
+    mutationFn: (input: EvidenceClaimInput, { client }) => executePrivateRequest(
+      client,
+      (signal) => submitEvidenceClaim(questId, input, signal),
+    ),
     onSuccess: () => syncAuthoritativeCompletion(queryClient, questId),
   });
 }
@@ -63,7 +73,10 @@ export function useSubmitEvidenceClaim(questId: string) {
 export function useSelfReportCompletion(questId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (completedAtUtc: string) => selfReportCompletion(questId, completedAtUtc),
+    mutationFn: (completedAtUtc: string, { client }) => executePrivateRequest(
+      client,
+      (signal) => selfReportCompletion(questId, completedAtUtc, signal),
+    ),
     onSuccess: () => syncAuthoritativeCompletion(queryClient, questId),
   });
 }
@@ -71,7 +84,9 @@ export function useSelfReportCompletion(questId: string) {
 export function useMyClaims() {
   return useQuery({
     queryKey: completionKeys.claims,
-    queryFn: fetchMyClaims,
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, completionKeys.claims, signal, fetchMyClaims,
+    ),
     retry: false,
   });
 }
@@ -79,7 +94,9 @@ export function useMyClaims() {
 export function usePendingClaims(enabled = true) {
   return useQuery({
     queryKey: completionKeys.adminClaims,
-    queryFn: fetchPendingClaims,
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, completionKeys.adminClaims, signal, fetchPendingClaims,
+    ),
     enabled,
     retry: false,
   });
@@ -88,7 +105,10 @@ export function usePendingClaims(enabled = true) {
 export function useAdminClaim(claimId: string) {
   return useQuery({
     queryKey: completionKeys.adminClaim(claimId),
-    queryFn: () => fetchAdminClaim(claimId),
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, completionKeys.adminClaim(claimId), signal,
+      (signal) => fetchAdminClaim(claimId, signal),
+    ),
     enabled: Boolean(claimId),
     retry: false,
   });
@@ -97,8 +117,13 @@ export function useAdminClaim(claimId: string) {
 export function useReviewEvidenceClaim(claimId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ approve, reviewNote }: { approve: boolean; reviewNote: string }) =>
-      reviewEvidenceClaim(claimId, approve, reviewNote),
+    mutationFn: (
+      { approve, reviewNote }: { approve: boolean; reviewNote: string },
+      { client },
+    ) => executePrivateRequest(
+      client,
+      (signal) => reviewEvidenceClaim(claimId, approve, reviewNote, signal),
+    ),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: completionKeys.adminClaims }),
@@ -120,7 +145,10 @@ export function useGenerateOrRotateCompletionCode(questId: string) {
   const queryClient = useQueryClient();
   return useCallback(async (): Promise<GeneratedCompletionCodeDto> => {
     try {
-      const generated = await generateOrRotateCompletionCode(questId);
+      const generated = await executePrivateRequest(
+        queryClient,
+        (signal) => generateOrRotateCompletionCode(questId, signal),
+      );
       // Deliberately not awaited (review M1): the reveal-once plaintext must
       // reach component memory immediately, even if the metadata resync
       // stalls. invalidateQueries resolves locally and never rejects here
@@ -152,7 +180,10 @@ export function useRedeemCompletionCode(questId: string) {
   const queryClient = useQueryClient();
   return useCallback(async (code: string): Promise<void> => {
     try {
-      await redeemCompletionCode(questId, code);
+      await executePrivateRequest(
+        queryClient,
+        (signal) => redeemCompletionCode(questId, code, signal),
+      );
     } catch (error) {
       // Mirror the participation convention: resync authoritative state on 409.
       if (error instanceof ApiError && error.status === 409) {

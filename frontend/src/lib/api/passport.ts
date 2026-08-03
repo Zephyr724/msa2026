@@ -1,4 +1,4 @@
-import type { QueryClient } from '@tanstack/react-query';
+import type { QueryClient, QueryKey } from '@tanstack/react-query';
 import type {
   PassportCommunityParticipation,
   PassportCompletionsPage,
@@ -10,8 +10,8 @@ import {
   validatePassportCompletionsPage,
   validatePassportSummary,
 } from '../validation/passportDto.ts';
-import { ApiError, apiFetch } from './apiFetch.ts';
-import { expirePrivateSession } from './privateCache.ts';
+import { apiFetch } from './apiFetch.ts';
+import { executePrivateQuery } from './privateCache.ts';
 
 /**
  * Transport/validation for `GET /v1/users/me/passport/completions`.
@@ -28,21 +28,22 @@ export async function fetchPassportCompletions(
   pageSize: number,
   options: {
     queryClient: QueryClient;
+    queryKey?: QueryKey;
     signal?: AbortSignal;
   },
 ): Promise<PassportCompletionsPage> {
-  try {
-    const payload = await apiFetch<unknown>(
-      `/v1/users/me/passport/completions?page=${page}&pageSize=${pageSize}`,
-      { signal: options.signal },
-    );
-    return validatePassportCompletionsPage(payload);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      await expirePrivateSession(options.queryClient);
-    }
-    throw error;
-  }
+  return executePrivateQuery(
+    options.queryClient,
+    options.queryKey ?? ['passport', 'completions', { page, pageSize }],
+    options.signal,
+    async (signal) => {
+      const payload = await apiFetch<unknown>(
+        `/v1/users/me/passport/completions?page=${page}&pageSize=${pageSize}`,
+        { signal },
+      );
+      return validatePassportCompletionsPage(payload);
+    },
+  );
 }
 
 /**
@@ -53,6 +54,7 @@ export async function fetchPassportCompletions(
  */
 export async function fetchAllPassportCompletions(options: {
   queryClient: QueryClient;
+  queryKey?: QueryKey;
   signal?: AbortSignal;
 }): Promise<PassportCompletionItem[]> {
   const pageSize = 50;
@@ -84,35 +86,37 @@ export async function fetchAllPassportCompletions(options: {
 
 export async function fetchPassportSummary(options: {
   queryClient: QueryClient;
+  queryKey?: QueryKey;
   signal?: AbortSignal;
 }): Promise<PassportSummary> {
-  try {
-    const payload = await apiFetch<unknown>('/v1/users/me/passport', {
-      signal: options.signal,
-    });
-    return validatePassportSummary(payload);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      await expirePrivateSession(options.queryClient);
-    }
-    throw error;
-  }
+  return executePrivateQuery(
+    options.queryClient,
+    options.queryKey ?? ['passport', 'summary'],
+    options.signal,
+    async (signal) => {
+      const payload = await apiFetch<unknown>('/v1/users/me/passport', {
+        signal,
+      });
+      return validatePassportSummary(payload);
+    },
+  );
 }
 
 export async function fetchPassportCommunityParticipation(options: {
   queryClient: QueryClient;
+  queryKey?: QueryKey;
   signal?: AbortSignal;
 }): Promise<PassportCommunityParticipation[]> {
-  try {
-    const payload = await apiFetch<unknown>(
-      '/v1/users/me/passport/community-participation',
-      { signal: options.signal },
-    );
-    return validatePassportCommunityParticipation(payload);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      await expirePrivateSession(options.queryClient);
-    }
-    throw error;
-  }
+  return executePrivateQuery(
+    options.queryClient,
+    options.queryKey ?? ['passport', 'community-participation'],
+    options.signal,
+    async (signal) => {
+      const payload = await apiFetch<unknown>(
+        '/v1/users/me/passport/community-participation',
+        { signal },
+      );
+      return validatePassportCommunityParticipation(payload);
+    },
+  );
 }

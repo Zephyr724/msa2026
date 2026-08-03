@@ -11,8 +11,8 @@ import {
   validateAchievementProfile,
   validateEarnedAchievements,
 } from '../validation/achievementDto.ts';
-import { ApiError, apiFetch } from './apiFetch.ts';
-import { expirePrivateSession } from './privateCache.ts';
+import { apiFetch } from './apiFetch.ts';
+import { executePrivateQuery } from './privateCache.ts';
 
 /** Transport and strict validation for the anonymous achievement catalog. */
 export async function fetchAchievementCatalog(options?: {
@@ -42,33 +42,33 @@ export async function fetchMyAchievements(options: {
   queryClient: QueryClient;
   signal?: AbortSignal;
 }): Promise<EarnedAchievement[]> {
-  try {
-    const payload = await apiFetch<unknown>('/v1/users/me/achievements', {
-      signal: options.signal,
-    });
-    return validateEarnedAchievements(payload);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      await expirePrivateSession(options.queryClient);
-    }
-    throw error;
-  }
+  return executePrivateQuery(
+    options.queryClient,
+    ['achievements', 'me'],
+    options.signal,
+    async (signal) => {
+      const payload = await apiFetch<unknown>('/v1/users/me/achievements', {
+        signal,
+      });
+      return validateEarnedAchievements(payload);
+    },
+  );
 }
 
 export async function fetchMyAchievementProfile(options: {
   queryClient: QueryClient;
   signal?: AbortSignal;
 }): Promise<AchievementProfile> {
-  try {
-    const payload = await apiFetch<unknown>(
-      '/v1/users/me/achievement-profile',
-      { signal: options.signal },
-    );
-    return validateAchievementProfile(payload);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      await expirePrivateSession(options.queryClient);
-    }
-    throw error;
-  }
+  return executePrivateQuery(
+    options.queryClient,
+    ['achievements', 'profile', 'me'],
+    options.signal,
+    async (signal) => {
+      const payload = await apiFetch<unknown>(
+        '/v1/users/me/achievement-profile',
+        { signal },
+      );
+      return validateAchievementProfile(payload);
+    },
+  );
 }

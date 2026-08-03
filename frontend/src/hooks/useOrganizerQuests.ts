@@ -10,6 +10,7 @@ import {
   updateOrganizerQuest,
 } from '../lib/api/organizerQuests';
 import { ApiError } from '../lib/api/apiFetch';
+import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
 import type { CreateQuestInput, UpdateQuestInput } from '../types/questManagement';
 
 export const organizerQuestKeys = {
@@ -20,14 +21,19 @@ export const organizerQuestKeys = {
 export function useOrganizerQuestListQuery() {
   return useQuery({
     queryKey: organizerQuestKeys.all,
-    queryFn: fetchOrganizerQuests,
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, organizerQuestKeys.all, signal, fetchOrganizerQuests,
+    ),
   });
 }
 
 export function useOrganizerQuestDetailQuery(id: string) {
   return useQuery({
     queryKey: organizerQuestKeys.detail(id),
-    queryFn: () => fetchOrganizerQuest(id),
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, organizerQuestKeys.detail(id), signal,
+      (signal) => fetchOrganizerQuest(id, signal),
+    ),
     enabled: !!id,
   });
 }
@@ -35,7 +41,10 @@ export function useOrganizerQuestDetailQuery(id: string) {
 export function useCreateQuestMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateQuestInput) => createOrganizerQuest(input),
+    mutationFn: (input: CreateQuestInput, { client }) => executePrivateRequest(
+      client,
+      (signal) => createOrganizerQuest(input, signal),
+    ),
     retry: false,
     onSuccess: () => queryClient.invalidateQueries({
       queryKey: organizerQuestKeys.all,
@@ -47,8 +56,8 @@ export function useCreateQuestMutation() {
 export function useUpdateQuestMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateQuestInput }) =>
-      updateOrganizerQuest(id, input),
+    mutationFn: ({ id, input }: { id: string; input: UpdateQuestInput }, { client }) =>
+      executePrivateRequest(client, (signal) => updateOrganizerQuest(id, input, signal)),
     retry: false,
     onSuccess: (quest) => {
       queryClient.setQueryData(organizerQuestKeys.detail(quest.id), quest);
@@ -83,8 +92,8 @@ function useLifecycleInvalidation() {
 export function usePublishQuestMutation() {
   const invalidation = useLifecycleInvalidation();
   return useMutation({
-    mutationFn: ({ id, version }: { id: string; version: number }) =>
-      publishOrganizerQuest(id, version),
+    mutationFn: ({ id, version }: { id: string; version: number }, { client }) =>
+      executePrivateRequest(client, (signal) => publishOrganizerQuest(id, version, signal)),
     retry: false,
     onSuccess: invalidation.onSuccess,
     onError: invalidation.onError,
@@ -102,7 +111,10 @@ export function useCancelQuestMutation() {
       id: string;
       version: number;
       confirmActiveParticipants: boolean;
-    }) => cancelOrganizerQuest(id, version, confirmActiveParticipants),
+    }, { client }) => executePrivateRequest(
+      client,
+      (signal) => cancelOrganizerQuest(id, version, confirmActiveParticipants, signal),
+    ),
     retry: false,
     onSuccess: invalidation.onSuccess,
     onError: invalidation.onError,
@@ -112,8 +124,8 @@ export function useCancelQuestMutation() {
 export function useArchiveQuestMutation() {
   const invalidation = useLifecycleInvalidation();
   return useMutation({
-    mutationFn: ({ id, version }: { id: string; version: number }) =>
-      archiveOrganizerQuest(id, version),
+    mutationFn: ({ id, version }: { id: string; version: number }, { client }) =>
+      executePrivateRequest(client, (signal) => archiveOrganizerQuest(id, version, signal)),
     retry: false,
     onSuccess: invalidation.onSuccess,
     onError: invalidation.onError,
@@ -123,8 +135,8 @@ export function useArchiveQuestMutation() {
 export function useDeleteQuestMutation() {
   const { queryClient } = useLifecycleInvalidation();
   return useMutation({
-    mutationFn: ({ id, version }: { id: string; version: number }) =>
-      deleteOrganizerQuest(id, version),
+    mutationFn: ({ id, version }: { id: string; version: number }, { client }) =>
+      executePrivateRequest(client, (signal) => deleteOrganizerQuest(id, version, signal)),
     retry: false,
     onSuccess: (_result, variables) => {
       queryClient.removeQueries({ queryKey: organizerQuestKeys.detail(variables.id) });

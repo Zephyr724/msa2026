@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchCurrentSession, login, logout, register } from '../lib/api/auth.ts';
-import { authQueryKey, clearPrivateServerState } from '../lib/api/privateCache.ts';
+import {
+  authQueryKey,
+  clearPrivateServerState,
+  expirePrivateSession,
+} from '../lib/api/privateCache.ts';
 
 // Re-exported so existing consumers can keep importing it from this module;
 // the definition lives in `lib/api/privateCache.ts` so the API layer does
@@ -10,7 +14,18 @@ export { authQueryKey };
 export function useAuthQuery() {
   return useQuery({
     queryKey: authQueryKey,
-    queryFn: fetchCurrentSession,
+    queryFn: async ({ client, signal }) => {
+      const previousSession = client.getQueryData(authQueryKey);
+      const session = await fetchCurrentSession(signal);
+      if (session === null && previousSession != null) {
+        const sourceQuery = client.getQueryCache().find({
+          queryKey: authQueryKey,
+          exact: true,
+        });
+        await expirePrivateSession(client, sourceQuery);
+      }
+      return session;
+    },
     retry: false,
     staleTime: 60_000,
   });

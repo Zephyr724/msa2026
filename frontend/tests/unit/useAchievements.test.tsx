@@ -209,7 +209,8 @@ describe('achievement transport and hooks', () => {
     expect(queryClient.getQueryData(authQueryKey)).toBeNull();
     expect(queryClient.getQueriesData({ queryKey: ['progression'] })).toEqual([]);
     expect(queryClient.getQueriesData({ queryKey: ['passport'] })).toEqual([]);
-    expect(queryClient.getQueriesData({ queryKey: achievementKeys.all })).toEqual([]);
+    expect(queryClient.getQueriesData({ queryKey: achievementKeys.all })
+      .every(([, data]) => data === undefined)).toBe(true);
   });
 
   it('uses the same private-session cleanup for a trophy-profile 401', async () => {
@@ -223,8 +224,8 @@ describe('achievement transport and hooks', () => {
       .rejects.toMatchObject({ status: 401 });
 
     expect(queryClient.getQueryData(authQueryKey)).toBeNull();
-    expect(queryClient.getQueriesData({ queryKey: achievementKeys.all }))
-      .toEqual([]);
+    expect(queryClient.getQueriesData({ queryKey: achievementKeys.all })
+      .every(([, data]) => data === undefined)).toBe(true);
   });
 
   it('keeps the anonymous catalog transport outside private-session cleanup', async () => {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AuthCard } from './LoginPage';
 import {
@@ -6,6 +7,7 @@ import {
   resendConfirmation, resetPassword,
 } from '../lib/api/auth';
 import { ApiError } from '../lib/api/apiFetch';
+import { executePrivateRequest } from '../lib/api/privateCache.ts';
 
 function messageFor(error: unknown): string {
   return error instanceof ApiError
@@ -120,13 +122,19 @@ export function ResetPasswordPage() {
 }
 
 export function ChangePasswordPage() {
+  const queryClient = useQueryClient();
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   async function submit(event: FormEvent) {
     event.preventDefault();
-    try { setMessage((await changePassword(current, password, confirmation)).message); }
+    try {
+      setMessage((await executePrivateRequest(
+        queryClient,
+        (signal) => changePassword(current, password, confirmation, signal),
+      )).message);
+    }
     catch (error) { setMessage(messageFor(error)); }
   }
   return (
