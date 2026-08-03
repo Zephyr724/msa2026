@@ -76,4 +76,38 @@ public sealed class OpenApiOperationTests
             .ToArray();
         Assert.Equal(["scope", "period", "page", "pageSize"], parameters);
     }
+
+    [Fact]
+    public async Task SocialFeedOperationsAndWriteBoundariesAreDocumented()
+    {
+        var text = await _factory.CreateClient().GetStringAsync(
+            "/openapi/v1.json",
+            TestContext.Current.CancellationToken);
+        using var document = JsonDocument.Parse(text);
+        var paths = document.RootElement.GetProperty("paths");
+
+        var list = paths.GetProperty("/api/v1/social/posts").GetProperty("get");
+        Assert.True(list.GetProperty("responses").TryGetProperty("200", out _));
+        var createResponses = paths
+            .GetProperty("/api/v1/social/posts")
+            .GetProperty("post")
+            .GetProperty("responses");
+        foreach (var status in new[] { "201", "400", "401", "403", "429" })
+            Assert.True(createResponses.TryGetProperty(status, out _), $"Missing {status}.");
+
+        var likePath = paths.GetProperty("/api/v1/social/posts/{postId}/like");
+        foreach (var method in new[] { "put", "delete" })
+        {
+            var responses = likePath.GetProperty(method).GetProperty("responses");
+            foreach (var status in new[] { "200", "401", "403", "404", "429" })
+                Assert.True(responses.TryGetProperty(status, out _), $"Missing {method} {status}.");
+        }
+
+        var commentResponses = paths
+            .GetProperty("/api/v1/social/posts/{postId}/comments")
+            .GetProperty("post")
+            .GetProperty("responses");
+        foreach (var status in new[] { "201", "400", "401", "403", "404", "429" })
+            Assert.True(commentResponses.TryGetProperty(status, out _), $"Missing {status}.");
+    }
 }

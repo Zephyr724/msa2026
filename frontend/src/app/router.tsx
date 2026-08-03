@@ -21,6 +21,7 @@ import {
 import AdminReviewPage from '../pages/AdminReviewPage.tsx';
 import ShareCardBuilderPage from '../pages/ShareCardBuilderPage.tsx';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage.tsx';
+import CommunityPage from '../pages/CommunityPage.tsx';
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/leaderboard', element: <LeaderboardPage /> },
+      { path: '/community', element: <CommunityPage /> },
       {
         element: <RequireAuth />,
         children: [
