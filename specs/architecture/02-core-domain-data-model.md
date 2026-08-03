@@ -48,6 +48,13 @@ erDiagram
     Achievement ||--o{ UserAchievement : "1:N"
     Achievement o|--o{ CommunityChallenge : "RewardAchievementId (nullable)"
     CommunityChallenge o|--o{ UserAchievement : "SourceCommunityChallengeId (nullable)"
+
+    ApplicationUser ||--o{ SocialPost : "AuthorUserId"
+    ApplicationUser ||--o{ SocialPostLike : "UserId"
+    ApplicationUser ||--o{ SocialComment : "AuthorUserId"
+    SocialPost ||--o{ SocialPostLike : "PostId"
+    SocialPost ||--o{ SocialComment : "PostId"
+    SocialComment o|--o{ SocialComment : "ParentCommentId (nullable)"
 ```
 
 ## 3. Entity and Field Tables
@@ -61,6 +68,7 @@ Managed by ASP.NET Core Identity. Not defined here in detail. Key relationships:
 - 1:N with `QuestParticipation`
 - 1:N with `QuestCompletion` (as completer)
 - 1:N with `UserAchievement`
+- 1:N with `SocialPost`, `SocialPostLike`, and `SocialComment`
 
 ### 3.2 UserProfile
 
@@ -369,6 +377,49 @@ sets `XpTransactionId` non-null to the resolved triggering ledger row and
 - Historical contribution does not move when Home Community changes.
 - **Editing restrictions (MVP):** Admin may edit region, period, target, and reward only before `PeriodStart`. Once `PeriodStart` has arrived, or once any eligible contribution exists, those competitive fields are immutable. An already-started challenge may only be cancelled. Reducing the target below current progress is forbidden. Return `409 Conflict` for prohibited changes.
 
+### 3.14 SocialPost
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `Id` | `uuid` | PK, not null |
+| `AuthorUserId` | `uuid` | Not null. FK → `AspNetUsers.Id`. Cascade delete. |
+| `Content` | `text` (max 2000) | Not null, non-blank after application normalization. |
+| `ImageUrl` | `text` (max 2048) | Nullable. When supplied, absolute HTTPS URL without credentials. |
+| `ImageAltText` | `text` (max 200) | Nullable. Required exactly when `ImageUrl` is supplied. |
+| `CreatedAt` | `timestamp with time zone` | Not null, immutable. |
+| `UpdatedAt` | `timestamp with time zone` | Not null. Equal to `CreatedAt` in Slice 25 because editing is deferred. |
+
+### 3.15 SocialPostLike
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `PostId` | `uuid` | Composite PK. FK → `SocialPost.Id`. Cascade delete. |
+| `UserId` | `uuid` | Composite PK. FK → `AspNetUsers.Id`. Cascade delete. |
+| `CreatedAt` | `timestamp with time zone` | Not null, immutable. |
+
+The composite primary key makes setting a like idempotent and prevents a user
+from contributing more than one like to the same post.
+
+### 3.16 SocialComment
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `Id` | `uuid` | PK, not null |
+| `PostId` | `uuid` | Not null. FK → `SocialPost.Id`. Cascade delete. |
+| `AuthorUserId` | `uuid` | Not null. FK → `AspNetUsers.Id`. Cascade delete. |
+| `ParentCommentId` | `uuid?` | Nullable self-FK. `SetNull` when the parent comment is removed. |
+| `Content` | `text` (max 1000) | Not null, non-blank after application normalization. |
+| `CreatedAt` | `timestamp with time zone` | Not null, immutable. |
+
+Slice 25 supports only roots and direct replies. The application service
+rejects a parent that belongs to another post and rejects replying to an
+existing reply. The database additionally rejects self-parenting.
+
+Public thread composition pages roots and returns at most the first 20 direct
+replies for each returned root. The API also returns the authoritative reply
+count and a `hasMoreReplies` flag, preventing high-fan-out threads from
+creating an unbounded public result.
+
 ## 4. Enums Summary
 
 ```text
@@ -408,6 +459,9 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 | Achievement | `Code` | Unique | Machine-readable identifier |
 | CommunityChallenge | `(LocalAreaRegionId) WHERE Status = 'Active'` | Partial unique index | At most one Active challenge per LocalArea |
 | CommunityChallenge | `(LocalAreaRegionId, PeriodStart)` | Index | Challenge history lookup |
+| SocialPost | `(CreatedAt, Id)` | Index | Stable newest-first feed paging |
+| SocialPostLike | `(PostId, UserId)` | Composite primary key | One like per user and post |
+| SocialComment | `(PostId, ParentCommentId, CreatedAt, Id)` | Index | Stable root/reply thread reads |
 
 ### 5.2 Foreign Key Delete Behaviors
 
@@ -417,6 +471,9 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 | `QuestImage` → `Quest` | `Cascade` | Images are owned by and live/die with the Quest. |
 | `EvidenceClaimDetail` → `QuestCompletion` | `Cascade` | Detail is 1:1 owned by the completion. |
 | `QuestCompletion` → `QuestParticipation` | `SetNull` | Completion outlives cancelled participation. |
+| `SocialPostLike` / `SocialComment` → `SocialPost` | `Cascade` | Reactions and discussion are owned by the post. |
+| `SocialPost` / `SocialPostLike` / `SocialComment` → `ApplicationUser` | `Cascade` | Account deletion removes authored social data and reactions. |
+| `SocialComment` → parent `SocialComment` | `SetNull` | A reply remains a valid root if its parent is removed during account cleanup. |
 | All other FKs | `Restrict` | Default safe behavior; specific cases reviewed during implementation. |
 
 ## 6. Ownership Boundaries
@@ -434,6 +491,9 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 | UserAchievement | The Member (self) | Self read; System awards |
 | CommunityChallenge | Admin | Guest and Member: public aggregate read. Admin: create and manage. Organizer: no special management privilege beyond public/member read. Private personal contribution data remains available only to the owning Member through Passport endpoints. |
 | Region | System (seed) | Public read (active only); Admin manages seed |
+| SocialPost | Author for creation; public read | Authenticated Member+ creates. Editing/deletion are outside Slice 25. API never returns the internal author user ID. |
+| SocialPostLike | The Member (self) | Authenticated user sets/removes only their own like; public responses expose aggregate count only. |
+| SocialComment | Author for creation; public read | Authenticated Member+ creates roots/direct replies. Editing/deletion are outside Slice 25. API never returns the internal author user ID. |
 
 ## 7. Transaction Boundaries
 
@@ -467,7 +527,10 @@ All entities and fields listed in §3 are MVP scope except as noted below.
 - Virtual currency, Wallet, Shop, purchasing
 - Community Challenge seasons, leagues, editable scoring formulas
 - Image evidence upload (MVP uses URL only)
-- Public Profile, social features, notifications
+- Public Profile, follows, friends, chat, notifications, and social file upload
+
+The bounded Slice 25 social feed (posts, aggregate likes, and two-level
+comments) was explicitly approved on 2026-07-31 and is no longer deferred.
 
 ## 10. Implementation Invariants
 
@@ -481,6 +544,13 @@ All entities and fields listed in §3 are MVP scope except as noted below.
 8. XP amount is server-calculated; frontend never submits a trusted XP value.
 9. XP is never awarded for SelfReported completions.
 10. `CommunityRegionIdAtAward` is immutable after creation.
+11. Social API responses expose display names but never author/user IDs,
+    emails, Home Community, or other private profile fields.
+12. Social images are linked HTTPS resources; the backend never downloads or
+    proxies them in Slice 25.
+13. If exceptional internal data damage leaves a social author without a
+    `UserProfile`, public social reads use the neutral `Community member`
+    display label instead of exposing an identifier or failing the whole page.
 
 ## 11. Resolved Completion-Lifecycle Decisions
 

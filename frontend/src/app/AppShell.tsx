@@ -4,6 +4,7 @@ import {
   IdCard,
   LogIn,
   LogOut,
+  MessagesSquare,
   ShieldCheck,
   Target,
   Trophy,
@@ -25,11 +26,13 @@ interface NavigationItem {
 
 const publicNavigation: NavigationItem[] = [
   { label: 'Discover', to: '/quests', Icon: Compass },
+  { label: 'Community', to: '/community', Icon: MessagesSquare },
   { label: 'Leaderboard', to: '/leaderboard', Icon: Trophy },
 ];
 
 const memberNavigation: NavigationItem[] = [
   { label: 'Discover', to: '/quests', Icon: Compass },
+  { label: 'Community', to: '/community', Icon: MessagesSquare },
   { label: 'My Quests', to: '/my-quests', Icon: Target },
   { label: 'Passport', to: '/passport', Icon: IdCard },
   { label: 'Leaderboard', to: '/leaderboard', Icon: Trophy },
@@ -203,7 +206,7 @@ export default function AppShell() {
         <nav
           aria-label={auth.data ? 'Member navigation' : 'Public navigation'}
           className={`fixed inset-x-0 bottom-0 z-40 grid border-t border-base-300 bg-base-100 px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-12px_35px_rgba(24,48,38,0.08)] md:hidden ${
-            auth.data ? 'grid-cols-4' : 'grid-cols-2'
+            auth.data ? 'grid-cols-5' : 'grid-cols-3'
           }`}
         >
           {navigation.map(({ label, to, Icon }) => (

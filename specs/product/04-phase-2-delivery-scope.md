@@ -109,7 +109,13 @@ marking, based on actual completion quality and evidence.
 - Community Challenge.
 - Multi-layer community leaderboard.
 - Share Card.
-- Seasons, leagues, social feed, or chat.
+- Seasons, leagues, or chat.
+
+The bounded social-post feed in `specs/implementation/25-social-posts-feed.md`
+was separately approved by explicit product-owner instruction on 2026-07-31.
+That approval covers public search/paging, authenticated publishing and likes,
+and two-level comments. Public profiles, follows, friends, chat,
+notifications, file upload, and moderation tooling remain deferred.
 
 Storybook must not be claimed complete unless the implemented reusable UI
 component set is comprehensively integrated.

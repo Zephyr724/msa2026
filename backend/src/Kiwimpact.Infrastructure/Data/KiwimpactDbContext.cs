@@ -22,6 +22,9 @@ public sealed class KiwimpactDbContext
     public DbSet<Achievement> Achievements => Set<Achievement>();
     public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
     public DbSet<CommunityChallenge> CommunityChallenges => Set<CommunityChallenge>();
+    public DbSet<SocialPost> SocialPosts => Set<SocialPost>();
+    public DbSet<SocialPostLike> SocialPostLikes => Set<SocialPostLike>();
+    public DbSet<SocialComment> SocialComments => Set<SocialComment>();
 
     public KiwimpactDbContext(DbContextOptions<KiwimpactDbContext> options)
         : base(options)
