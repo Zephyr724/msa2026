@@ -397,18 +397,19 @@ describe('Participant quest completion panel', () => {
     expect(redeemCalls(fetchMock)).toHaveLength(0);
   });
 
-  it('shows session feedback on a 401 redemption response', async () => {
+  it('clears the session before replacing a 401 redemption form with sign-in', async () => {
     const user = userEvent.setup();
     stubParticipantApi({
       redeemResponses: [jsonResponse({ detail: 'Authentication required.' }, 401)],
     });
-    renderPanel();
+    const { queryClient } = renderPanel();
 
     await user.type(await openCompletionDialog(user), ENTERED_TYPED);
     await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
-    expect((await screen.findByRole('alert')))
-      .toHaveTextContent('Your session has expired. Please sign in again.');
+    expect(await screen.findByText('Sign in to redeem a completion code.'))
+      .toBeInTheDocument();
+    expect(queryClient.getQueryData(['auth', 'me'])).toBeNull();
   });
 
   it('maps a 403 redemption rejection to bounded authorization feedback', async () => {

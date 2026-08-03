@@ -12,6 +12,7 @@ import {
   setSocialPostLike,
 } from '../lib/api/social';
 import { ApiError } from '../lib/api/apiFetch';
+import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
 import type {
   CreateSocialCommentInput,
   SocialPostPage,
@@ -27,7 +28,10 @@ export const socialKeys = {
 export function useSocialFeed(search: string) {
   return useInfiniteQuery({
     queryKey: socialKeys.feed(search),
-    queryFn: ({ pageParam }) => fetchSocialPosts(search, pageParam),
+    queryFn: ({ client, pageParam, signal }) => executePrivateQuery(
+      client, socialKeys.feed(search), signal,
+      (signal) => fetchSocialPosts(search, pageParam, 12, signal),
+    ),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.hasNextPage ? lastPage.page + 1 : undefined,
@@ -39,7 +43,7 @@ export function useCreateSocialPost() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: Parameters<typeof createSocialPost>[0]) =>
-      createSocialPost(input, client),
+      executePrivateRequest(client, (signal) => createSocialPost(input, signal)),
     onSuccess: () => client.invalidateQueries({ queryKey: socialKeys.feeds }),
   });
 }
@@ -48,7 +52,10 @@ export function useSetSocialLike() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: ({ postId, isLiked }: { postId: string; isLiked: boolean }) =>
-      setSocialPostLike(postId, isLiked, client),
+      executePrivateRequest(
+        client,
+        (signal) => setSocialPostLike(postId, isLiked, signal),
+      ),
     onMutate: async ({ postId, isLiked }) => {
       await client.cancelQueries({ queryKey: socialKeys.feeds });
       const snapshots = client.getQueriesData<InfiniteData<SocialPostPage>>({
@@ -83,7 +90,10 @@ export function useSetSocialLike() {
 export function useSocialComments(postId: string, enabled: boolean) {
   return useInfiniteQuery({
     queryKey: socialKeys.comments(postId),
-    queryFn: ({ pageParam }) => fetchSocialComments(postId, pageParam),
+    queryFn: ({ client, pageParam, signal }) => executePrivateQuery(
+      client, socialKeys.comments(postId), signal,
+      (signal) => fetchSocialComments(postId, pageParam, 20, signal),
+    ),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.hasNextPage ? lastPage.page + 1 : undefined,
@@ -95,7 +105,10 @@ export function useCreateSocialComment(postId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: Omit<CreateSocialCommentInput, 'postId'>) =>
-      createSocialComment({ ...input, postId }, client),
+      executePrivateRequest(
+        client,
+        (signal) => createSocialComment({ ...input, postId }, signal),
+      ),
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: socialKeys.comments(postId) }),

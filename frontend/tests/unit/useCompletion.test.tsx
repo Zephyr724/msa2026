@@ -121,7 +121,11 @@ describe('completion Query hooks', () => {
       await result.current('ABCDE23456');
     });
 
-    expect(mockRedeem).toHaveBeenCalledWith(questId, 'ABCDE23456');
+    expect(mockRedeem).toHaveBeenCalledWith(
+      questId,
+      'ABCDE23456',
+      expect.any(AbortSignal),
+    );
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: completionKeys.detail(questId),
       exact: true,

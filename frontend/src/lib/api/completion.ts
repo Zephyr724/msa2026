@@ -23,8 +23,9 @@ function questPath(questId: string): string {
 
 export async function fetchCompletionCodeStatus(
   questId: string,
+  signal?: AbortSignal,
 ): Promise<CompletionCodeStatusDto> {
-  const payload = await apiFetch<unknown>(organizerCompletionCodesPath(questId));
+  const payload = await apiFetch<unknown>(organizerCompletionCodesPath(questId), { signal });
   return validateCompletionCodeStatus(payload);
 }
 
@@ -35,64 +36,70 @@ export async function fetchCompletionCodeStatus(
  */
 export async function generateOrRotateCompletionCode(
   questId: string,
+  signal?: AbortSignal,
 ): Promise<GeneratedCompletionCodeDto> {
   const payload = await apiFetch<unknown>(organizerCompletionCodesPath(questId), {
     method: 'POST',
+    signal,
   });
   return validateGeneratedCompletionCode(payload);
 }
 
 export async function fetchMyQuestCompletion(
   questId: string,
+  signal?: AbortSignal,
 ): Promise<MyQuestCompletionDto> {
-  const payload = await apiFetch<unknown>(`${questPath(questId)}/completion`);
+  const payload = await apiFetch<unknown>(`${questPath(questId)}/completion`, { signal });
   return validateMyQuestCompletion(payload);
 }
 
 export async function redeemCompletionCode(
   questId: string,
   code: string,
+  signal?: AbortSignal,
 ): Promise<MyQuestCompletionDto> {
   const payload = await apiFetch<unknown>(`${questPath(questId)}/redeem`, {
     method: 'POST',
     body: JSON.stringify({ code }),
+    signal,
   });
   return validateMyQuestCompletion(payload);
 }
 
 export function submitEvidenceClaim(
-  questId: string, input: EvidenceClaimInput,
+  questId: string, input: EvidenceClaimInput, signal?: AbortSignal,
 ): Promise<EvidenceClaim> {
   return apiFetch<EvidenceClaim>(`${questPath(questId)}/claims`, {
-    method: 'POST', body: JSON.stringify(input),
+    method: 'POST', body: JSON.stringify(input), signal,
   });
 }
 
 export function selfReportCompletion(
-  questId: string, completedAtUtc: string,
+  questId: string, completedAtUtc: string, signal?: AbortSignal,
 ): Promise<MyQuestCompletionDto> {
   return apiFetch<MyQuestCompletionDto>(`${questPath(questId)}/self-report`, {
-    method: 'POST', body: JSON.stringify({ completedAtUtc }),
+    method: 'POST', body: JSON.stringify({ completedAtUtc }), signal,
   });
 }
 
-export function fetchMyClaims(): Promise<EvidenceClaimSummary[]> {
-  return apiFetch<EvidenceClaimSummary[]>('/v1/users/me/claims');
+export function fetchMyClaims(signal?: AbortSignal): Promise<EvidenceClaimSummary[]> {
+  return apiFetch<EvidenceClaimSummary[]>('/v1/users/me/claims', { signal });
 }
 
-export function fetchPendingClaims(): Promise<EvidenceClaimSummary[]> {
-  return apiFetch<EvidenceClaimSummary[]>('/v1/admin/claims');
+export function fetchPendingClaims(signal?: AbortSignal): Promise<EvidenceClaimSummary[]> {
+  return apiFetch<EvidenceClaimSummary[]>('/v1/admin/claims', { signal });
 }
 
-export function fetchAdminClaim(claimId: string): Promise<EvidenceClaim> {
-  return apiFetch<EvidenceClaim>(`/v1/admin/claims/${encodeURIComponent(claimId)}`);
+export function fetchAdminClaim(claimId: string, signal?: AbortSignal): Promise<EvidenceClaim> {
+  return apiFetch<EvidenceClaim>(`/v1/admin/claims/${encodeURIComponent(claimId)}`, { signal });
 }
 
 export function reviewEvidenceClaim(
   claimId: string, approve: boolean, reviewNote: string,
+  signal?: AbortSignal,
 ): Promise<EvidenceClaim> {
   return apiFetch<EvidenceClaim>(
     `/v1/admin/claims/${encodeURIComponent(claimId)}/review`,
-    { method: 'POST', body: JSON.stringify({ approve, reviewNote: reviewNote || null }) },
+    { method: 'POST', body: JSON.stringify({ approve, reviewNote: reviewNote || null }), signal },
   );
 }

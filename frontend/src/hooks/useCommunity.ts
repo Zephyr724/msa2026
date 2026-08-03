@@ -8,6 +8,7 @@ import {
   updateCommunityChallenge,
   updateMyProfile,
 } from '../lib/api/community';
+import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
 
 export const communityKeys = {
   profile: ['community', 'profile'] as const,
@@ -18,7 +19,9 @@ export const communityKeys = {
 export function useMyProfile(enabled = true) {
   return useQuery({
     queryKey: communityKeys.profile,
-    queryFn: fetchMyProfile,
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, communityKeys.profile, signal, fetchMyProfile,
+    ),
     enabled,
     retry: false,
   });
@@ -27,7 +30,8 @@ export function useMyProfile(enabled = true) {
 export function useUpdateMyProfile() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: updateMyProfile,
+    mutationFn: (input: Parameters<typeof updateMyProfile>[0], { client: activeClient }) =>
+      executePrivateRequest(activeClient, (signal) => updateMyProfile(input, signal)),
     onSuccess: (profile) => client.setQueryData(communityKeys.profile, profile),
   });
 }
@@ -35,7 +39,9 @@ export function useUpdateMyProfile() {
 export function useWeeklyStreak() {
   return useQuery({
     queryKey: communityKeys.streak,
-    queryFn: fetchWeeklyStreak,
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, communityKeys.streak, signal, fetchWeeklyStreak,
+    ),
     retry: false,
   });
 }
@@ -52,17 +58,26 @@ export function useCommunityChallengeMutations() {
   const client = useQueryClient();
   const refresh = () => client.invalidateQueries({ queryKey: communityKeys.challenges });
   return {
-    create: useMutation({ mutationFn: createCommunityChallenge, onSuccess: refresh }),
+    create: useMutation({
+      mutationFn: (input: Parameters<typeof createCommunityChallenge>[0], { client: activeClient }) =>
+        executePrivateRequest(activeClient, (signal) =>
+          createCommunityChallenge(input, signal)),
+      onSuccess: refresh,
+    }),
     update: useMutation({
       mutationFn: ({ id, input }: {
         id: string;
         input: Parameters<typeof updateCommunityChallenge>[1];
-      }) => updateCommunityChallenge(id, input),
+      }, { client: activeClient }) => executePrivateRequest(
+        activeClient,
+        (signal) => updateCommunityChallenge(id, input, signal),
+      ),
       onSuccess: refresh,
     }),
     cancel: useMutation({
-      mutationFn: ({ id, version }: { id: string; version: number }) =>
-        cancelCommunityChallenge(id, version),
+      mutationFn: ({ id, version }: { id: string; version: number }, { client: activeClient }) =>
+        executePrivateRequest(activeClient, (signal) =>
+          cancelCommunityChallenge(id, version, signal)),
       onSuccess: refresh,
     }),
   };

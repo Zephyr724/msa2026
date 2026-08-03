@@ -13,7 +13,11 @@ import {
 import AppShell from '../../src/app/AppShell.tsx';
 import RequireAuth from '../../src/components/RequireAuth.tsx';
 import PassportPage from '../../src/pages/PassportPage.tsx';
-import { authQueryKey, useLoginMutation } from '../../src/hooks/useAuth.ts';
+import {
+  authQueryKey,
+  useAuthQuery,
+  useLoginMutation,
+} from '../../src/hooks/useAuth.ts';
 import { resetCsrfToken } from '../../src/lib/api/apiFetch.ts';
 import { jsonResponse } from '../organizerTestUtils.tsx';
 
@@ -64,12 +68,9 @@ function historyWith(title: string) {
 }
 
 const EXPECTED_CLEANUP_ORDER = [
-  'cancel:progression',
-  'cancel:passport',
-  'cancel:achievements',
-  'remove:progression',
-  'remove:passport',
-  'remove:achievements',
+  'cancelQueries',
+  'removeQueries',
+  'clearMutations',
   'setAuth',
 ];
 
@@ -79,18 +80,18 @@ function trackOrder(client: QueryClient, order: string[]) {
   const origRemove = client.removeQueries.bind(client);
   const origSet = client.setQueryData.bind(client);
   vi.spyOn(client, 'cancelQueries').mockImplementation((filters) => {
-    const first = (filters?.queryKey as readonly unknown[] | undefined)?.[0];
-    if (first === 'progression' || first === 'passport' || first === 'achievements') {
-      order.push(`cancel:${String(first)}`);
-    }
+    if (filters?.predicate) order.push('cancelQueries');
     return origCancel(filters);
   });
   vi.spyOn(client, 'removeQueries').mockImplementation((filters) => {
-    const first = (filters?.queryKey as readonly unknown[] | undefined)?.[0];
-    if (first === 'progression' || first === 'passport' || first === 'achievements') {
-      order.push(`remove:${String(first)}`);
-    }
+    if (filters?.predicate) order.push('removeQueries');
     origRemove(filters);
+  });
+  const mutationCache = client.getMutationCache();
+  const origClearMutations = mutationCache.clear.bind(mutationCache);
+  vi.spyOn(mutationCache, 'clear').mockImplementation(() => {
+    order.push('clearMutations');
+    origClearMutations();
   });
   vi.spyOn(client, 'setQueryData').mockImplementation(((key: unknown, data: unknown, options: unknown) => {
     if (Array.isArray(key) && key[0] === 'auth') {
@@ -100,16 +101,14 @@ function trackOrder(client: QueryClient, order: string[]) {
   }) as never);
 }
 
-function privateCacheEntries(client: QueryClient) {
+function principalDataEntries(client: QueryClient) {
   return client.getQueryCache().findAll()
-    .filter((query) =>
-      ['progression', 'passport', 'achievements']
-        .includes(String(query.queryKey[0])));
+    .filter((query) => query.queryKey[0] !== 'auth' && query.state.data !== undefined);
 }
 
 /**
  * Concurrent-401 invariant: every recorded auth write must be preceded by a
- * complete cancel-then-remove of both private prefixes, no matter how the
+ * complete cancel-then-remove-and-mutation-clear, no matter how the
  * concurrent cleanup runs interleave.
  */
 function expectEveryAuthWritePrecededByFullCleanup(order: string[]) {
@@ -119,7 +118,7 @@ function expectEveryAuthWritePrecededByFullCleanup(order: string[]) {
   expect(setAuthIndexes.length).toBeGreaterThan(0);
   for (const index of setAuthIndexes) {
     const before = order.slice(0, index);
-    for (const required of EXPECTED_CLEANUP_ORDER.slice(0, 6)) {
+    for (const required of EXPECTED_CLEANUP_ORDER.slice(0, 3)) {
       expect(before).toContain(required);
     }
   }
@@ -135,6 +134,39 @@ function LoginHarness() {
       B sign in
     </button>
   );
+}
+
+function SessionRefreshHarness() {
+  const auth = useAuthQuery();
+  return <button onClick={() => void auth.refetch()} type="button">Refresh session</button>;
+}
+
+const omittedPrivateKeys = [
+  ['community', 'profile'],
+  ['community', 'streak'],
+  ['claims', 'me'],
+  ['claims', 'admin'],
+  ['claims', 'admin', 'claim-a'],
+  ['quest', 'quest-a', 'my-participation'],
+  ['quest', 'quest-a', 'my-completion'],
+  ['organizer', 'quests'],
+  ['organizer', 'quests', 'quest-a', 'completion-code'],
+  ['leaderboard', 'people', 'home-community', 'weekly'],
+  ['social', 'posts', ''],
+] as const;
+
+async function seedPreviouslyOmittedPrincipalState(client: QueryClient) {
+  for (const queryKey of omittedPrivateKeys) {
+    const data = queryKey[0] === 'claims' && queryKey[1] === 'me'
+      ? []
+      : { owner: 'principal-a', privateValue: queryKey.join(':') };
+    client.setQueryData(queryKey, data);
+  }
+  const mutation = client.getMutationCache().build(client, {
+    mutationKey: ['claims', 'admin', 'review'],
+    mutationFn: async (variables: { reviewNote: string }) => variables,
+  });
+  await mutation.execute({ reviewNote: 'Principal A private review note' });
 }
 
 describe('authenticated-cache lifecycle at principal boundaries', () => {
@@ -199,7 +231,8 @@ describe('authenticated-cache lifecycle at principal boundaries', () => {
     expect(await screen.findByText('Sign in page')).toBeInTheDocument();
     await waitFor(() => expect(queryClient.getQueryData(authQueryKey)).toBeNull());
     expectEveryAuthWritePrecededByFullCleanup(order);
-    expect(privateCacheEntries(queryClient)).toHaveLength(0);
+    expect(principalDataEntries(queryClient)).toHaveLength(0);
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
   });
 
   it('F10: logout and login run cleanup before the session changes; nothing of A survives for B', async () => {
@@ -269,6 +302,8 @@ describe('authenticated-cache lifecycle at principal boundaries', () => {
 
     // A's history renders; A's progression request is still in flight.
     expect(await screen.findByText('Aroha river clean-up')).toBeInTheDocument();
+    await seedPreviouslyOmittedPrincipalState(queryClient);
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(1);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Sign out' }));
@@ -276,13 +311,17 @@ describe('authenticated-cache lifecycle at principal boundaries', () => {
     // Logout awaits the cleanup before the auth entry becomes null.
     await waitFor(() => expect(queryClient.getQueryData(authQueryKey)).toBeNull());
     expect(order).toEqual(EXPECTED_CLEANUP_ORDER);
-    expect(privateCacheEntries(queryClient)).toHaveLength(0);
+    expect(principalDataEntries(queryClient)).toHaveLength(0);
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+    for (const queryKey of omittedPrivateKeys) {
+      expect(queryClient.getQueryData(queryKey)).toBeUndefined();
+    }
 
     // A's deferred progression request resolving after logout must NOT
     // repopulate the cache (cancelled before removal).
     resolveProgressionA(jsonResponse({ totalXp: 51_940, level: 99, rankTitle: 'Kiwimpact Legend' }));
     await act(async () => undefined);
-    expect(privateCacheEntries(queryClient)).toHaveLength(0);
+    expect(principalDataEntries(queryClient)).toHaveLength(0);
 
     // B signs in: account replacement shares the same strict order.
     order.length = 0;
@@ -304,5 +343,66 @@ describe('authenticated-cache lifecycle at principal boundaries', () => {
     expect(screen.queryByText('Aroha river clean-up')).not.toBeInTheDocument();
     expect(screen.queryByText(/Kiwimpact Legend/)).not.toBeInTheDocument();
     expect(screen.queryByText(/51,940|51940/)).not.toBeInTheDocument();
+  });
+
+  it('replacing an Admin session with a Member removes admin queries and mutation data first', async () => {
+    const order: string[] = [];
+    trackOrder(queryClient, order);
+    queryClient.setQueryData(authQueryKey, {
+      userId: 'admin-a',
+      displayName: 'Admin A',
+      email: 'admin-a@example.test',
+      roles: ['Admin'],
+    });
+    order.length = 0;
+    await seedPreviouslyOmittedPrincipalState(queryClient);
+
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/csrf-token')) {
+        return Promise.resolve(jsonResponse({ token: 'csrf-role-boundary' }));
+      }
+      if (url.endsWith('/v1/auth/login')) return Promise.resolve(jsonResponse(sessionB));
+      return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+    }));
+
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LoginHarness />
+      </QueryClientProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'B sign in' }));
+
+    await waitFor(() => expect(queryClient.getQueryData(authQueryKey)).toEqual(sessionB));
+    expect(order).toEqual(EXPECTED_CLEANUP_ORDER);
+    expect(principalDataEntries(queryClient)).toHaveLength(0);
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+    for (const queryKey of omittedPrivateKeys) {
+      expect(queryClient.getQueryData(queryKey)).toBeUndefined();
+    }
+  });
+
+  it('an auth/me 401 clears all old-principal state before publishing null', async () => {
+    const order: string[] = [];
+    trackOrder(queryClient, order);
+    queryClient.setQueryData(authQueryKey, sessionA);
+    order.length = 0;
+    await seedPreviouslyOmittedPrincipalState(queryClient);
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve(jsonResponse({ detail: 'Authentication required.' }, 401))));
+
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SessionRefreshHarness />
+      </QueryClientProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Refresh session' }));
+
+    await waitFor(() => expect(queryClient.getQueryData(authQueryKey)).toBeNull());
+    expect(order).toEqual(EXPECTED_CLEANUP_ORDER);
+    expect(principalDataEntries(queryClient)).toHaveLength(0);
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
   });
 });

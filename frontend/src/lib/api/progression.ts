@@ -1,8 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { MyProgression } from '../../types/progression.ts';
 import { validateMyProgression } from '../validation/progressionDto.ts';
-import { ApiError, apiFetch } from './apiFetch.ts';
-import { expirePrivateSession } from './privateCache.ts';
+import { apiFetch } from './apiFetch.ts';
+import { executePrivateQuery } from './privateCache.ts';
 
 /**
  * Transport/validation for `GET /v1/users/me/progression`.
@@ -18,15 +18,15 @@ export async function fetchMyProgression(options: {
   queryClient: QueryClient;
   signal?: AbortSignal;
 }): Promise<MyProgression> {
-  try {
-    const payload = await apiFetch<unknown>('/v1/users/me/progression', {
-      signal: options.signal,
-    });
-    return validateMyProgression(payload);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      await expirePrivateSession(options.queryClient);
-    }
-    throw error;
-  }
+  return executePrivateQuery(
+    options.queryClient,
+    ['progression', 'me'],
+    options.signal,
+    async (signal) => {
+      const payload = await apiFetch<unknown>('/v1/users/me/progression', {
+        signal,
+      });
+      return validateMyProgression(payload);
+    },
+  );
 }

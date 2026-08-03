@@ -9,9 +9,9 @@ export function normalizeAccountLifecycleToken(token: string): string {
   return token.replaceAll(' ', '+');
 }
 
-export async function fetchCurrentSession(): Promise<AuthSession | null> {
+export async function fetchCurrentSession(signal?: AbortSignal): Promise<AuthSession | null> {
   try {
-    return await apiFetch<AuthSession>('/v1/auth/me');
+    return await apiFetch<AuthSession>('/v1/auth/me', { signal });
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       return null;
@@ -46,9 +46,10 @@ export function googleLoginUrl(returnUrl = '/'): string {
   return buildApiUrl(`/v1/auth/external-login/google?${query.toString()}`);
 }
 
-export async function beginGoogleLink(): Promise<string> {
+export async function beginGoogleLink(signal?: AbortSignal): Promise<string> {
   const result = await apiFetch<{ redirectUrl: string }>('/v1/auth/link/google', {
     method: 'POST',
+    signal,
   });
   return result.redirectUrl;
 }
@@ -82,9 +83,11 @@ export function resetPassword(
 
 export function changePassword(
   currentPassword: string, newPassword: string, newPasswordConfirmation: string,
+  signal?: AbortSignal,
 ): Promise<AccountLifecycleResult> {
   return apiFetch('/v1/auth/change-password', {
     method: 'POST',
     body: JSON.stringify({ currentPassword, newPassword, newPasswordConfirmation }),
+    signal,
   });
 }

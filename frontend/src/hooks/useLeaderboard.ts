@@ -3,6 +3,7 @@ import {
   fetchCommunitiesLeaderboard,
   fetchPeopleLeaderboard,
 } from '../lib/api/leaderboard.ts';
+import { executePrivateQuery } from '../lib/api/privateCache.ts';
 import type {
   CommunitiesLeaderboardPeriod,
   CommunitiesLeaderboardScope,
@@ -29,7 +30,10 @@ export function usePeopleLeaderboard(
 ) {
   return useQuery({
     queryKey: leaderboardKeys.people(scope, period),
-    queryFn: ({ signal }) => fetchPeopleLeaderboard({ scope, period, signal }),
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, leaderboardKeys.people(scope, period), signal,
+      (signal) => fetchPeopleLeaderboard({ scope, period, signal }),
+    ),
     enabled,
     retry: false,
     staleTime: LEADERBOARD_STALE_TIME_MS,
@@ -43,8 +47,10 @@ export function useCommunitiesLeaderboard(
 ) {
   return useQuery({
     queryKey: leaderboardKeys.communities(scope, period),
-    queryFn: ({ signal }) =>
-      fetchCommunitiesLeaderboard({ scope, period, signal }),
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, leaderboardKeys.communities(scope, period), signal,
+      (signal) => fetchCommunitiesLeaderboard({ scope, period, signal }),
+    ),
     enabled,
     retry: false,
     staleTime: LEADERBOARD_STALE_TIME_MS,

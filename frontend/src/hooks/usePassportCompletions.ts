@@ -22,7 +22,7 @@ export function usePassportSummary() {
   return useQuery({
     queryKey: passportKeys.summary,
     queryFn: ({ signal }) =>
-      fetchPassportSummary({ queryClient, signal }),
+      fetchPassportSummary({ queryClient, queryKey: passportKeys.summary, signal }),
     retry: false,
   });
 }
@@ -32,7 +32,9 @@ export function useAllPassportCompletions(enabled = true) {
   return useQuery({
     queryKey: passportKeys.allCompletions,
     queryFn: ({ signal }) =>
-      fetchAllPassportCompletions({ queryClient, signal }),
+      fetchAllPassportCompletions({
+        queryClient, queryKey: passportKeys.allCompletions, signal,
+      }),
     enabled,
     retry: false,
   });
@@ -43,7 +45,9 @@ export function usePassportCommunityParticipation() {
   return useQuery({
     queryKey: passportKeys.communityParticipation,
     queryFn: ({ signal }) =>
-      fetchPassportCommunityParticipation({ queryClient, signal }),
+      fetchPassportCommunityParticipation({
+        queryClient, queryKey: passportKeys.communityParticipation, signal,
+      }),
     retry: false,
   });
 }
@@ -58,7 +62,9 @@ export function usePassportCompletions(
   return useQuery({
     queryKey: passportKeys.completions(page, pageSize),
     queryFn: ({ signal }) =>
-      fetchPassportCompletions(page, pageSize, { queryClient, signal }),
+      fetchPassportCompletions(page, pageSize, {
+        queryClient, queryKey: passportKeys.completions(page, pageSize), signal,
+      }),
     placeholderData: keepPreviousData,
     retry: false,
   });

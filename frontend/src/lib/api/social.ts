@@ -1,4 +1,3 @@
-import type { QueryClient } from '@tanstack/react-query';
 import type {
   CreateSocialCommentInput,
   CreateSocialPostInput,
@@ -13,60 +12,61 @@ import {
   validateSocialPost,
   validateSocialPostPage,
 } from '../validation/socialDto';
-import { ApiError, apiFetch } from './apiFetch';
-import { expirePrivateSession } from './privateCache';
+import { apiFetch } from './apiFetch';
 
 export async function fetchSocialPosts(
   search: string,
   page: number,
   pageSize = 12,
+  signal?: AbortSignal,
 ): Promise<SocialPostPage> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (search) params.set('search', search);
   return validateSocialPostPage(
-    await apiFetch<unknown>(`/v1/social/posts?${params.toString()}`),
+    await apiFetch<unknown>(`/v1/social/posts?${params.toString()}`, { signal }),
   );
 }
 
 export async function createSocialPost(
   input: CreateSocialPostInput,
-  queryClient: QueryClient,
+  signal?: AbortSignal,
 ): Promise<SocialPostDto> {
-  return withPrivateSessionExpiry(queryClient, async () =>
-    validateSocialPost(await apiFetch<unknown>('/v1/social/posts', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    })));
+  return validateSocialPost(await apiFetch<unknown>('/v1/social/posts', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    signal,
+  }));
 }
 
 export async function setSocialPostLike(
   postId: string,
   isLiked: boolean,
-  queryClient: QueryClient,
+  signal?: AbortSignal,
 ): Promise<SocialLikeDto> {
-  return withPrivateSessionExpiry(queryClient, async () =>
-    validateSocialLike(await apiFetch<unknown>(
-      `/v1/social/posts/${encodeURIComponent(postId)}/like`,
-      { method: isLiked ? 'PUT' : 'DELETE' },
-    )));
+  return validateSocialLike(await apiFetch<unknown>(
+    `/v1/social/posts/${encodeURIComponent(postId)}/like`,
+    { method: isLiked ? 'PUT' : 'DELETE', signal },
+  ));
 }
 
 export async function fetchSocialComments(
   postId: string,
   page: number,
   pageSize = 20,
+  signal?: AbortSignal,
 ): Promise<SocialCommentPage> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   return validateSocialCommentPage(await apiFetch<unknown>(
     `/v1/social/posts/${encodeURIComponent(postId)}/comments?${params.toString()}`,
+    { signal },
   ));
 }
 
 export async function createSocialComment(
   input: CreateSocialCommentInput,
-  queryClient: QueryClient,
+  signal?: AbortSignal,
 ): Promise<void> {
-  await withPrivateSessionExpiry(queryClient, () => apiFetch<unknown>(
+  await apiFetch<unknown>(
     `/v1/social/posts/${encodeURIComponent(input.postId)}/comments`,
     {
       method: 'POST',
@@ -74,20 +74,7 @@ export async function createSocialComment(
         content: input.content,
         parentCommentId: input.parentCommentId,
       }),
+      signal,
     },
-  ));
-}
-
-async function withPrivateSessionExpiry<T>(
-  queryClient: QueryClient,
-  operation: () => Promise<T>,
-): Promise<T> {
-  try {
-    return await operation();
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      await expirePrivateSession(queryClient);
-    }
-    throw error;
-  }
+  );
 }

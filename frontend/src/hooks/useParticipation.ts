@@ -7,6 +7,7 @@ import {
   joinQuest,
 } from '../lib/api/participation';
 import { ApiError } from '../lib/api/apiFetch';
+import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
 import type { MyQuestParticipationFilter } from '../types/participation.ts';
 
 export const participationKeys = {
@@ -22,7 +23,10 @@ export function useMyQuestParticipationsQuery(
   const auth = useAuthQuery();
   return useQuery({
     queryKey: participationKeys.list(status),
-    queryFn: () => fetchMyQuestParticipations(status),
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, participationKeys.list(status), signal,
+      (signal) => fetchMyQuestParticipations(status, signal),
+    ),
     enabled: Boolean(auth.data),
     retry: false,
   });
@@ -32,7 +36,10 @@ export function useMyQuestParticipationQuery(questId: string) {
   const auth = useAuthQuery();
   return useQuery({
     queryKey: participationKeys.detail(questId),
-    queryFn: () => fetchMyQuestParticipation(questId),
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client, participationKeys.detail(questId), signal,
+      (signal) => fetchMyQuestParticipation(questId, signal),
+    ),
     enabled: Boolean(questId && auth.data),
     retry: false,
   });
@@ -72,7 +79,10 @@ function useAuthoritativeParticipationSync(questId: string) {
 export function useJoinQuestMutation(questId: string) {
   const authoritative = useAuthoritativeParticipationSync(questId);
   return useMutation({
-    mutationFn: () => joinQuest(questId),
+    mutationFn: (_variables, { client }) => executePrivateRequest(
+      client,
+      (signal) => joinQuest(questId, signal),
+    ),
     retry: false,
     onSuccess: authoritative.sync,
     onError: authoritative.onError,
@@ -82,7 +92,10 @@ export function useJoinQuestMutation(questId: string) {
 export function useCancelQuestParticipationMutation(questId: string) {
   const authoritative = useAuthoritativeParticipationSync(questId);
   return useMutation({
-    mutationFn: () => cancelQuestParticipation(questId),
+    mutationFn: (_variables, { client }) => executePrivateRequest(
+      client,
+      (signal) => cancelQuestParticipation(questId, signal),
+    ),
     retry: false,
     onSuccess: authoritative.sync,
     onError: authoritative.onError,

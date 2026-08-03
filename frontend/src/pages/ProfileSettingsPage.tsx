@@ -2,13 +2,16 @@ import {
   CheckCircle2, KeyRound, Link2, MapPinned, ShieldCheck,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import CommunityProfileCard from '../components/community/CommunityProfileCard.tsx';
 import { useAuthQuery } from '../hooks/useAuth.ts';
 import { beginGoogleLink } from '../lib/api/auth.ts';
+import { executePrivateRequest } from '../lib/api/privateCache.ts';
 
 export default function ProfileSettingsPage() {
   const auth = useAuthQuery();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -18,7 +21,7 @@ export default function ProfileSettingsPage() {
     setIsLinking(true);
     setLinkError(null);
     try {
-      window.location.assign(await beginGoogleLink());
+      window.location.assign(await executePrivateRequest(queryClient, beginGoogleLink));
     } catch {
       setLinkError('Google linking could not be started. Please try again.');
       setIsLinking(false);
