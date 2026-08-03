@@ -215,10 +215,11 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
             profile.ApplyXpAward(xp.XpAmount, timestamp);
             _db.QuestCompletions.Add(completion);
             _db.XpTransactions.Add(xp);
-            // Achievement hook: the profile lock is held; the service
-            // re-reads existing awards and stages only missing milestones
-            // against the snapshot (committed rows + the staged XP row).
-            await _achievementAwards.StageMissingMilestoneAwardsAsync(actorId, xp, ct);
+            await _achievementAwards.StageMissingAutomaticAwardsAsync(
+                profile,
+                xp,
+                completion.QuestCategorySnapshot,
+                ct);
 
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -530,8 +531,11 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
                 var xp = XpTransaction.CreateFromVerifiedCompletion(completion);
                 profile.ApplyXpAward(xp.XpAmount, now);
                 _db.XpTransactions.Add(xp);
-                await _achievementAwards.StageMissingMilestoneAwardsAsync(
-                    completion.UserId, xp, ct);
+                await _achievementAwards.StageMissingAutomaticAwardsAsync(
+                    profile,
+                    xp,
+                    completion.QuestCategorySnapshot,
+                    ct);
             }
             else
             {

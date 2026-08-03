@@ -3,6 +3,8 @@ export interface AuthSession {
   displayName: string;
   email: string;
   roles: string[];
+  hasPassword?: boolean;
+  linkedProviders?: string[] | null;
 }
 
 export interface RegisterInput {

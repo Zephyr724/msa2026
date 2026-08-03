@@ -1,6 +1,7 @@
 using Kiwimpact.Api.Contracts;
 using Kiwimpact.Api.Mapping;
 using Kiwimpact.Core.Authorization;
+using Kiwimpact.Core.Achievements;
 using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Services;
@@ -285,15 +286,22 @@ public sealed class AdminCommunityChallengesController : ControllerBase
         if (localArea is null || localArea.Type != RegionType.LocalArea)
             return ValidationProblemResult(
                 "Challenge region must be an active Local Area.");
-        if (request.RewardAchievementId.HasValue &&
-            !await _db.Achievements.AsNoTracking().AnyAsync(
-                item =>
-                    item.Id == request.RewardAchievementId.Value &&
-                    item.IsActive,
-                ct))
+        if (request.RewardAchievementId.HasValue)
         {
-            return ValidationProblemResult(
-                "Reward achievement must be active.");
+            var rewardDefinition = AchievementCatalog.Definitions
+                .SingleOrDefault(definition =>
+                    definition.Id == request.RewardAchievementId.Value);
+            if (rewardDefinition?.RuleKind !=
+                    AchievementRuleKind.CommunityChallengeReward ||
+                !await _db.Achievements.AsNoTracking().AnyAsync(
+                    item =>
+                        item.Id == request.RewardAchievementId.Value &&
+                        item.IsActive,
+                    ct))
+            {
+                return ValidationProblemResult(
+                    "Reward achievement must be an active Community achievement.");
+            }
         }
         return null;
     }

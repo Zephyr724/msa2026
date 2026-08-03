@@ -461,11 +461,13 @@ public sealed class ProgressionApiTests
             INSERT INTO "QuestCompletions"
                 ("Id", "UserId", "QuestId", "ParticipationId", "Method", "Status",
                  "CompletedAt", "VerifiedAtUtc", "RewardDifficultySnapshot",
+                 "QuestCategorySnapshot",
                  "CommunityRegionIdAtCompletion", "CreatedAt", "UpdatedAt")
             VALUES
                 ({completionId}, {userId}, {quest.Id},
                  {participation.Id}, 'CompletionCode', 'Verified',
-                 {now}, NULL, 'Easy', NULL, {now}, {now})
+                 {now}, NULL, 'Easy', {quest.Category.ToString()},
+                 NULL, {now}, {now})
             """, TestContext.Current.CancellationToken);
         return completionId;
     }

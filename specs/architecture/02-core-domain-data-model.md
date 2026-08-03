@@ -73,6 +73,7 @@ Managed by ASP.NET Core Identity. Not defined here in detail. Key relationships:
 | `LastCommunityChangeAt` | `timestamp with time zone?` | Nullable. Set when Home Community is changed (not first selection). Used for cooldown enforcement. |
 | `TotalXp` | `bigint` | Not null, default `0`, CHECK `>= 0`. Transactional projection of the XP ledger; written only inside award transactions as a checked addition (overflow is an invariant failure that rolls back the award); never wrapped or clamped. |
 | `Level` | `int` | Not null, default `1`, CHECK `BETWEEN 1 AND 99`. Always recomputed from `TotalXp` via the accepted progression formula, never incremented. Rank Title is derived from `Level` at read time and never persisted. |
+| `AchievementEvaluationVersion` | `int` | Not null, CHECK `>= 0`. New profiles default to `AchievementCatalog.CurrentEvaluationVersion` (currently `2`). The Slice 23 migration leaves legacy profiles at `0` for bounded backfill, then changes the database default to `2`. Advances monotonically only after the complete active automatic catalog has been evaluated for the profile. |
 | `CreatedAt` | `timestamp with time zone` | Not null |
 | `UpdatedAt` | `timestamp with time zone` | Not null |
 
@@ -184,6 +185,7 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 | `Method` | `text` (max 50) | Not null. Stores `CompletionMethod` enum as string. |
 | `Status` | `text` (max 50) | Not null. Stores `CompletionStatus` enum as string. |
 | `CompletedAt` | `timestamp with time zone` | Not null. The date the Member claims/records completion. |
+| `QuestCategorySnapshot` | `text` (max 50) | Not null. Immutable copy of `Quest.Category` captured by every completion factory. |
 | `CreatedAt` | `timestamp with time zone` | Not null |
 | `UpdatedAt` | `timestamp with time zone` | Not null |
 
@@ -201,6 +203,12 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 - SelfReported and verification records may coexist as separate rows. A SelfReported record is never promoted or deleted when a later verification occurs.
 - Passport deduplication is a read-model rule and does not delete or merge canonical completion records. Precedence: Verified > Pending EvidenceClaim > SelfReported > latest Rejected EvidenceClaim.
 - Self-reported completions have `Status = SelfReported`, award no XP, and do not count toward streaks, achievements, or leaderboards.
+- Category achievements and Passport category-impact aggregates read
+  `QuestCategorySnapshot`, never the mutable Quest category. The migration
+  backfills legacy rows from the Quest category visible at migration time;
+  this is an explicitly recorded historical approximation. Quest edits do not
+  rewrite the snapshot. Passport completion-history items continue to display
+  the current Quest category.
 - Use `QuestCompletion.CreatedAt` as submission time.
 
 ### 3.8 EvidenceClaimDetail
@@ -290,27 +298,27 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 | `Name` | `text` (max 200) | Not null |
 | `Description` | `text` (max 500) | Not null |
 | `IconUrl` | `text` (max 2000) | Nullable |
-| `Category` | `text` (max 50) | Not null. e.g. `Milestone`, `Streak`, `Community`, `Category`. |
+| `Category` | `text` (max 50) | Not null. One of `Milestone`, `Specialist`, `Explorer`, `Streak`, `Progression`, or `Community`. |
 | `IsActive` | `bool` | Not null, default `true` |
 | `CreatedAt` | `timestamp with time zone` | Not null |
 
 **Business rules:**
-- Achievement catalog content was originally deferred with a stable schema.
-  Slice 6A (2026-07-26) implemented the first three rows — the P0 cumulative
-  verified-rewarded-completion milestones, all `Category = 'Milestone'`,
-  `IconUrl = NULL`, with deterministic seed GUIDs and thresholds defined in
-  code (`AchievementCatalog`):
 
-| Code | Name | Threshold (committed `XpTransaction` count) |
-|------|------|----------------------------------------------|
-| `verified-completions-1` | First Steps | 1 |
-| `verified-completions-3` | Building Momentum | 3 |
-| `verified-completions-5` | Committed Contributor | 5 |
-
+- Slice 23 expands the static catalog to 45 deterministic definitions while
+  preserving the original three IDs and codes: 8 total-completion, 18
+  category-specialist, 3 all-category breadth, 6 historical Auckland-week
+  streak, 7 level, and 3 Community Challenge reward definitions.
+- Eligibility criteria are code-owned typed metadata, not database-authored
+  expressions. Supported rule kinds are `TotalVerifiedCompletions`,
+  `CategoryVerifiedCompletions`, `AllCategoriesMinimum`,
+  `LongestWeeklyStreak`, `LevelReached`, and `CommunityChallengeReward`.
+  The first five evaluate committed XP-ledger facts; Community rewards are
+  issued by the challenge finalizer. Self-reported completions never count.
 - Catalog rows are written only by the every-environment, concurrency-safe
   `AchievementSeed` (deterministic display-field upsert) and validated
-  fail-closed at application startup. Richer catalog content (6–8
-  achievements incl. other categories) remains deferred future direction.
+  fail-closed at application startup.
+- Trophy, rarity, and cosmetic unlocks are derived presentation rules. They do
+  not add Achievement columns or separate persistence entities.
 
 ### 3.12 UserAchievement
 
@@ -327,18 +335,15 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 - Partial unique index on `(UserId, AchievementId)` WHERE `SourceCommunityChallengeId IS NULL` — a Member earns each non-challenge achievement at most once.
 - Partial unique index on `(UserId, AchievementId, SourceCommunityChallengeId)` WHERE `SourceCommunityChallengeId IS NOT NULL` — a Member earns each challenge-reward achievement at most once per challenge.
 - `SourceCommunityChallengeId` is non-null when the achievement is awarded as a Community Challenge reward; null for all other achievement awards (milestones, streaks, category achievements).
-
-**Staged implementation (Slice 6A, 2026-07-26):** Community Challenge is
-Deferred and its table does not exist. The physical `UserAchievements` table
-implemented by Slice 6A deliberately **omits `SourceCommunityChallengeId`**;
-the accepted first partial unique index is staged as a plain unique index
-`UX_UserAchievements_UserId_AchievementId` on `(UserId, AchievementId)`,
-which is semantically identical while no challenge rows can exist. The
-nullable column, its `CommunityChallenge` FK, and the second partial unique
-index arrive with the future Community Challenge slice as an additive
-migration. All other columns match this accepted model; every Slice 6A award
-sets `XpTransactionId` non-null to the resolved triggering ledger row and
-`AwardedAt` to that row's `CreatedAt` (immutable once persisted).
+- Automatic awards have `SourceCommunityChallengeId = null`, a non-null
+  triggering `XpTransactionId`, and the trigger transaction timestamp as
+  `AwardedAt`. Community Challenge awards have a non-null source challenge,
+  no XP-transaction trigger, and use the challenge period end as their
+  award-effective timestamp.
+- Trophy ownership uses the lifetime count of distinct Achievement IDs,
+  including later-inactive rows; repeated challenge awards for the same
+  Achievement ID count once. Approved static cosmetic ownership also survives
+  catalog deactivation.
 
 ### 3.13 CommunityChallenge
 
@@ -365,6 +370,14 @@ sets `XpTransactionId` non-null to the resolved triggering ledger row and
 - Progress is derived by querying `XpTransaction` — count of verified completions where `CommunityRegionIdAtAward = LocalAreaRegionId` and `XpTransaction.CreatedAt >= PeriodStart` AND `XpTransaction.CreatedAt < PeriodEnd` (half-open interval `[PeriodStart, PeriodEnd)`).
 - Do not create a `CommunityChallengeContribution` entity.
 - Rewards use `RewardAchievementId` only. Do not create `RewardBadgeCode` or another badge reward system.
+- A non-null `RewardAchievementId` must resolve to an active static definition
+  whose rule kind is `CommunityChallengeReward`. Unknown, inactive, or
+  automatic-rule Achievement IDs are rejected with validation `400`.
+- The finalizer revalidates this same typed, active allowlist immediately
+  before reading progress or changing challenge state. A legacy persisted
+  reference that no longer satisfies it fails closed: no award or status
+  transition occurs, the challenge remains `Active`, and an Admin must cancel
+  it explicitly.
 - Members do not manually join; contribution is automatic when eligible XP is awarded.
 - Historical contribution does not move when Home Community changes.
 - **Editing restrictions (MVP):** Admin may edit region, period, target, and reward only before `PeriodStart`. Once `PeriodStart` has arrived, or once any eligible contribution exists, those competitive fields are immutable. An already-started challenge may only be cancelled. Reducing the target below current progress is forbidden. Return `409 Conflict` for prohibited changes.
@@ -384,6 +397,10 @@ CompletionStatus:      Pending, Verified, Rejected, SelfReported
 ChallengeStatus:       Active, Completed, Failed, Cancelled
 ```
 
+The code-only achievement evaluator and presentation enums are
+`AchievementRuleKind`, `AchievementCosmeticKind`, `AchievementRarity`, and
+`AchievementTrophyTier`. They are not persisted as additional columns.
+
 ## 5. Constraints and Indexes Summary
 
 ### 5.1 Unique Constraints and Indexes
@@ -398,6 +415,7 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 | QuestCompletion | `(UserId, QuestId) WHERE Method = 'EvidenceClaim' AND Status = 'Pending'` | Partial unique index | At most one Pending Evidence Claim per Member per Quest |
 | QuestCompletion | `(UserId, QuestId) WHERE Method = 'SelfReported' AND Status = 'SelfReported'` | Partial unique index | At most one SelfReported completion per Member per Quest |
 | QuestCompletion | `ParticipationId` | Index | Lookup completions by participation |
+| QuestCompletion | `(UserId, QuestCategorySnapshot, VerifiedAtUtc)` | Index | Typed achievement and Passport category-fact lookup |
 | EvidenceClaimDetail | `QuestCompletionId` | Unique | 1:1 with QuestCompletion |
 | CompletionCode | `(QuestId, IsActive, IsRevoked)` | Index | Lookup active codes for a quest |
 | XpTransaction | `SourceCompletionId` | Unique | One XP transaction per QuestCompletion (reward idempotency) |
@@ -406,6 +424,7 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 | UserAchievement | `(UserId, AchievementId) WHERE SourceCommunityChallengeId IS NULL` | Partial unique index | One award per non-challenge achievement per user |
 | UserAchievement | `(UserId, AchievementId, SourceCommunityChallengeId) WHERE SourceCommunityChallengeId IS NOT NULL` | Partial unique index | One award per challenge-reward achievement per user per challenge |
 | Achievement | `Code` | Unique | Machine-readable identifier |
+| UserProfile | `AchievementEvaluationVersion` | Index | Bounded stale-profile discovery for achievement backfill |
 | CommunityChallenge | `(LocalAreaRegionId) WHERE Status = 'Active'` | Partial unique index | At most one Active challenge per LocalArea |
 | CommunityChallenge | `(LocalAreaRegionId, PeriodStart)` | Index | Challenge history lookup |
 
@@ -439,7 +458,17 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 
 - XP award: creating a `Verified` QuestCompletion (via CompletionCode redemption or Admin claim approval) and its XpTransaction must be atomic — a single `SaveChangesAsync()` call. Slice 5A restored this atomicity for Completion Code redemption: completion, `XpTransaction`, and the profile progression projection commit or roll back in one transaction. The single bounded exception is the historical reconciliation of pre-ledger Slice 4B completions: a hosted background service awards each legacy completion in its own per-row transaction, with unique `SourceCompletionId` as the authoritative idempotency boundary and the completion's immutable `VerifiedAtUtc` as the award-effective timestamp.
 - EvidenceClaim review: updating QuestCompletion.Status to `Verified` + `ReviewedAt`/`ReviewedBy` + creating XpTransaction must be atomic.
+- Completion-code redemption, evidence approval, and XP reconciliation evaluate
+  and stage every missing active automatic achievement and advance the locked
+  profile to the current evaluation version in the same transaction as XP and
+  progression. Any failure rolls back the complete reward unit.
+- Historical achievement backfill processes one stale profile per transaction
+  from a bounded candidate batch and marks it current even if no award is
+  earned.
 - CommunityChallenge progress is derived (read-only query); no transactional write.
+- Nationwide achievement/trophy numerator and denominator reads execute inside
+  one PostgreSQL `REPEATABLE READ` transaction so every composite rarity
+  response is calculated from one database snapshot.
 - CompletionCode redemption: creating a Verified QuestCompletion + XpTransaction must check the `(UserId, QuestId) WHERE Status = 'Verified'` uniqueness constraint and the redemption eligibility in one atomic operation.
 - Self-dealing prevention rules:
   - Organizer cannot redeem a CompletionCode or receive a Verified Completion for an Organizer-owned Quest they created. The application service must reject the operation (409 Conflict).
@@ -451,7 +480,11 @@ ChallengeStatus:       Active, Completed, Failed, Cancelled
 - Default: optimistic concurrency via EF Core concurrency tokens on mutable entities.
 - Entities with concurrency tokens: `Quest`, `QuestParticipation`, `QuestCompletion`, `CommunityChallenge`.
 - XP award idempotency is enforced through unique constraints (database-level guard), not application-level retry logic.
-- `UserProfiles.TotalXp`/`Level` progression updates are serialized by a `SELECT ... FOR UPDATE` row lock on the profile row inside award transactions; no new concurrency token is added for progression.
+- `UserProfiles.TotalXp`/`Level` progression updates, complete achievement
+  snapshot evaluation, and evaluation-version advancement are serialized by a
+  `SELECT ... FOR UPDATE` row lock on the profile row inside award
+  transactions. Partial unique indexes remain the final award-idempotency
+  backstop; no new profile concurrency token is added.
 
 ## 9. MVP and Deferred Scope
 
@@ -461,10 +494,10 @@ All entities and fields listed in §3 are MVP scope except as noted below.
 
 ### Deferred
 
-- Achievement catalog content beyond the three Slice 6A P0 milestones (see
-  §3.11) — schema stable, richer content deferred
 - Repeatable Quest completion (`QuestOccurrence`)
 - Virtual currency, Wallet, Shop, purchasing
+- Arbitrary expression/script achievement rules, equipment/inventory
+  mutations, public earner lists, and regional achievement rarity
 - Community Challenge seasons, leagues, editable scoring formulas
 - Image evidence upload (MVP uses URL only)
 - Public Profile, social features, notifications

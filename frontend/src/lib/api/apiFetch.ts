@@ -1,5 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
+export function buildApiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
+}
+
 export interface ProblemDetails {
   type?: string;
   title?: string;
@@ -36,7 +40,7 @@ export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const url = `${API_BASE_URL}${path}`;
+  const url = buildApiUrl(path);
   const method = (init?.method ?? 'GET').toUpperCase();
   const stateChanging = !SAFE_METHODS.has(method);
   const canReplay = init?.body === undefined || typeof init.body === 'string';
@@ -81,7 +85,7 @@ async function getCsrfToken(): Promise<string> {
     return csrfToken;
   }
 
-  csrfTokenRequest ??= fetch(`${API_BASE_URL}/v1/auth/csrf-token`, {
+  csrfTokenRequest ??= fetch(buildApiUrl('/v1/auth/csrf-token'), {
     credentials: 'include',
   })
     .then(async (response) => {

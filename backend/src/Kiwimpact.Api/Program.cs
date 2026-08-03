@@ -10,6 +10,8 @@ using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
 using Kiwimpact.Infrastructure.Reconciliation;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -142,6 +144,32 @@ builder.Services
     .AddEntityFrameworkStores<KiwimpactDbContext>()
     .AddTokenProvider<PasswordResetTokenProvider>("KiwimpactReset")
     .AddDefaultTokenProviders();
+
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+if (string.IsNullOrWhiteSpace(googleClientId) != string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    throw new InvalidOperationException(
+        "Google authentication requires both Authentication:Google:ClientId " +
+        "and Authentication:Google:ClientSecret.");
+}
+
+if (!string.IsNullOrWhiteSpace(googleClientId) &&
+    !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    builder.Services
+        .AddAuthentication()
+        .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+        {
+            options.ClientId = googleClientId;
+            options.ClientSecret = googleClientSecret;
+            options.SignInScheme = IdentityConstants.ExternalScheme;
+            options.ClaimActions.Add(new JsonKeyClaimAction(
+                "urn:google:email_verified",
+                System.Security.Claims.ClaimValueTypes.Boolean,
+                "verified_email"));
+        });
+}
 
 builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
     options.TokenLifespan = TimeSpan.FromHours(24));

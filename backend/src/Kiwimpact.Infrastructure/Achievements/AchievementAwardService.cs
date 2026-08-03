@@ -1,24 +1,17 @@
 using Kiwimpact.Core.Achievements;
 using Kiwimpact.Core.Entities;
+using Kiwimpact.Core.Enums;
 using Kiwimpact.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace Kiwimpact.Infrastructure.Achievements;
 
 /// <summary>
-/// Write-side milestone award evaluation shared by every XP-creation path
-/// (live redemption, XP reconciliation, and the historical backfill). Every
-/// entry point implements the approved idempotency protocol: the caller holds
-/// the user's profile <c>FOR UPDATE</c> row lock, existing awards are
-/// re-read after the lock, and only missing awards are staged. The
-/// <c>UX_UserAchievements_UserId_AchievementId</c> unique index is an
-/// invariant backstop only — never normal control flow; an unexpected unique
-/// violation aborts and rolls back the caller's whole transaction.
-///
-/// Trigger resolution uses the transactionally stable ledger snapshot visible
-/// under that lock: committed rows plus the staged row where applicable,
-/// ordered by (CreatedAt, Id). Persisted awards are immutable; a later
-/// backdated or equal-timestamp ledger row never rewrites them.
+/// Shared write-side evaluation for live awards, XP reconciliation, and
+/// historical backfill. Every caller holds the user's profile row lock, then
+/// this service re-reads the full immutable XP ledger and earned awards before
+/// staging missing automatic achievements and advancing the evaluation
+/// version in the same transaction.
 /// </summary>
 public sealed class AchievementAwardService
 {
@@ -34,63 +27,81 @@ public sealed class AchievementAwardService
         IReadOnlyList<Guid> EligibleUserIds);
 
     /// <summary>
-    /// Stages the active milestone awards the user is eligible for but has
-    /// not earned, on the caller's DbContext. The caller MUST hold the user's
-    /// profile row lock before calling and commits (or rolls back) the staged
-    /// rows with its own flush.
+    /// Stages every missing automatic award. The caller owns the transaction,
+    /// MUST hold <paramref name="profile"/>'s row lock, and commits the staged
+    /// awards and version update together.
     /// </summary>
     /// <param name="stagedXp">
-    /// The not-yet-flushed XP row of a live redemption; null when the new
-    /// row is already committed (reconciliation flush #1, backfill).
+    /// A live XP row that has not yet been flushed. Null when all XP is already
+    /// query-visible on the current connection.
     /// </param>
-    /// <returns>The number of staged awards.</returns>
-    public async Task<int> StageMissingMilestoneAwardsAsync(
-        Guid userId,
+    /// <param name="stagedCategory">
+    /// The staged completion's immutable category. Required exactly when
+    /// <paramref name="stagedXp"/> is supplied.
+    /// </param>
+    public async Task<int> StageMissingAutomaticAwardsAsync(
+        UserProfile profile,
         XpTransaction? stagedXp,
+        QuestCategory? stagedCategory,
         CancellationToken ct = default)
     {
-        var activeMilestones = await GetActiveMilestoneDefinitionsAsync(ct);
-        if (activeMilestones.Count == 0)
-            return 0;
+        ArgumentNullException.ThrowIfNull(profile);
+        if (profile.Id == Guid.Empty)
+            throw new ArgumentException("A persisted profile is required.", nameof(profile));
+        if ((stagedXp is null) != (stagedCategory is null))
+        {
+            throw new ArgumentException(
+                "Staged XP and its immutable category must be supplied together.",
+                nameof(stagedCategory));
+        }
+        if (stagedXp is not null && stagedXp.UserId != profile.Id)
+        {
+            throw new ArgumentException(
+                "The staged XP row must belong to the locked profile.",
+                nameof(stagedXp));
+        }
 
-        // Post-lock re-read: the idempotency protocol. Whatever is visible
-        // here is treated as already awarded; the unique index is only the
-        // invariant backstop for anything outside the lock protocol.
+        var activeDefinitions = await GetActiveAutomaticDefinitionsAsync(ct);
+
+        // Re-read after the profile lock. Unique indexes remain invariant
+        // backstops rather than normal concurrency control.
         var earned = (await _db.UserAchievements
             .AsNoTracking()
-            .Where(award =>
-                award.UserId == userId &&
-                award.SourceCommunityChallengeId == null)
+            .Where(award => award.UserId == profile.Id)
             .Select(award => award.AchievementId)
-            .ToListAsync(ct)).ToHashSet();
+            .ToListAsync(ct))
+            .ToHashSet();
 
-        var missing = activeMilestones
-            .Where(definition => !earned.Contains(definition.Id))
-            .ToList();
-        if (missing.Count == 0)
-            return 0;
-
-        var committedCount = await _db.XpTransactions
-            .AsNoTracking()
-            .CountAsync(transaction => transaction.UserId == userId, ct);
-        var snapshotCount = committedCount + (stagedXp is null ? 0 : 1);
-        if (snapshotCount < missing.Min(definition => definition.Threshold))
-            return 0;
-
-        var maxThreshold = activeMilestones.Max(definition => definition.Threshold);
         var snapshot = await _db.XpTransactions
             .AsNoTracking()
-            .Where(transaction => transaction.UserId == userId)
-            .OrderBy(transaction => transaction.CreatedAt)
-            .ThenBy(transaction => transaction.Id)
-            .Take(maxThreshold)
-            .Select(transaction => new AchievementLedgerRow(
-                transaction.Id,
-                transaction.CreatedAt))
+            .Where(transaction => transaction.UserId == profile.Id)
+            .Join(
+                _db.QuestCompletions.AsNoTracking(),
+                transaction => transaction.SourceCompletionId,
+                completion => completion.Id,
+                (transaction, completion) => new
+                {
+                    transaction.Id,
+                    transaction.CreatedAt,
+                    transaction.XpAmount,
+                    completion.QuestCategorySnapshot,
+                })
+            .OrderBy(row => row.CreatedAt)
+            .ThenBy(row => row.Id)
+            .Select(row => new AchievementLedgerRow(
+                row.Id,
+                row.CreatedAt,
+                row.QuestCategorySnapshot,
+                row.XpAmount))
             .ToListAsync(ct);
+
         if (stagedXp is not null)
         {
-            snapshot.Add(new AchievementLedgerRow(stagedXp.Id, stagedXp.CreatedAt));
+            snapshot.Add(new AchievementLedgerRow(
+                stagedXp.Id,
+                stagedXp.CreatedAt,
+                stagedCategory!.Value,
+                stagedXp.XpAmount));
             snapshot.Sort(static (left, right) =>
             {
                 var byTime = left.CreatedAt.CompareTo(right.CreatedAt);
@@ -100,83 +111,73 @@ public sealed class AchievementAwardService
             });
         }
 
-        var awards = AchievementCatalog.EvaluateMilestones(
-            activeMilestones,
+        var awards = AchievementCatalog.EvaluateAutomaticAchievements(
+            activeDefinitions,
             earned,
-            snapshotCount,
             snapshot);
         foreach (var award in awards)
-            _db.UserAchievements.Add(UserAchievement.CreateFromMilestone(userId, award));
+        {
+            _db.UserAchievements.Add(
+                UserAchievement.CreateFromMilestone(profile.Id, award));
+        }
+
+        profile.MarkAchievementsEvaluated(
+            AchievementCatalog.CurrentEvaluationVersion);
         return awards.Count;
     }
 
     /// <summary>
-    /// Backfill candidate discovery. PostgreSQL filters to users with at
-    /// least one eligible-but-missing active milestone before applying the
-    /// deterministic order and batch limit. Read-only: a pass with nothing
-    /// missing acquires no row locks and writes nothing.
+    /// Version-indexed candidate discovery. Every stale profile is evaluated
+    /// once, including profiles with no XP, so global rarity readiness has a
+    /// complete and auditable boundary.
     /// </summary>
     public async Task<BackfillCandidateScan> FindBackfillCandidatesAsync(
         int batchSize,
         IReadOnlyCollection<Guid> attemptedIds,
         CancellationToken ct = default)
     {
-        var activeMilestones = await GetActiveMilestoneDefinitionsAsync(ct);
-        if (activeMilestones.Count == 0)
-            return new BackfillCandidateScan([], []);
+        if (batchSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(batchSize));
+        ArgumentNullException.ThrowIfNull(attemptedIds);
 
-        IQueryable<Guid>? candidateQuery = null;
-        foreach (var milestone in activeMilestones)
-        {
-            var achievementId = milestone.Id;
-            var threshold = milestone.Threshold;
-            var milestoneCandidates = _db.XpTransactions
-                .AsNoTracking()
-                .GroupBy(transaction => transaction.UserId)
-                .Where(group => group.Count() >= threshold)
-                .Select(group => group.Key)
-                .Where(userId => !_db.UserAchievements.Any(award =>
-                    award.UserId == userId &&
-                    award.AchievementId == achievementId &&
-                    award.SourceCommunityChallengeId == null));
-
-            candidateQuery = candidateQuery is null
-                ? milestoneCandidates
-                : candidateQuery.Union(milestoneCandidates);
-        }
-
-        var candidates = await candidateQuery!
-            .Where(userId => !attemptedIds.Contains(userId))
-            .OrderBy(userId => userId)
+        var candidates = await _db.UserProfiles
+            .AsNoTracking()
+            .Where(profile =>
+                profile.AchievementEvaluationVersion <
+                    AchievementCatalog.CurrentEvaluationVersion &&
+                !attemptedIds.Contains(profile.Id))
+            .OrderBy(profile => profile.Id)
+            .Select(profile => profile.Id)
             .Take(batchSize)
             .ToListAsync(ct);
-        if (candidates.Count == 0)
-            return new BackfillCandidateScan([], []);
 
-        return new BackfillCandidateScan(candidates, candidates);
+        return candidates.Count == 0
+            ? new BackfillCandidateScan([], [])
+            : new BackfillCandidateScan(candidates, candidates);
     }
 
     /// <summary>
-    /// Awards one user's missing milestones inside its own per-user
-    /// transaction (the backfill path): profile <c>FOR UPDATE</c> lock →
-    /// post-lock re-read → locked committed snapshot → one flush. Any failure
-    /// — including an unexpected unique violation from the backstop — rolls
-    /// back the whole transaction and propagates; an aborted transaction is
-    /// never reported as awarded.
+    /// Evaluates one stale profile inside an isolated transaction:
+    /// profile FOR UPDATE → post-lock snapshot → awards and version → commit.
     /// </summary>
-    /// <returns>The number of awards committed.</returns>
     public async Task<int> AwardBackfillUserAsync(
         Guid userId,
         CancellationToken ct = default)
     {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("A user is required.", nameof(userId));
+
         await using var transaction = await _db.Database.BeginTransactionAsync(ct);
         try
         {
-            if (!await LockUserProfileAsync(userId, ct))
-                throw new InvalidOperationException(
-                    "A user with XP transactions has no profile row.");
-
-            var staged = await StageMissingMilestoneAwardsAsync(userId, null, ct);
+            var profile = await LockUserProfileAsync(userId, ct)
+                ?? throw new InvalidOperationException(
+                    "An achievement backfill candidate has no profile row.");
+            var staged = await StageMissingAutomaticAwardsAsync(
+                profile,
+                stagedXp: null,
+                stagedCategory: null,
+                ct);
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return staged;
@@ -188,38 +189,39 @@ public sealed class AchievementAwardService
         }
     }
 
-    /// <summary>
-    /// Active milestone definitions: the static rule definitions joined to
-    /// seeded catalog rows by code, requiring identity agreement. Startup
-    /// validation guarantees the mapping; the id check is defensive so a
-    /// drifted row can never redirect an award.
-    /// </summary>
-    private async Task<IReadOnlyList<AchievementDefinition>> GetActiveMilestoneDefinitionsAsync(
-        CancellationToken ct)
+    private async Task<IReadOnlyList<AchievementDefinition>>
+        GetActiveAutomaticDefinitionsAsync(CancellationToken ct)
     {
         var activeRows = await _db.Achievements
             .AsNoTracking()
             .Where(achievement => achievement.IsActive)
             .Select(achievement => new { achievement.Code, achievement.Id })
             .ToListAsync(ct);
+        var activeIdsByCode = activeRows.ToDictionary(
+            row => row.Code,
+            row => row.Id,
+            StringComparer.Ordinal);
 
-        var definitions = new List<AchievementDefinition>();
-        foreach (var row in activeRows)
-        {
-            var definition = AchievementCatalog.FindByCode(row.Code);
-            if (definition is not null && definition.Id == row.Id)
-                definitions.Add(definition);
-        }
-
-        return definitions;
+        return AchievementCatalog.Definitions
+            .Where(definition =>
+                definition.RuleKind !=
+                    AchievementRuleKind.CommunityChallengeReward &&
+                activeIdsByCode.TryGetValue(
+                    definition.Code,
+                    out var activeId) &&
+                activeId == definition.Id)
+            .ToArray();
     }
 
-    private async Task<bool> LockUserProfileAsync(Guid userId, CancellationToken ct) =>
-        await _db.Database.SqlQuery<Guid>($"""
-                SELECT p."Id" AS "Value"
+    private Task<UserProfile?> LockUserProfileAsync(
+        Guid userId,
+        CancellationToken ct) =>
+        _db.UserProfiles
+            .FromSqlInterpolated($$"""
+                SELECT p.*
                 FROM "UserProfiles" AS p
-                WHERE p."Id" = {userId}
+                WHERE p."Id" = {{userId}}
                 FOR UPDATE
                 """)
-            .SingleOrDefaultAsync(ct) != Guid.Empty;
+            .SingleOrDefaultAsync(ct);
 }

@@ -361,11 +361,13 @@ public sealed class XpLedgerPersistenceTests : IClassFixture<TestDatabaseFixture
             INSERT INTO "QuestCompletions"
                 ("Id", "UserId", "QuestId", "ParticipationId", "Method", "Status",
                  "CompletedAt", "VerifiedAtUtc", "RewardDifficultySnapshot",
+                 "QuestCategorySnapshot",
                  "CommunityRegionIdAtCompletion", "CreatedAt", "UpdatedAt")
             VALUES
                 ({Guid.NewGuid()}, {graph.Actor.Id}, {graph.Quest.Id},
                  {graph.Participation.Id}, 'SelfReported', 'SelfReported',
-                 {now}, NULL, 'Easy', NULL, {now}, {now})
+                 {now}, NULL, 'Easy', {graph.Quest.Category.ToString()},
+                 NULL, {now}, {now})
             """, TestContext.Current.CancellationToken);
 
         var repository = XpLedgerTestHelpers.NewXpLedgerRepository(seedDb);

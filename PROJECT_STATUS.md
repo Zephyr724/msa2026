@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-07-27
+Last reviewed: 2026-07-30
 
 Current `main` baseline: `73e79fa` (`Merge pull request #20 from
 Zephyr724/fix/slice-8-storage-access`)
@@ -98,6 +98,27 @@ has occurred.
   survived an app restart. Public hosting provider selection, DNS, billable
   resources, public deployment, backup/restore, and provider-specific
   forwarded-header behavior remain outside this Slice.
+
+### Slice 23 — Richer Achievements and Trophies
+
+- **Branch:** `feat/richer-achievements-trophies`
+- **Status:** implemented and verified; independent Review 76 approved;
+  pending explicit human Git approval.
+- **Implemented behavior:** 45 typed achievements, immutable completion
+  category facts, versioned live/historical evaluation, national
+  distinct-earner rarity, lifetime Bronze-to-Diamond trophies, a lit
+  navigation trophy, achievement-unlocked Passport border/avatar-frame/badge
+  styles, and validated Community Challenge reward selection.
+- **Observed gates:** frontend lint/type-check/build passed with 47/47 test
+  files and 377/377 tests; final backend build passed with 288/288 unit tests
+  and 320/320 PostgreSQL integration tests; `git diff --check` passed. The
+  initial independent review found 0 Blockers and 2 Majors; both are Closed
+  after one concentrated correction and the same reviewer's targeted 3/3
+  closure test.
+- **Evidence:**
+  `specs/implementation/reports/23-richer-achievements-trophies-completion.md`.
+- **Boundary:** Google account linking and social posts/comments/media remain
+  separate requested tasks and are not represented as implemented here.
 
 ### Remaining P0 delivery gaps
 

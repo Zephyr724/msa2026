@@ -12,14 +12,17 @@ using Testcontainers.PostgreSql;
 namespace Kiwimpact.IntegrationTests.Persistence;
 
 /// <summary>
-/// Migration tests for the additive simple-achievements migration. Each test
-/// runs against its own isolated database inside the container so
-/// clean-schema, upgrade, and destructive Down() observations never share
-/// state.
+/// Migration tests for the achievement history and the additive richer-
+/// achievements migration. Each test runs against its own isolated database
+/// inside the container so clean-schema, upgrade, and destructive Down()
+/// observations never share state.
 /// </summary>
 public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
 {
-    private const string PreviousMigration = "20260725144430_AddXpLedgerAndProgression";
+    private const string PreAchievementsMigration =
+        "20260725144430_AddXpLedgerAndProgression";
+    private const string DirectPreviousMigration =
+        "20260726233101_AddCommunityDiscovery";
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
         .WithImage("postgres:17-alpine")
         .Build();
@@ -46,6 +49,26 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
 
             Assert.True(await TableExistsAsync(db, "Achievements"));
             Assert.True(await TableExistsAsync(db, "UserAchievements"));
+            AssertColumn(
+                await ColumnShapesAsync(db, "QuestCompletions"),
+                "QuestCategorySnapshot",
+                "character varying",
+                false);
+            AssertColumn(
+                await ColumnShapesAsync(db, "UserProfiles"),
+                "AchievementEvaluationVersion",
+                "integer",
+                false,
+                "2");
+            Assert.Contains(
+                "IX_UserProfiles_AchievementEvaluationVersion",
+                await IndexNamesAsync(db, "UserProfiles"));
+            Assert.Contains(
+                "CK_UserProfiles_AchievementEvaluationVersion_NonNegative",
+                await ConstraintNamesAsync(db, "UserProfiles", "c"));
+            Assert.Contains(
+                "IX_QuestCompletions_UserId_CategorySnapshot_VerifiedAtUtc",
+                await IndexNamesAsync(db, "QuestCompletions"));
 
             var achievementColumns = await ColumnShapesAsync(db, "Achievements");
             AssertColumn(achievementColumns, "Id", "uuid", false);
@@ -121,7 +144,7 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
             var graph = await SeedAwardedGraphAsync(db);
 
             await migrator.MigrateAsync(
-                PreviousMigration,
+                PreAchievementsMigration,
                 TestContext.Current.CancellationToken);
 
             Assert.False(await TableExistsAsync(db, "Achievements"));
@@ -145,6 +168,90 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
                 TestContext.Current.CancellationToken));
             Assert.Equal(0, await db.Achievements.CountAsync(
                 TestContext.Current.CancellationToken));
+            Assert.Equal(
+                QuestCategory.RestoreNature,
+                await db.QuestCompletions
+                    .Where(completion => completion.Id == graph.CompletionId)
+                    .Select(completion => completion.QuestCategorySnapshot)
+                    .SingleAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(
+                0,
+                await db.UserProfiles
+                    .Where(profile => profile.Id == graph.UserId)
+                    .Select(profile => profile.AchievementEvaluationVersion)
+                    .SingleAsync(TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            await DropDatabaseAsync(connectionString);
+        }
+    }
+
+    [Fact]
+    public async Task DirectUpgradeBackfillsSnapshotsAndDirectDownPreservesAchievementData()
+    {
+        var connectionString = await CreateIsolatedDatabaseAsync();
+        try
+        {
+            await using var db = CreateDbContext(connectionString);
+            var migrator = db.GetService<IMigrator>();
+            await migrator.MigrateAsync(
+                cancellationToken: TestContext.Current.CancellationToken);
+            var graph = await SeedAwardedGraphAsync(db);
+            await AchievementSeed.SeedAndValidateAsync(
+                db,
+                TestContext.Current.CancellationToken);
+            var xp = await db.XpTransactions.SingleAsync(
+                TestContext.Current.CancellationToken);
+            db.UserAchievements.Add(UserAchievement.CreateFromMilestone(
+                graph.UserId,
+                new Kiwimpact.Core.Achievements.PendingAchievementAward(
+                    Kiwimpact.Core.Achievements.AchievementCatalog.FirstSteps.Id,
+                    xp.Id,
+                    xp.CreatedAt)));
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            await migrator.MigrateAsync(
+                DirectPreviousMigration,
+                TestContext.Current.CancellationToken);
+
+            Assert.True(await TableExistsAsync(db, "Achievements"));
+            Assert.True(await TableExistsAsync(db, "UserAchievements"));
+            Assert.Equal(
+                1,
+                await db.UserAchievements.CountAsync(
+                    TestContext.Current.CancellationToken));
+            Assert.DoesNotContain(
+                await ColumnShapesAsync(db, "QuestCompletions"),
+                column => column.Name == "QuestCategorySnapshot");
+            Assert.DoesNotContain(
+                await ColumnShapesAsync(db, "UserProfiles"),
+                column => column.Name == "AchievementEvaluationVersion");
+
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE \"Quests\" SET \"Category\" = {QuestCategory.LearnShare.ToString()} WHERE \"Id\" = {graph.QuestId}",
+                TestContext.Current.CancellationToken);
+
+            await migrator.MigrateAsync(
+                cancellationToken: TestContext.Current.CancellationToken);
+            db.ChangeTracker.Clear();
+
+            Assert.Equal(
+                QuestCategory.LearnShare,
+                await db.QuestCompletions
+                    .Where(completion => completion.Id == graph.CompletionId)
+                    .Select(completion => completion.QuestCategorySnapshot)
+                    .SingleAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(
+                0,
+                await db.UserProfiles
+                    .Where(profile => profile.Id == graph.UserId)
+                    .Select(profile => profile.AchievementEvaluationVersion)
+                    .SingleAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(
+                1,
+                await db.UserAchievements.CountAsync(
+                    TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -178,7 +285,7 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
                 TestContext.Current.CancellationToken));
 
             await migrator.MigrateAsync(
-                PreviousMigration,
+                PreAchievementsMigration,
                 TestContext.Current.CancellationToken);
 
             Assert.False(await TableExistsAsync(db, "Achievements"));
@@ -243,10 +350,13 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
         db.QuestCompletions.Add(completion);
         db.XpTransactions.Add(xp);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        return new AwardGraph(user.Id, completion.Id);
+        return new AwardGraph(user.Id, quest.Id, completion.Id);
     }
 
-    private sealed record AwardGraph(Guid UserId, Guid CompletionId);
+    private sealed record AwardGraph(
+        Guid UserId,
+        Guid QuestId,
+        Guid CompletionId);
 
     private async Task<string> CreateIsolatedDatabaseAsync()
     {
@@ -329,6 +439,20 @@ public sealed class AchievementMigrationUpgradeTests : IAsyncLifetime
                 SELECT indexname AS "Value"
                 FROM pg_indexes
                 WHERE schemaname = 'public' AND tablename = {table}
+                """)
+            .ToListAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<List<string>> ConstraintNamesAsync(
+        KiwimpactDbContext db,
+        string table,
+        string type)
+    {
+        return await db.Database.SqlQuery<string>($"""
+                SELECT conname AS "Value"
+                FROM pg_constraint
+                WHERE conrelid = {"public.\"" + table + "\""}::regclass
+                  AND contype::text = {type}
                 """)
             .ToListAsync(TestContext.Current.CancellationToken);
     }

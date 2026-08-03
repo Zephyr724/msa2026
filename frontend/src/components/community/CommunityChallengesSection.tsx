@@ -8,6 +8,7 @@ import {
 import { useRegions } from '../../hooks/useRegions';
 import { ApiError } from '../../lib/api/apiFetch';
 import type { CommunityChallenge } from '../../types/community';
+import { useAchievementCatalog } from '../../hooks/useAchievements.ts';
 
 export default function CommunityChallengesSection({
   showAdminControls = true,
@@ -105,12 +106,14 @@ function ChallengeCard({ challenge }: { challenge: CommunityChallenge }) {
 
 function ChallengeAdminPanel({ challenges }: { challenges: CommunityChallenge[] }) {
   const regions = useRegions();
+  const achievementCatalog = useAchievementCatalog();
   const mutations = useCommunityChallengeMutations();
   const [editing, setEditing] = useState<CommunityChallenge | null>(null);
   const [regionId, setRegionId] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [target, setTarget] = useState('25');
+  const [rewardAchievementId, setRewardAchievementId] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
   function beginEdit(challenge: CommunityChallenge) {
@@ -119,6 +122,7 @@ function ChallengeAdminPanel({ challenges }: { challenges: CommunityChallenge[] 
     setStart(toLocalInput(challenge.periodStartUtc));
     setEnd(toLocalInput(challenge.periodEndUtc));
     setTarget(String(challenge.targetValue));
+    setRewardAchievementId(challenge.rewardAchievementId ?? '');
     setMessage(null);
   }
 
@@ -132,7 +136,7 @@ function ChallengeAdminPanel({ challenges }: { challenges: CommunityChallenge[] 
       periodStartUtc: new Date(start).toISOString(),
       periodEndUtc: new Date(end).toISOString(),
       targetValue: Number(target),
-      rewardAchievementId: null,
+      rewardAchievementId: rewardAchievementId || null,
       version: editing?.version,
     };
     try {
@@ -181,6 +185,27 @@ function ChallengeAdminPanel({ challenges }: { challenges: CommunityChallenge[] 
         <label>
           <span className="label-text">Ends</span>
           <input className="input input-bordered mt-1 w-full" onChange={(event) => setEnd(event.target.value)} required type="datetime-local" value={end} />
+        </label>
+        <label className="sm:col-span-2">
+          <span className="label-text">Community achievement reward</span>
+          <select
+            className="select select-bordered mt-1 w-full"
+            onChange={(event) => setRewardAchievementId(event.target.value)}
+            value={rewardAchievementId}
+          >
+            <option value="">No achievement reward</option>
+            {achievementCatalog.data
+              ?.filter((achievement) => achievement.category === 'Community')
+              .map((achievement) => (
+                <option key={achievement.id} value={achievement.id}>
+                  {achievement.name}
+                </option>
+              ))}
+          </select>
+          <span className="mt-1 block text-xs text-muted-content">
+            Every verified contributor receives this reward if the challenge
+            completes. Competitive terms lock once it starts.
+          </span>
         </label>
         <button className="btn btn-primary sm:col-span-2" disabled={mutations.create.isPending || mutations.update.isPending} type="submit">
           <Target className="size-4" /> {editing ? 'Save challenge' : 'Create challenge'}

@@ -13,6 +13,9 @@ export default defineConfig({
       '/api': {
         target: proxyTarget,
       },
+      '/signin-google': {
+        target: proxyTarget,
+      },
       '/hubs': {
         target: proxyTarget.replace(/^http/, 'ws'),
         ws: true,

@@ -131,6 +131,9 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
                      {completion.Id}, {50}, NULL, {completion.VerifiedAtUtc!.Value})
                 """, TestContext.Current.CancellationToken);
         }
+        await XpLedgerTestHelpers.MarkAchievementEvaluationStaleAsync(
+            seedDb,
+            graph.Actor.Id);
 
         await using var provider = CreateProvider();
         var runner = CreateRunner(provider);
@@ -167,13 +170,13 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
             Assert.Equal(3, await seedDb.XpTransactions.CountAsync(
                 row => row.UserId == backfillUser,
                 TestContext.Current.CancellationToken));
-            // Milestones 1 and 3 exactly once each, regardless of which path
-            // won the profile lock.
+            // Milestones 1 and 3, the category specialist, and Level 5
+            // exactly once, regardless of which path won the profile lock.
             var awards = await seedDb.UserAchievements
                 .AsNoTracking()
                 .Where(award => award.UserId == backfillUser)
                 .ToListAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(2, awards.Count);
+            Assert.Equal(4, awards.Count);
             Assert.Contains(
                 awards,
                 award => award.AchievementId ==
@@ -182,11 +185,23 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
                 awards,
                 award => award.AchievementId ==
                     Kiwimpact.Core.Achievements.AchievementCatalog.BuildingMomentum.Id);
+            Assert.Contains(
+                awards,
+                award => award.AchievementId ==
+                    Kiwimpact.Core.Achievements.AchievementCatalog
+                        .FindByCode("restore-nature-3")!.Id);
+            Assert.Contains(
+                awards,
+                award => award.AchievementId ==
+                    Kiwimpact.Core.Achievements.AchievementCatalog
+                        .FindByCode("level-5")!.Id);
             var snapshot = await OrderedSnapshotAsync(seedDb, backfillUser);
             foreach (var (achievementId, position) in new[]
             {
                 (Kiwimpact.Core.Achievements.AchievementCatalog.FirstSteps.Id, 0),
                 (Kiwimpact.Core.Achievements.AchievementCatalog.BuildingMomentum.Id, 2),
+                (Kiwimpact.Core.Achievements.AchievementCatalog
+                    .FindByCode("level-5")!.Id, 2),
             })
             {
                 var award = awards.Single(
@@ -224,18 +239,21 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
         Assert.All(results, result => Assert.Equal(0, result.Failed));
         Assert.Equal(1, results.Sum(result => result.Awarded));
         seedDb.ChangeTracker.Clear();
-        // Five legacy rows: milestones 1, 3, and 5 exactly once each.
+        // Five legacy rows: three milestones, the category specialist, and
+        // Level 5 exactly once each.
         var awards = await seedDb.UserAchievements
             .AsNoTracking()
             .Where(award => award.UserId == userId)
             .ToListAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(3, awards.Count);
+        Assert.Equal(5, awards.Count);
         var snapshot = await OrderedSnapshotAsync(seedDb, userId);
         foreach (var (achievementId, position) in new[]
         {
             (Kiwimpact.Core.Achievements.AchievementCatalog.FirstSteps.Id, 0),
             (Kiwimpact.Core.Achievements.AchievementCatalog.BuildingMomentum.Id, 2),
             (Kiwimpact.Core.Achievements.AchievementCatalog.CommittedContributor.Id, 4),
+            (Kiwimpact.Core.Achievements.AchievementCatalog.FindByCode("restore-nature-3")!.Id, 2),
+            (Kiwimpact.Core.Achievements.AchievementCatalog.FindByCode("level-5")!.Id, 4),
         })
         {
             var award = awards.Single(
@@ -306,6 +324,9 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
                      {completion.Id}, {50}, NULL, {completion.VerifiedAtUtc!.Value})
                 """, TestContext.Current.CancellationToken);
         }
+        await XpLedgerTestHelpers.MarkAchievementEvaluationStaleAsync(
+            db,
+            actor.Id);
         return actor.Id;
     }
 

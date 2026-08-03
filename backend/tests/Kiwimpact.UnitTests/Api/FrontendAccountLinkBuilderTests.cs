@@ -5,6 +5,16 @@ namespace Kiwimpact.UnitTests.Api;
 public sealed class FrontendAccountLinkBuilderTests
 {
     [Fact]
+    public void BuildWithoutQuery_DoesNotAppendEmptyQuestionMark()
+    {
+        var link = FrontendAccountLinkBuilder.Build(
+            "https://app.example.test/",
+            "/passport");
+
+        Assert.Equal("https://app.example.test/passport", link);
+    }
+
+    [Fact]
     public void Build_PercentEncodesReservedTokenCharacters()
     {
         var link = FrontendAccountLinkBuilder.Build(

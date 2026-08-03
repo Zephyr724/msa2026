@@ -1,3 +1,4 @@
+using Kiwimpact.Core.Achievements;
 using Kiwimpact.Core.Progression;
 
 namespace Kiwimpact.Core.Entities;
@@ -18,6 +19,8 @@ public sealed class UserProfile
     public DateTimeOffset? LastCommunityChangeAt { get; internal set; }
     public long TotalXp { get; internal set; }
     public int Level { get; internal set; } = ProgressionRules.MinLevel;
+    public int AchievementEvaluationVersion { get; internal set; } =
+        AchievementCatalog.CurrentEvaluationVersion;
     public DateTimeOffset CreatedAt { get; internal set; }
     public DateTimeOffset UpdatedAt { get; internal set; }
 
@@ -36,6 +39,8 @@ public sealed class UserProfile
             LastCommunityChangeAt = null,
             TotalXp = 0,
             Level = ProgressionRules.MinLevel,
+            AchievementEvaluationVersion =
+                AchievementCatalog.CurrentEvaluationVersion,
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -69,6 +74,20 @@ public sealed class UserProfile
         TotalXp = newTotal;
         Level = ProgressionRules.ComputeLevel(newTotal);
         UpdatedAt = now.ToUniversalTime();
+    }
+
+    public void MarkAchievementsEvaluated(int evaluationVersion)
+    {
+        if (evaluationVersion < AchievementEvaluationVersion ||
+            evaluationVersion > AchievementCatalog.CurrentEvaluationVersion)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(evaluationVersion),
+                "Achievement evaluation versions must advance monotonically " +
+                "and cannot exceed the running catalog version.");
+        }
+
+        AchievementEvaluationVersion = evaluationVersion;
     }
 
     public void UpdateCommunity(

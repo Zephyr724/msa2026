@@ -304,6 +304,39 @@ internal static class DtoMapping
             item.AwardedAt.ToString("O"));
     }
 
+    public static AchievementNationwideStatDto ToDto(
+        this AchievementNationwideStat item)
+    {
+        return new AchievementNationwideStatDto(
+            item.AchievementId,
+            item.NationwideEarnedCount,
+            item.NationwideMemberCount,
+            item.EarnedPercentage,
+            item.Rarity.ToString(),
+            item.CalculatedAtUtc.ToString("O"));
+    }
+
+    public static AchievementProfileDto ToDto(this AchievementProfile profile)
+    {
+        return new AchievementProfileDto(
+            profile.EarnedDistinctCount,
+            profile.ActiveAchievementCount,
+            new AchievementTrophyProfileDto(
+                profile.Trophy.Tier.ToString(),
+                profile.Trophy.RequiredCount,
+                profile.Trophy.NextTier?.ToString(),
+                profile.Trophy.NextRequiredCount,
+                profile.Trophy.NationwideEarnedCount,
+                profile.Trophy.NationwideMemberCount,
+                profile.Trophy.EarnedPercentage,
+                profile.Trophy.Rarity.ToString(),
+                profile.Trophy.CalculatedAtUtc.ToString("O")),
+            new AchievementCosmeticsDto(
+                profile.Cosmetics.PassportBorderStyle,
+                profile.Cosmetics.AvatarFrameStyle,
+                profile.Cosmetics.BadgeStampStyles));
+    }
+
     public static CreateQuestCommand ToCommand(this CreateQuestRequest request) => new(
         request.Title,
         request.Description,

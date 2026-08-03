@@ -229,6 +229,7 @@ public sealed class QuestCompletionApiTests
         Assert.Equal(CompletionMethod.CompletionCode, completion.Method);
         Assert.Equal(participation.Id, completion.ParticipationId);
         Assert.Equal(QuestDifficulty.Hard, completion.RewardDifficultySnapshot);
+        Assert.Equal(quest.Category, completion.QuestCategorySnapshot);
         Assert.Equal(communityId, completion.CommunityRegionIdAtCompletion);
         Assert.Equal(completion.CompletedAt, completion.VerifiedAtUtc);
         Assert.NotEqual(0u, completion.Version);

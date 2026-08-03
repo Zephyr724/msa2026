@@ -180,10 +180,14 @@ public sealed class PassportRepository : IPassportRepository
             .AsNoTracking()
             .Where(item => item.UserId == userId)
             .Join(
-                _db.Quests.AsNoTracking(),
-                transaction => transaction.QuestId,
-                quest => quest.Id,
-                (transaction, quest) => new { transaction, quest.Category })
+                _db.QuestCompletions.AsNoTracking(),
+                transaction => transaction.SourceCompletionId,
+                completion => completion.Id,
+                (transaction, completion) => new
+                {
+                    transaction,
+                    Category = completion.QuestCategorySnapshot,
+                })
             .GroupBy(item => item.Category)
             .Select(group => new
             {

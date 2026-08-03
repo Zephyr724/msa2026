@@ -182,8 +182,16 @@ internal static class XpLedgerTestHelpers
                  {Kiwimpact.Core.Progression.ProgressionRules.XpForDifficulty(difficulty)},
                  {communityRegionId}, {completion.VerifiedAtUtc!.Value})
             """, TestContext.Current.CancellationToken);
+        await MarkAchievementEvaluationStaleAsync(db, completion.UserId);
         return completion;
     }
+
+    public static Task<int> MarkAchievementEvaluationStaleAsync(
+        KiwimpactDbContext db,
+        Guid userId) =>
+        db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE \"UserProfiles\" SET \"AchievementEvaluationVersion\" = 0 WHERE \"Id\" = {userId}",
+            TestContext.Current.CancellationToken);
 
     public static async Task<bool> WaitForBlockedSessionsAsync(
         string connectionString,

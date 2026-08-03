@@ -1,7 +1,9 @@
 import type {
   AccountLifecycleResult, AuthSession, LoginInput, RegisterInput,
 } from '../../types/auth.ts';
-import { ApiError, apiFetch, resetCsrfToken } from './apiFetch.ts';
+import {
+  ApiError, apiFetch, buildApiUrl, resetCsrfToken,
+} from './apiFetch.ts';
 
 export function normalizeAccountLifecycleToken(token: string): string {
   return token.replaceAll(' ', '+');
@@ -37,6 +39,18 @@ export async function login(input: LoginInput): Promise<AuthSession> {
 export async function logout(): Promise<void> {
   await apiFetch<void>('/v1/auth/logout', { method: 'POST' });
   resetCsrfToken();
+}
+
+export function googleLoginUrl(returnUrl = '/'): string {
+  const query = new URLSearchParams({ returnUrl });
+  return buildApiUrl(`/v1/auth/external-login/google?${query.toString()}`);
+}
+
+export async function beginGoogleLink(): Promise<string> {
+  const result = await apiFetch<{ redirectUrl: string }>('/v1/auth/link/google', {
+    method: 'POST',
+  });
+  return result.redirectUrl;
 }
 
 export function confirmEmail(userId: string, token: string): Promise<AccountLifecycleResult> {

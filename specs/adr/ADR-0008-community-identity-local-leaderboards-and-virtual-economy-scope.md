@@ -233,6 +233,12 @@ Constraints:
 
 A full virtual economy requires a new ADR and a separate product/economy specification.
 
+**Implementation status (2026-07-30):** Slice 23 exercises this explicitly
+approved optional stretch within the constraints above. It adds deterministic
+achievement-unlocked presentation styles only; no wallet, inventory,
+equipment mutation, currency, purchasing, shop, random reward, or gameplay
+advantage is introduced.
+
 ## Consequences
 
 ### Benefits

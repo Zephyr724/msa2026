@@ -64,9 +64,9 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
             {
                 1 => 1,
                 2 => 1,
-                3 => 2,
-                4 => 2,
-                _ => 3,
+                3 => 3,
+                4 => 3,
+                _ => 5,
             };
             Assert.Equal(expectedAwards, await CountAwardsAsync(seedDb, graph.Actor.Id));
         }
@@ -84,9 +84,61 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
             awards, AchievementCatalog.BuildingMomentum.Id, snapshot[2]);
         AssertMilestoneAward(
             awards, AchievementCatalog.CommittedContributor.Id, snapshot[4]);
+        AssertMilestoneAward(
+            awards,
+            AchievementCatalog.FindByCode("restore-nature-3")!.Id,
+            snapshot[2]);
+        AssertMilestoneAward(
+            awards,
+            AchievementCatalog.FindByCode("level-5")!.Id,
+            snapshot[4]);
         Assert.Equal(250, (await seedDb.UserProfiles.SingleAsync(
             profile => profile.Id == graph.Actor.Id,
             TestContext.Current.CancellationToken)).TotalXp);
+    }
+
+    [Fact]
+    public async Task LegacyCommunitySourcedAutomaticAwardIsNotAwardedAgain()
+    {
+        using var seedScope = await _fixture.CreateSeededScopeAsync();
+        var seedDb =
+            seedScope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        await AchievementSeed.SeedAndValidateAsync(
+            seedDb,
+            TestContext.Current.CancellationToken);
+        var graph = await SeedMultiQuestGraphAsync(seedDb, 1);
+        var now = DateTimeOffset.UtcNow;
+        var legacyChallenge = CommunityChallenge.Create(
+            RegionSeed.WhauId,
+            now.AddDays(1),
+            now.AddDays(2),
+            1,
+            AchievementCatalog.FirstSteps.Id,
+            now);
+        seedDb.CommunityChallenges.Add(legacyChallenge);
+        seedDb.UserAchievements.Add(
+            UserAchievement.CreateFromCommunityChallenge(
+                graph.Actor.Id,
+                AchievementCatalog.FirstSteps.Id,
+                legacyChallenge.Id,
+                now));
+        await seedDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        await RedeemAsync(
+            graph.Quests[0].Id,
+            graph.Actor.Id,
+            DateTimeOffset.UtcNow);
+
+        seedDb.ChangeTracker.Clear();
+        var awards = await seedDb.UserAchievements
+            .AsNoTracking()
+            .Where(item =>
+                item.UserId == graph.Actor.Id &&
+                item.AchievementId == AchievementCatalog.FirstSteps.Id)
+            .ToListAsync(TestContext.Current.CancellationToken);
+        var onlyAward = Assert.Single(awards);
+        Assert.Equal(legacyChallenge.Id, onlyAward.SourceCommunityChallengeId);
+        Assert.Null(onlyAward.XpTransactionId);
     }
 
     [Fact]
@@ -185,7 +237,7 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
 
         // One user, three pending completions with distinct verification
         // times: the reconciliation pass awards all three XP rows and the
-        // first and third milestones.
+        // first and third milestones plus the Restore Nature specialist.
         var graph = await SeedMultiQuestGraphAsync(seedDb, 3);
         for (var index = 0; index < 3; index++)
         {
@@ -206,7 +258,7 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
         Assert.Equal(3, await seedDb.XpTransactions.CountAsync(
             transaction => transaction.UserId == graph.Actor.Id,
             TestContext.Current.CancellationToken));
-        Assert.Equal(2, await CountAwardsAsync(seedDb, graph.Actor.Id));
+        Assert.Equal(3, await CountAwardsAsync(seedDb, graph.Actor.Id));
         var snapshot = await OrderedSnapshotAsync(seedDb, graph.Actor.Id);
         var awards = await seedDb.UserAchievements
             .AsNoTracking()
@@ -214,6 +266,10 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
             .ToListAsync(TestContext.Current.CancellationToken);
         AssertMilestoneAward(awards, AchievementCatalog.FirstSteps.Id, snapshot[0]);
         AssertMilestoneAward(awards, AchievementCatalog.BuildingMomentum.Id, snapshot[2]);
+        AssertMilestoneAward(
+            awards,
+            AchievementCatalog.FindByCode("restore-nature-3")!.Id,
+            snapshot[2]);
     }
 
     [Fact]
@@ -273,7 +329,9 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
         var awardBefore = await seedDb.UserAchievements
             .AsNoTracking()
             .SingleAsync(
-                award => award.UserId == graph.Actor.Id,
+                award =>
+                    award.UserId == graph.Actor.Id &&
+                    award.AchievementId == AchievementCatalog.FirstSteps.Id,
                 TestContext.Current.CancellationToken);
         Assert.Equal(liveXp.Id, awardBefore.XpTransactionId);
 
@@ -298,7 +356,9 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
 
         seedDb.ChangeTracker.Clear();
         var awardAfter = await seedDb.UserAchievements.SingleAsync(
-            award => award.UserId == graph.Actor.Id,
+            award =>
+                award.UserId == graph.Actor.Id &&
+                award.AchievementId == AchievementCatalog.FirstSteps.Id,
             TestContext.Current.CancellationToken);
         Assert.Equal(awardBefore.Id, awardAfter.Id);
         Assert.Equal(liveXp.Id, awardAfter.XpTransactionId);
@@ -306,11 +366,20 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
             awardBefore.AwardedAt,
             awardAfter.AwardedAt,
             TimeSpan.FromMicroseconds(1));
-        // Two ledger rows but still only the first milestone.
+        // The first milestone stays immutable. Historical reevaluation also
+        // observes the two Auckland calendar weeks and awards the 2-week
+        // streak from the later week.
         Assert.Equal(2, await seedDb.XpTransactions.CountAsync(
             transaction => transaction.UserId == graph.Actor.Id,
             TestContext.Current.CancellationToken));
-        Assert.Equal(1, await CountAwardsAsync(seedDb, graph.Actor.Id));
+        Assert.Equal(2, await CountAwardsAsync(seedDb, graph.Actor.Id));
+        var streak = await seedDb.UserAchievements.SingleAsync(
+            award =>
+                award.UserId == graph.Actor.Id &&
+                award.AchievementId ==
+                    AchievementCatalog.FindByCode("weekly-streak-2")!.Id,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(liveXp.Id, streak.XpTransactionId);
     }
 
     private static void AssertMilestoneAward(

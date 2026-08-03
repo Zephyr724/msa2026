@@ -1,11 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Kiwimpact.Api.Reconciliation;
+using Kiwimpact.Core.Achievements;
 using Kiwimpact.Core.Authorization;
 using Kiwimpact.Core.Entities;
+using Kiwimpact.Core.Enums;
+using Kiwimpact.Core.Services;
+using Kiwimpact.Infrastructure.Achievements;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Data.Seeds;
 using Kiwimpact.Infrastructure.Identity;
+using Kiwimpact.IntegrationTests.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -93,6 +99,235 @@ public sealed class CommunityDiscoveryApiTests
         var result = await ReadJsonAsync(created);
         Assert.NotEqual(Guid.Empty, result.GetProperty("id").GetGuid());
         Assert.True(result.GetProperty("version").GetUInt32() > 0);
+    }
+
+    [Fact]
+    public async Task AdminChallengeRewardMustBeAnActiveCommunityAchievement()
+    {
+        await ResetAndSeedRegionsAsync();
+        var communityReward = AchievementCatalog.FindByCode("community-spark")!;
+        var inactiveCommunityReward =
+            AchievementCatalog.FindByCode("community-catalyst")!;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            await AchievementSeed.SeedAndValidateAsync(
+                db,
+                TestContext.Current.CancellationToken);
+            await db.Database.ExecuteSqlRawAsync(
+                """UPDATE "Achievements" SET "IsActive" = TRUE""",
+                TestContext.Current.CancellationToken);
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE \"Achievements\" SET \"IsActive\" = FALSE WHERE \"Id\" = {inactiveCommunityReward.Id}",
+                TestContext.Current.CancellationToken);
+        }
+
+        try
+        {
+            var admin = await CreateAuthenticatedClientAsync(AppRoles.Admin);
+            var now = DateTimeOffset.UtcNow;
+            object Request(Guid regionId, Guid rewardId, uint version = 0) => new
+            {
+                localAreaRegionId = regionId,
+                periodStartUtc = now.AddYears(10),
+                periodEndUtc = now.AddYears(10).AddDays(7),
+                targetValue = 20,
+                rewardAchievementId = rewardId,
+                version,
+            };
+
+            var valid = await SendJsonWithCsrfAsync(
+                admin,
+                HttpMethod.Post,
+                "/api/v1/admin/community-challenges",
+                Request(RegionSeed.DevonportTakapunaId, communityReward.Id));
+            var automatic = await SendJsonWithCsrfAsync(
+                admin,
+                HttpMethod.Post,
+                "/api/v1/admin/community-challenges",
+                Request(RegionSeed.FranklinId, AchievementCatalog.FirstSteps.Id));
+            var unknown = await SendJsonWithCsrfAsync(
+                admin,
+                HttpMethod.Post,
+                "/api/v1/admin/community-challenges",
+                Request(RegionSeed.GreatBarrierId, Guid.NewGuid()));
+            var inactive = await SendJsonWithCsrfAsync(
+                admin,
+                HttpMethod.Post,
+                "/api/v1/admin/community-challenges",
+                Request(RegionSeed.HendersonMasseyId, inactiveCommunityReward.Id));
+
+            Assert.Equal(HttpStatusCode.Created, valid.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, automatic.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, inactive.StatusCode);
+
+            var created = await ReadJsonAsync(valid);
+            var challengeId = created.GetProperty("id").GetGuid();
+            var current = await ReadJsonAsync(await admin.GetAsync(
+                $"/api/v1/community-challenges/{challengeId}",
+                TestContext.Current.CancellationToken));
+            var invalidUpdate = await SendJsonWithCsrfAsync(
+                admin,
+                HttpMethod.Patch,
+                $"/api/v1/admin/community-challenges/{challengeId}",
+                Request(
+                    RegionSeed.DevonportTakapunaId,
+                    AchievementCatalog.FirstSteps.Id,
+                    current.GetProperty("version").GetUInt32()));
+            Assert.True(
+                invalidUpdate.StatusCode == HttpStatusCode.BadRequest,
+                await invalidUpdate.Content.ReadAsStringAsync(
+                    TestContext.Current.CancellationToken));
+
+            var unchanged = await ReadJsonAsync(await admin.GetAsync(
+                $"/api/v1/community-challenges/{challengeId}",
+                TestContext.Current.CancellationToken));
+            Assert.Equal(
+                communityReward.Id,
+                unchanged.GetProperty("rewardAchievementId").GetGuid());
+        }
+        finally
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE \"Achievements\" SET \"IsActive\" = TRUE WHERE \"Id\" = {inactiveCommunityReward.Id}",
+                TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task FinalizerAwardsCommunityAchievementOnceToEachContributor()
+    {
+        await ResetAndSeedRegionsAsync();
+        Guid challengeId;
+        Guid contributorId;
+        var reward = AchievementCatalog.FindByCode("community-spark")!;
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            await AchievementSeed.SeedAndValidateAsync(
+                db,
+                TestContext.Current.CancellationToken);
+            var creator = XpLedgerTestHelpers.NewUser("challenge-finalizer-creator");
+            var contributor =
+                XpLedgerTestHelpers.NewUser("challenge-finalizer-member");
+            contributorId = contributor.Id;
+            var profile = UserProfile.Create(
+                contributor.Id,
+                "Challenge contributor",
+                now.AddHours(-4));
+            var quest = XpLedgerTestHelpers.NewQuest(
+                creator.Id,
+                QuestDifficulty.Easy);
+            var participation = QuestParticipation.CreateActive(
+                contributor.Id,
+                quest.Id,
+                now.AddHours(-3));
+            var completion = QuestCompletion.CreateVerifiedWithCode(
+                contributor.Id,
+                quest,
+                participation,
+                RegionSeed.AlbertEdenId,
+                now.AddHours(-2));
+            var xp = XpTransaction.CreateFromVerifiedCompletion(completion);
+            profile.ApplyXpAward(xp.XpAmount, xp.CreatedAt);
+            var challenge = CommunityChallenge.Create(
+                RegionSeed.AlbertEdenId,
+                now.AddHours(-3),
+                now.AddHours(-1),
+                1,
+                reward.Id,
+                now.AddHours(-4));
+            challengeId = challenge.Id;
+
+            db.Users.AddRange(creator, contributor);
+            db.UserProfiles.Add(profile);
+            db.Quests.Add(quest);
+            db.QuestParticipations.Add(participation);
+            db.QuestCompletions.Add(completion);
+            db.XpTransactions.Add(xp);
+            db.CommunityChallenges.Add(challenge);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var finalizer =
+            _factory.Services.GetRequiredService<CommunityChallengeFinalizer>();
+        Assert.Equal(
+            1,
+            await finalizer.FinalizePassAsync(
+                TestContext.Current.CancellationToken));
+        Assert.Equal(
+            0,
+            await finalizer.FinalizePassAsync(
+                TestContext.Current.CancellationToken));
+
+        using var assertScope = _factory.Services.CreateScope();
+        var assertDb =
+            assertScope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var challengeAfter = await assertDb.CommunityChallenges
+            .AsNoTracking()
+            .SingleAsync(
+                challenge => challenge.Id == challengeId,
+                TestContext.Current.CancellationToken);
+        Assert.Equal(ChallengeStatus.Completed, challengeAfter.Status);
+        var award = Assert.Single(await assertDb.UserAchievements
+            .AsNoTracking()
+            .Where(item =>
+                item.UserId == contributorId &&
+                item.AchievementId == reward.Id)
+            .ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(challengeId, award.SourceCommunityChallengeId);
+        Assert.Null(award.XpTransactionId);
+        Assert.Equal(
+            challengeAfter.PeriodEnd,
+            award.AwardedAt,
+            TimeSpan.FromMicroseconds(1));
+    }
+
+    [Fact]
+    public async Task FinalizerFailsClosedForALegacyAutomaticRewardReference()
+    {
+        await ResetAndSeedRegionsAsync();
+        var challenge = CommunityChallenge.Create(
+            RegionSeed.WhauId,
+            new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2000, 1, 2, 0, 0, 0, TimeSpan.Zero),
+            1,
+            AchievementCatalog.FirstSteps.Id,
+            new DateTimeOffset(1999, 12, 31, 0, 0, 0, TimeSpan.Zero));
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            await AchievementSeed.SeedAndValidateAsync(
+                db,
+                TestContext.Current.CancellationToken);
+            db.CommunityChallenges.Add(challenge);
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var finalizer =
+            _factory.Services.GetRequiredService<CommunityChallengeFinalizer>();
+        Assert.Equal(
+            0,
+            await finalizer.FinalizePassAsync(
+                TestContext.Current.CancellationToken));
+
+        using var assertScope = _factory.Services.CreateScope();
+        var assertDb =
+            assertScope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var unchanged = await assertDb.CommunityChallenges
+            .AsNoTracking()
+            .SingleAsync(
+                item => item.Id == challenge.Id,
+                TestContext.Current.CancellationToken);
+        Assert.Equal(ChallengeStatus.Active, unchanged.Status);
+        Assert.Empty(await assertDb.UserAchievements
+            .AsNoTracking()
+            .Where(item => item.SourceCommunityChallengeId == challenge.Id)
+            .ToListAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]

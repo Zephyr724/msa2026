@@ -50,12 +50,13 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
         var result = await runner.BackfillPassAsync(TestContext.Current.CancellationToken);
 
         Assert.True(result.AdvisoryLockAcquired);
-        Assert.Equal(5, result.Scanned);
+        Assert.Equal(6, result.Scanned);
         Assert.Equal(5, result.Awarded);
+        Assert.Equal(1, result.AlreadyAwarded);
         Assert.Equal(0, result.Failed);
         Assert.True(result.PassComplete);
 
-        var expectedAwards = new[] { 0, 1, 1, 2, 2, 3 };
+        var expectedAwards = new[] { 0, 1, 1, 3, 3, 5 };
         for (var index = 0; index < users.Count; index++)
         {
             Assert.Equal(expectedAwards[index], await CountAwardsAsync(seedDb, users[index]));
@@ -68,6 +69,14 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
         AssertAward(awards, AchievementCatalog.FirstSteps.Id, snapshot[0]);
         AssertAward(awards, AchievementCatalog.BuildingMomentum.Id, snapshot[2]);
         AssertAward(awards, AchievementCatalog.CommittedContributor.Id, snapshot[4]);
+        AssertAward(
+            awards,
+            AchievementCatalog.FindByCode("restore-nature-3")!.Id,
+            snapshot[2]);
+        AssertAward(
+            awards,
+            AchievementCatalog.FindByCode("level-5")!.Id,
+            snapshot[4]);
     }
 
     [Fact]
@@ -84,7 +93,7 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
         var first = await runner.BackfillPassAsync(TestContext.Current.CancellationToken);
         Assert.Equal(1, first.Awarded);
         var awardCount = await CountAwardsAsync(seedDb, userId);
-        Assert.Equal(2, awardCount);
+        Assert.Equal(3, awardCount);
 
         var second = await runner.BackfillPassAsync(TestContext.Current.CancellationToken);
         Assert.Equal(0, second.Scanned);
@@ -226,7 +235,7 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
         var healed = await runner.BackfillPassAsync(TestContext.Current.CancellationToken);
         Assert.Equal(1, healed.Awarded);
         Assert.Equal(0, healed.Failed);
-        Assert.Equal(2, await CountAwardsAsync(seedDb, userId));
+        Assert.Equal(3, await CountAwardsAsync(seedDb, userId));
     }
 
     [Fact]
@@ -245,9 +254,10 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
         {
             var result = await runner.BackfillPassAsync(TestContext.Current.CancellationToken);
 
-            Assert.Equal(1, result.Failed);
+            Assert.Equal(0, result.Failed);
+            Assert.Equal(0, result.Scanned);
             Assert.Equal(0, result.Awarded);
-            Assert.False(result.PassComplete);
+            Assert.True(result.PassComplete);
             Assert.Equal(0, await CountAwardsAsync(seedDb, userId));
         }
         finally
@@ -272,9 +282,10 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
         for (var index = 0; index < 3; index++)
         {
             breakerUsers.Add(await SeedLegacyUserAsync(
-                seedDb, 1, $"ach-bf-breaker-{index}", withProfile: false));
+                seedDb, 1, $"ach-bf-breaker-{index}"));
         }
 
+        await InstallAwardConflictTriggerAsync(seedDb);
         try
         {
             var result = await runner.BackfillPassAsync(TestContext.Current.CancellationToken);
@@ -288,6 +299,7 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
         }
         finally
         {
+            await DropAwardConflictTriggerAsync(seedDb);
             await DeleteLegacyUserDataAsync(seedDb, breakerUsers.ToArray());
         }
     }
@@ -321,6 +333,9 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
             seedDb.QuestCompletions.Add(completion);
         }
         await seedDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await XpLedgerTestHelpers.MarkAchievementEvaluationStaleAsync(
+            seedDb,
+            actor.Id);
         var completions = await seedDb.QuestCompletions
             .Where(completion => completion.UserId == actor.Id)
             .ToListAsync(TestContext.Current.CancellationToken);
@@ -382,8 +397,9 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
         await SeedCatalogAsync(seedDb);
         await DrainAsync(drainRunner);
         var userId = await SeedLegacyUserAsync(
-            seedDb, 1, "ach-bf-log", withProfile: false);
+            seedDb, 1, "ach-bf-log");
 
+        await InstallAwardConflictTriggerAsync(seedDb);
         try
         {
             var logger = new CapturingLogger<AchievementBackfillRunner>();
@@ -403,7 +419,7 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
                 aboveDebug,
                 entry =>
                     entry.Level == LogLevel.Warning &&
-                    entry.Message.Contains("InvalidOperationException", StringComparison.Ordinal));
+                    entry.Message.Contains("DbUpdateException", StringComparison.Ordinal));
             foreach (var entry in aboveDebug)
             {
                 Assert.Null(entry.Exception);
@@ -420,6 +436,7 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
         }
         finally
         {
+            await DropAwardConflictTriggerAsync(seedDb);
             await DeleteLegacyUserDataAsync(seedDb, userId);
         }
     }
@@ -530,6 +547,12 @@ public sealed class AchievementBackfillTests : IClassFixture<TestDatabaseFixture
                     ({Guid.NewGuid()}, {completion.UserId}, {completion.QuestId},
                      {completion.Id}, {50}, NULL, {completion.VerifiedAtUtc!.Value})
                 """, TestContext.Current.CancellationToken);
+        }
+        if (withProfile)
+        {
+            await XpLedgerTestHelpers.MarkAchievementEvaluationStaleAsync(
+                db,
+                actor.Id);
         }
         return actor.Id;
     }

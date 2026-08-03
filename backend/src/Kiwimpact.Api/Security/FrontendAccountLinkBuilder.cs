@@ -11,6 +11,7 @@ internal static class FrontendAccountLinkBuilder
             "&",
             query.Select(item =>
                 $"{Uri.EscapeDataString(item.Key)}={Uri.EscapeDataString(item.Value)}"));
-        return $"{root.TrimEnd('/')}{path}?{queryString}";
+        var baseUrl = $"{root.TrimEnd('/')}{path}";
+        return queryString.Length == 0 ? baseUrl : $"{baseUrl}?{queryString}";
     }
 }

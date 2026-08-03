@@ -44,11 +44,13 @@ public sealed class QuestCompletionPersistenceTests
                 INSERT INTO "QuestCompletions"
                     ("Id", "UserId", "QuestId", "ParticipationId", "Method", "Status",
                      "CompletedAt", "VerifiedAtUtc", "RewardDifficultySnapshot",
+                     "QuestCategorySnapshot",
                      "CommunityRegionIdAtCompletion", "CreatedAt", "UpdatedAt")
                 VALUES
                     ({Guid.NewGuid()}, {graph.Participant.Id}, {graph.Quest.Id},
                      {graph.Participation.Id}, 'CompletionCode', 'Verified',
-                     {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow}, 'Easy', NULL,
+                     {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow}, 'Easy',
+                     {graph.Quest.Category.ToString()}, NULL,
                      {DateTimeOffset.UtcNow}, {DateTimeOffset.UtcNow})
                 """, TestContext.Current.CancellationToken));
         Assert.Equal(PostgresErrorCodes.UniqueViolation, exception.SqlState);
@@ -212,6 +214,9 @@ public sealed class QuestCompletionPersistenceTests
         Assert.Contains("UX_QuestCompletions_UserId_QuestId_PendingClaim", completionIndexes);
         Assert.Contains("UX_QuestCompletions_UserId_QuestId_SelfReported", completionIndexes);
         Assert.Contains("IX_QuestCompletions_Method_Status_CreatedAt", completionIndexes);
+        Assert.Contains(
+            "IX_QuestCompletions_UserId_CategorySnapshot_VerifiedAtUtc",
+            completionIndexes);
     }
 
     private static async Task<string> IndexDefinitionAsync(

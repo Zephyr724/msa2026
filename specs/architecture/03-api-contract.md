@@ -264,8 +264,9 @@ Participation reads without adding a persistence model.
 - `GET /api/v1/users/me/passport` returns the caller's display name,
   authoritative XP/level/rank, optional Home Community under the existing
   `ShowCommunityOnPassport` preference, Verified/SelfReported/Pending counts,
-  and Verified XP-producing impact grouped by Quest category. Category values
-  are aggregates, not goals or environmental outcome claims.
+  and Verified XP-producing impact grouped by immutable
+  `QuestCompletion.QuestCategorySnapshot`. Category values are aggregates, not
+  goals or environmental outcome claims.
 - `GET /api/v1/users/me/passport/community-participation` groups the caller's
   immutable XP ledger rows by `CommunityRegionIdAtAward`. Each item returns the
   Region summary, whether it is the current Home Community, Verified completion
@@ -306,13 +307,15 @@ Participation reads without adding a persistence model.
 | ------ | ------------------------------- | ------- | -------------------------------- |
 | `GET`  | `/api/v1/achievements`          | None    | List all achievements (catalog). |
 | `GET`  | `/api/v1/users/me/achievements` | Member+ | List own earned achievements.    |
+| `GET`  | `/api/v1/achievement-stats` | None | List nationwide rarity aggregates for active achievements. |
+| `GET`  | `/api/v1/users/me/achievement-profile` | Member+ | Return the caller's trophy and derived Passport cosmetics. |
 
 `GET /api/v1/achievements` is anonymous and returns a bare array of active
 catalog rows ordered by `code ASC`. Each item has exactly six keys:
 `id`, `code`, `name`, `description`, `iconUrl`, `category`. `id` is a UUID;
-`iconUrl` is nullable; `category` is the plain string `Milestone` for the
-Slice 6A catalog. There is no pagination, filtering, request body, or
-authentication error contract.
+`iconUrl` is nullable; `category` is one of `Milestone`, `Specialist`,
+`Explorer`, `Streak`, `Progression`, or `Community`. There is no pagination,
+filtering, request body, or authentication error contract.
 
 `GET /api/v1/users/me/achievements` is self-only for Member, Organizer, and
 Admin. Identity comes only from the authenticated `NameIdentifier`; no
@@ -327,11 +330,48 @@ but are excluded.
 Errors for the self route: `401` for anonymous or unparseable identity;
 `404` for an authenticated principal without a `UserProfile` (checked
 first); `503` `progression-not-ready` when the caller has either a Verified
-completion without its `XpTransaction` or enough committed XP transactions
-for an active known milestone without the matching `UserAchievement`.
+completion without its `XpTransaction` or an
+`AchievementEvaluationVersion` behind the current catalog version.
 Readiness is caller-scoped and evaluated on every request. Responses expose
 no user ID, email, community/region data, completion evidence, code material,
 claim data, `SourceCompletionId`, or `XpTransactionId`.
+
+`GET /api/v1/achievement-stats` returns one exact-key item per active catalog
+row in catalog-code order: `achievementId`, `nationwideEarnedCount`,
+`nationwideMemberCount`, `earnedPercentage`, `rarity`, and
+`calculatedAtUtc`. The denominator is distinct email-confirmed Identity users
+who have a `UserProfile` and the `Member` role. The numerator is distinct
+denominator users with an award for that Achievement ID. Repeated Community
+Challenge awards count once. Percentages are rounded to four decimal places;
+labels are `Unawarded`, `UltraRare`, `Rare`, `Uncommon`, and `Common` at the
+approved 0/1/5/20 percent boundaries. The anonymous endpoint returns bounded
+`progression-not-ready` `503` while any profile is behind the current catalog
+version or any Verified completion globally lacks its XP transaction. It
+exposes no user list, identifier, email, region, evidence, or activity history.
+The active catalog, denominator, and per-achievement numerators are read in one
+PostgreSQL `REPEATABLE READ` transaction.
+
+`GET /api/v1/users/me/achievement-profile` returns exactly
+`earnedDistinctCount`, `activeAchievementCount`, `trophy`, and `cosmetics`.
+`earnedDistinctCount` is the lifetime distinct Achievement-ID count, including
+later-inactive achievements. Trophy tiers are Locked 0, Bronze 5, Silver 10,
+Gold 20, Platinum 30, and Diamond 40. The nested trophy contains `tier`,
+`requiredCount`, nullable `nextTier` and `nextRequiredCount`,
+`nationwideEarnedCount`, `nationwideMemberCount`, `earnedPercentage`, `rarity`,
+and `calculatedAtUtc`. Nationwide tier count means denominator members at or
+above the current tier threshold. Cosmetics contain the highest-priority
+Passport border, highest-priority avatar frame, and at most three
+highest-priority badge stamps. Current allowlists are borders
+`forest|kauri|ocean|aurora`, frames `sprout|ember|guardian`, and stamps
+`explorer|community|legend`.
+
+Profile errors are `401` for anonymous or unparseable identity, profile-first
+bounded `404`, and caller-scoped `503` for reward-pending or stale evaluation
+version. Because readiness is caller-scoped, nationwide trophy fields can be a
+temporary lower-bound aggregate while a different profile is still awaiting
+backfill; the public stats route remains globally fail-closed. The caller's
+awards, active catalog, nationwide denominator, and trophy numerator are read
+in one PostgreSQL `REPEATABLE READ` transaction.
 
 ### 2.13 Community Challenges
 
@@ -348,6 +388,12 @@ claim data, `SourceCompletionId`, or `XpTransactionId`.
 
 - Create: 409 if an Active challenge already exists for the LocalArea.
 - Create: 400 if Region is not LocalArea type.
+- Create/PATCH: 400 if a non-null reward is unknown, inactive, or not a static
+  `CommunityChallengeReward` definition.
+- Finalization revalidates that same typed active allowlist. A legacy invalid
+  reward reference fails closed before progress evaluation, status mutation,
+  or award creation; the challenge stays Active for explicit Admin
+  cancellation.
 - PATCH: 409 if Admin attempts to change region, period, target, or reward after `PeriodStart`.
 - PATCH: 409 if Admin attempts to change those competitive fields after any eligible contribution exists.
 - PATCH: 409 if Admin attempts to reduce `TargetValue` below current progress.
@@ -459,8 +505,8 @@ Share Card rules enforced by the data returned:
 
 | Role      | Abilities                                                                                                                        |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Guest     | Public quest discovery, leaderboards (Auckland/NZ), regions, achievements catalog, community challenges                          |
-| Member    | All Guest abilities + self-profile, participation, completion, Passport, achievements, Share Card                                |
+| Guest     | Public quest discovery, leaderboards (Auckland/NZ), regions, achievements catalog and nationwide stats, community challenges     |
+| Member    | All Guest abilities + self-profile, participation, completion, Passport, achievements, trophy/cosmetic profile, Share Card       |
 | Organizer | All Member abilities + CRUD for owned quests, completion codes, images for owned quests                                          |
 | Admin     | All Organizer abilities + manage all quests, review claims, manage external sources, manage community challenges, manage regions |
 

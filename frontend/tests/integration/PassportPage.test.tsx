@@ -73,6 +73,41 @@ function achievementCatalog() {
   }];
 }
 
+function achievementStats() {
+  return achievementCatalog().map((item) => ({
+    achievementId: item.id,
+    nationwideEarnedCount: 0,
+    nationwideMemberCount: 100,
+    earnedPercentage: 0,
+    rarity: 'Unawarded',
+    calculatedAtUtc: '2026-07-30T00:00:00.0000000Z',
+  }));
+}
+
+function achievementProfile(overrides: Record<string, unknown> = {}) {
+  return {
+    earnedDistinctCount: 0,
+    activeAchievementCount: 45,
+    trophy: {
+      tier: 'Locked',
+      requiredCount: 0,
+      nextTier: 'Bronze',
+      nextRequiredCount: 5,
+      nationwideEarnedCount: 0,
+      nationwideMemberCount: 100,
+      earnedPercentage: 0,
+      rarity: 'Unawarded',
+      calculatedAtUtc: '2026-07-30T00:00:00.0000000Z',
+    },
+    cosmetics: {
+      passportBorderStyle: null,
+      avatarFrameStyle: null,
+      badgeStampStyles: [],
+    },
+    ...overrides,
+  };
+}
+
 function historyPage(
   items: unknown[],
   { page = 1, totalPages = 1 }: { page?: number; totalPages?: number } = {},
@@ -93,6 +128,8 @@ interface StubOptions {
   completions?: (url: string) => Promise<Response>;
   catalog?: () => Promise<Response>;
   achievements?: () => Promise<Response>;
+  achievementStats?: () => Promise<Response>;
+  achievementProfile?: () => Promise<Response>;
   summary?: () => Promise<Response>;
   communityParticipation?: () => Promise<Response>;
 }
@@ -102,6 +139,8 @@ function stubPassportApi({
   completions,
   catalog,
   achievements,
+  achievementStats: stats,
+  achievementProfile: profile,
   summary,
   communityParticipation,
 }: StubOptions) {
@@ -136,8 +175,15 @@ function stubPassportApi({
     if (url.endsWith('/v1/achievements')) {
       return catalog?.() ?? Promise.resolve(jsonResponse(achievementCatalog()));
     }
+    if (url.endsWith('/v1/achievement-stats')) {
+      return stats?.() ?? Promise.resolve(jsonResponse(achievementStats()));
+    }
     if (url.endsWith('/v1/users/me/achievements')) {
       return achievements?.() ?? Promise.resolve(jsonResponse([]));
+    }
+    if (url.endsWith('/v1/users/me/achievement-profile')) {
+      return profile?.()
+        ?? Promise.resolve(jsonResponse(achievementProfile()));
     }
     if (url.endsWith('/v1/users/me/profile')) {
       return Promise.resolve(jsonResponse({
@@ -220,6 +266,11 @@ describe('PassportPage', () => {
     expect(screen.getByText('No verified completions yet.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Discover quests' }))
       .toHaveAttribute('href', '/quests');
+    expect(screen.getByRole('heading', { name: 'Bronze trophy is next' }))
+      .toBeInTheDocument();
+    expect(screen.getByRole('progressbar', {
+      name: '0 of 5 distinct achievements',
+    })).toBeInTheDocument();
     expect(historyRegion().querySelector('ul')).not.toBeInTheDocument();
   });
 
@@ -227,6 +278,26 @@ describe('PassportPage', () => {
     stubPassportApi({
       completions: () =>
         Promise.resolve(jsonResponse(historyPage([completionItem()]))),
+      achievementProfile: () => Promise.resolve(jsonResponse({
+        ...achievementProfile(),
+        earnedDistinctCount: 12,
+        trophy: {
+          tier: 'Silver',
+          requiredCount: 10,
+          nextTier: 'Gold',
+          nextRequiredCount: 20,
+          nationwideEarnedCount: 8,
+          nationwideMemberCount: 240,
+          earnedPercentage: 3.3333,
+          rarity: 'Rare',
+          calculatedAtUtc: '2026-07-30T00:00:00.0000000Z',
+        },
+        cosmetics: {
+          passportBorderStyle: 'forest',
+          avatarFrameStyle: 'sprout',
+          badgeStampStyles: ['explorer'],
+        },
+      })),
     });
     const { container } = renderPassport();
 
@@ -241,6 +312,16 @@ describe('PassportPage', () => {
     expect(screen.getByText('120 XP')).toBeInTheDocument();
     expect(screen.getByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
     expect(screen.getByText('45 XP to Level 4')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Silver Trophy' }))
+      .toBeInTheDocument();
+    expect(screen.getByText(/8 members have reached Silver or higher/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/3.33% · Rare/)).toBeInTheDocument();
+    expect(container.querySelector('[data-passport-border="forest"]'))
+      .toBeInTheDocument();
+    expect(container.querySelector('[data-avatar-frame="sprout"]'))
+      .toBeInTheDocument();
+    expect(screen.getByText('Eco Explorer')).toBeInTheDocument();
 
     expect(screen.getAllByText('Restore Nature')).not.toHaveLength(0);
     expect(screen.getAllByText('Verified')).not.toHaveLength(0);
@@ -418,6 +499,60 @@ describe('PassportPage', () => {
       String(url).endsWith('/v1/users/me/progression'))).toHaveLength(2);
   });
 
+  it.each([
+    [
+      'typed not-ready',
+      NOT_READY_PROBLEM,
+      503,
+      'Your achievement trophy is being prepared. Try again shortly.',
+    ],
+    [
+      'generic server failure',
+      { title: 'Server error' },
+      500,
+      'We could not load this section.',
+    ],
+  ])(
+    'isolates a %s from the rest of Passport and retries only the trophy profile',
+    async (_caseName, problem, status, expectedMessage) => {
+      const user = userEvent.setup();
+      let profileAttempts = 0;
+      const fetchMock = stubPassportApi({
+        achievementProfile: () => {
+          profileAttempts += 1;
+          return Promise.resolve(
+            profileAttempts === 1
+              ? jsonResponse(problem, status)
+              : jsonResponse(achievementProfile()),
+          );
+        },
+        completions: () =>
+          Promise.resolve(jsonResponse(historyPage([completionItem()]))),
+      });
+      renderPassport();
+
+      expect(await screen.findByText(expectedMessage)).toBeInTheDocument();
+      expect(screen.getByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Achievements' }))
+        .toHaveTextContent('First Steps');
+      expect(historyRegion()).toHaveTextContent('Harbour restoration day');
+
+      const nonProfileCallsBefore = fetchMock.mock.calls.filter(([url]) =>
+        !String(url).endsWith('/v1/users/me/achievement-profile')).length;
+      await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+      expect(await screen.findByRole('heading', {
+        name: 'Bronze trophy is next',
+      })).toBeInTheDocument();
+      expect(fetchMock.mock.calls.filter(([url]) =>
+        String(url).endsWith('/v1/users/me/achievement-profile')))
+        .toHaveLength(2);
+      expect(fetchMock.mock.calls.filter(([url]) =>
+        !String(url).endsWith('/v1/users/me/achievement-profile')).length)
+        .toBe(nonProfileCallsBefore);
+    },
+  );
+
   it('F17: resets the history view to page 1 on a redemption-driven invalidation', async () => {
     const user = userEvent.setup();
     const pageOneItem = completionItem({ questTitle: 'First page quest' });
@@ -586,7 +721,7 @@ describe('PassportPage', () => {
       .map((heading) => heading.textContent);
     expect(headings).toEqual([
       'Progress',
-      'Building Momentum',
+      'Bronze trophy is next',
       'Quest category progress',
       'Achievements',
       'Community challenge participation',

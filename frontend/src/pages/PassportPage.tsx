@@ -18,13 +18,14 @@ import CompletionHistoryList from '../components/passport/CompletionHistoryList.
 import PassportPagination from '../components/passport/PassportPagination.tsx';
 import { useMyClaims } from '../hooks/useCompletion.ts';
 import ShareCard from '../components/passport/ShareCard.tsx';
-import NextMilestoneCard from '../components/passport/NextMilestoneCard.tsx';
+import TrophyProgressCard from '../components/passport/TrophyProgressCard.tsx';
 import CategoryImpactSection from '../components/passport/CategoryImpactSection.tsx';
 import CommunityParticipationSection from '../components/passport/CommunityParticipationSection.tsx';
 import { useWeeklyStreak } from '../hooks/useCommunity.ts';
 import { CATEGORY_PRESENTATION } from '../lib/questPresentation.ts';
 import { QUEST_CATEGORIES, type QuestCategory } from '../types/quest.ts';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
+import { useMyAchievementProfile } from '../hooks/useAchievements.ts';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
@@ -104,6 +105,7 @@ export default function PassportPage() {
   const streak = useWeeklyStreak();
   const queryClient = useQueryClient();
   const claims = useMyClaims();
+  const achievementProfile = useMyAchievementProfile();
 
   // Redemption resync invalidates ['passport']; the history view returns to
   // page 1 so a new Verified completion is visible (m3).
@@ -169,6 +171,7 @@ export default function PassportPage() {
             {progression.isSuccess && (
               <PassportSummaryCard
                 displayName={displayName}
+                cosmetics={achievementProfile.data?.cosmetics}
                 passport={summary.data}
                 progression={progression.data}
                 streakWeeks={streak.data?.currentWeeks}
@@ -184,11 +187,21 @@ export default function PassportPage() {
             onRetry={() => void summary.refetch()}
           />
         )}
+        {achievementProfile.isPending && (
+          <RegionSkeleton label="Loading achievement trophy…" />
+        )}
+        {achievementProfile.isError && (
+          <RegionError
+            error={achievementProfile.error}
+            notReadyMessage="Your achievement trophy is being prepared. Try again shortly."
+            onRetry={() => void achievementProfile.refetch()}
+          />
+        )}
+        {achievementProfile.data && (
+          <TrophyProgressCard profile={achievementProfile.data} />
+        )}
         {summary.data && (
-          <>
-            <NextMilestoneCard summary={summary.data} />
-            <CategoryImpactSection summary={summary.data} />
-          </>
+          <CategoryImpactSection summary={summary.data} />
         )}
         <div id="passport-achievements">
           <AchievementsSection />

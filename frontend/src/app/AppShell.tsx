@@ -16,6 +16,8 @@ import PlayerStatusCapsule from '../components/PlayerStatusCapsule.tsx';
 import ThemeSwitcher from '../components/ThemeSwitcher.tsx';
 import { useAuthQuery, useLogoutMutation } from '../hooks/useAuth.ts';
 import { useThemeSync } from '../hooks/useThemeSync.ts';
+import { useMyAchievementProfile } from '../hooks/useAchievements.ts';
+import { TrophyArtwork } from '../components/game/GameArtwork.tsx';
 
 interface NavigationItem {
   label: string;
@@ -148,6 +150,7 @@ export default function AppShell() {
                   to="/settings/profile"
                 >
                   <UserRoundCog aria-hidden="true" className="size-4" />
+                  <NavAchievementTrophy />
                   <span className="hidden sm:inline">{auth.data.displayName}</span>
                 </Link>
                 <button
@@ -223,5 +226,30 @@ export default function AppShell() {
         </nav>
       )}
     </div>
+  );
+}
+
+function NavAchievementTrophy() {
+  const profile = useMyAchievementProfile();
+  if (!profile.data || profile.data.trophy.tier === 'Locked')
+    return null;
+
+  const { trophy } = profile.data;
+  const percentage = trophy.nationwideEarnedCount > 0
+      && trophy.earnedPercentage < 0.01
+    ? '<0.01%'
+    : `${trophy.earnedPercentage.toLocaleString(undefined, {
+      maximumFractionDigits: 2,
+    })}%`;
+
+  return (
+    <span
+      aria-hidden="true"
+      className="hidden sm:grid"
+      data-nav-trophy={trophy.tier}
+      title={`${trophy.tier} Trophy · ${trophy.nationwideEarnedCount.toLocaleString()} nationwide · ${percentage} · ${trophy.rarity}`}
+    >
+      <TrophyArtwork tier={trophy.tier} size={22} />
+    </span>
   );
 }
