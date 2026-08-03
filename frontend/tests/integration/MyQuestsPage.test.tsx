@@ -32,7 +32,8 @@ const activeQuest = {
     difficulty: 'Easy',
     xpAward: 50,
     capacity: 30,
-    startAtUtc: '2026-08-01T00:00:00Z',
+    // Keep this fixture in the Active bucket regardless of the test date.
+    startAtUtc: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     endAtUtc: null,
     locationRegion: null,
     locationDescription: 'Oakley Creek',

@@ -342,12 +342,16 @@ public sealed class AchievementAwardPathTests : IClassFixture<TestDatabaseFixtur
         // A backdated completion (verified before the live award) is
         // reconciled later: the ledger gains an earlier-dated row, but the
         // committed award record is immutable.
+        // Anchor the historical row to the live redemption so the two facts
+        // always occupy consecutive Auckland calendar weeks. A fixed calendar
+        // date eventually leaves a gap as real time advances.
+        var backdatedTime = liveTime.AddDays(-7);
         var backdated = QuestCompletion.CreateVerifiedWithCode(
             graph.Actor.Id,
             graph.Quests[1],
             graph.Participations[1],
             null,
-            BaseTime);
+            backdatedTime);
         seedDb.QuestCompletions.Add(backdated);
         await seedDb.SaveChangesAsync(TestContext.Current.CancellationToken);
 

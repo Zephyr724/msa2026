@@ -104,8 +104,22 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
             graph.Actor.Id, legacyQuest.Id, DateTimeOffset.UtcNow.AddDays(-3));
         seedDb.Quests.Add(legacyQuest);
         seedDb.QuestParticipations.Add(legacyParticipation);
-        var firstInstant = DateTimeOffset.UtcNow.AddDays(-2);
-        var secondInstant = DateTimeOffset.UtcNow.AddDays(-1);
+        // Keep all three XP facts ordered inside one Auckland calendar week.
+        // This test isolates profile-lock serialization; crossing a Monday
+        // boundary would legitimately add the two-week streak achievement.
+        // Move a few seconds forward only when the test begins at the boundary
+        // so the two earlier facts remain in the same week as the redemption.
+        var now = DateTimeOffset.UtcNow;
+        var aucklandNow = TimeZoneInfo.ConvertTime(
+            now,
+            TimeZoneInfo.FindSystemTimeZoneById("Pacific/Auckland"));
+        var completionInstant =
+            aucklandNow.DayOfWeek == DayOfWeek.Monday &&
+            aucklandNow.TimeOfDay < TimeSpan.FromSeconds(3)
+                ? now.AddSeconds(3)
+                : now;
+        var firstInstant = completionInstant.AddSeconds(-2);
+        var secondInstant = completionInstant.AddSeconds(-1);
         var firstCompletion = QuestCompletion.CreateVerifiedWithCode(
             graph.Actor.Id,
             graph.EasyQuest,
@@ -151,7 +165,7 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
                 "The backfill did not reach the profile lock.");
 
             var redemption = RedeemAsync(
-                graph.HardQuest.Id, graph.Actor.Id, DateTimeOffset.UtcNow);
+                graph.HardQuest.Id, graph.Actor.Id, completionInstant);
             Assert.True(
                 await XpLedgerTestHelpers.WaitForBlockedSessionsAsync(
                     _fixture.ConnectionString,
