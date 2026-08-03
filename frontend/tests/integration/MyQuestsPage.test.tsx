@@ -32,7 +32,7 @@ const activeQuest = {
     difficulty: 'Easy',
     xpAward: 50,
     capacity: 30,
-    startAtUtc: '2026-08-01T00:00:00Z',
+    startAtUtc: '2099-08-01T00:00:00Z',
     endAtUtc: null,
     locationRegion: null,
     locationDescription: 'Oakley Creek',
