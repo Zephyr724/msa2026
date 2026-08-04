@@ -384,13 +384,16 @@ app.UseAuthorization();
 
 // ── Seed Orchestration ──────────────────────────────────────────────
 // Stable roles are safely idempotent in every environment. Automatic
-// migration and all application/demo data remain Development-only.
+// migration and all demo data remain Development-only. The separately
+// approved assessment bootstrap is explicit, disabled by default, and may run
+// in a deployed environment after its schema migration has completed.
 var seedRoles = builder.Configuration.GetValue<bool>("Seed:Roles");
 var seedRegion = builder.Configuration.GetValue<bool>("Seed:Region");
 var seedDemoQuests = builder.Configuration.GetValue<bool>("Seed:DemoQuests");
 var seedDemoAccounts = builder.Configuration.GetValue<bool>("Seed:DemoAccounts");
+var seedAssessmentData = builder.Configuration.GetValue<bool>("Seed:AssessmentData");
 
-if (seedRoles || (app.Environment.IsDevelopment() &&
+if (seedRoles || seedAssessmentData || (app.Environment.IsDevelopment() &&
     (seedRegion || seedDemoQuests || seedDemoAccounts)))
 {
     using var scope = app.Services.CreateScope();
@@ -412,6 +415,26 @@ if (seedRoles || (app.Environment.IsDevelopment() &&
     if (app.Environment.IsDevelopment() && seedRegion)
     {
         await RegionSeed.SeedAsync(db);
+    }
+
+    if (seedAssessmentData)
+    {
+        await using var assessmentTransaction =
+            await db.Database.BeginTransactionAsync();
+        try
+        {
+            // Reference data and the bounded assessment showcase commit as one
+            // unit. No account with sign-in credentials or application role is
+            // created by this path.
+            await RegionSeed.SeedAsync(db);
+            await AssessmentDataSeed.SeedAsync(db);
+            await assessmentTransaction.CommitAsync();
+        }
+        catch
+        {
+            await assessmentTransaction.RollbackAsync();
+            throw;
+        }
     }
 
     if (app.Environment.IsDevelopment() && seedDemoQuests)

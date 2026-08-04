@@ -32,7 +32,7 @@ public sealed class SeedConfigurationTests
         return new KiwimpactDbContext(options);
     }
 
-    // ── Case 1: Non-Development environment → seed does not execute ──
+    // ── Case 1: Non-Development environment → demo seed does not execute ──
 
     [Fact]
     public async Task NonDevelopmentEnvironment_SeedDoesNotExecute()
@@ -65,6 +65,192 @@ public sealed class SeedConfigurationTests
             Assert.Equal(0, regionCount);
             Assert.Equal(0, questCount);
             Assert.Equal(3, roleCount);
+        }
+        finally
+        {
+            await container.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ProductionAssessmentData_SeedsBoundedPublicDataWithoutSignInIdentity()
+    {
+        await using var container = new PostgreSqlBuilder()
+            .WithImage("postgres:17-alpine")
+            .Build();
+        await container.StartAsync(TestContext.Current.CancellationToken);
+
+        try
+        {
+            using (var preDb = CreateInspectionContext(container.GetConnectionString()))
+            {
+                await preDb.Database.MigrateAsync(TestContext.Current.CancellationToken);
+            }
+
+            using var factory = new NonDevelopmentWebApplicationFactory(
+                container.GetConnectionString(),
+                new Dictionary<string, string?>
+                {
+                    ["Seed:AssessmentData"] = "true",
+                });
+            _ = factory.CreateClient();
+
+            using var db = CreateInspectionContext(container.GetConnectionString());
+            Assert.Equal(23, await db.Regions.CountAsync(
+                TestContext.Current.CancellationToken));
+
+            var quests = await db.Quests
+                .Where(quest => AssessmentDataSeed.QuestIds.Contains(quest.Id))
+                .Include(quest => quest.Images)
+                .ToListAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(5, quests.Count);
+            Assert.All(quests, quest =>
+            {
+                Assert.Equal(QuestStatus.Published, quest.Status);
+                Assert.Equal(AssessmentDataSeed.CuratorUserId, quest.CreatedByUserId);
+                Assert.NotNull(quest.Latitude);
+                Assert.NotNull(quest.Longitude);
+                Assert.Single(quest.Images, image => image.IsCover);
+            });
+
+            var curator = await db.Set<ApplicationUser>()
+                .SingleAsync(
+                    user => user.Id == AssessmentDataSeed.CuratorUserId,
+                    TestContext.Current.CancellationToken);
+            Assert.Null(curator.PasswordHash);
+            Assert.False(curator.EmailConfirmed);
+            Assert.True(curator.LockoutEnabled);
+            Assert.Empty(await db.Set<IdentityUserRole<Guid>>()
+                .Where(item => item.UserId == curator.Id)
+                .ToListAsync(TestContext.Current.CancellationToken));
+            Assert.Empty(await db.Set<IdentityUserClaim<Guid>>()
+                .Where(item => item.UserId == curator.Id)
+                .ToListAsync(TestContext.Current.CancellationToken));
+            Assert.Empty(await db.Set<IdentityUserLogin<Guid>>()
+                .Where(item => item.UserId == curator.Id)
+                .ToListAsync(TestContext.Current.CancellationToken));
+            Assert.Empty(await db.Set<IdentityUserToken<Guid>>()
+                .Where(item => item.UserId == curator.Id)
+                .ToListAsync(TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            await container.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ProductionAssessmentData_IsIdempotentAndDoesNotOverwriteEdits()
+    {
+        await using var container = new PostgreSqlBuilder()
+            .WithImage("postgres:17-alpine")
+            .Build();
+        await container.StartAsync(TestContext.Current.CancellationToken);
+
+        try
+        {
+            using (var preDb = CreateInspectionContext(container.GetConnectionString()))
+            {
+                await preDb.Database.MigrateAsync(TestContext.Current.CancellationToken);
+            }
+
+            var config = new Dictionary<string, string?>
+            {
+                ["Seed:AssessmentData"] = "true",
+            };
+            using (var firstFactory = new NonDevelopmentWebApplicationFactory(
+                container.GetConnectionString(), config))
+            {
+                _ = firstFactory.CreateClient();
+            }
+
+            const string operatorEditedTitle = "Operator-reviewed assessment quest";
+            using (var editDb = CreateInspectionContext(container.GetConnectionString()))
+            {
+                var quest = await editDb.Quests.SingleAsync(
+                    item => item.Id == AssessmentDataSeed.QuestIds[0],
+                    TestContext.Current.CancellationToken);
+                quest.Title = operatorEditedTitle;
+                await editDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            using (var secondFactory = new NonDevelopmentWebApplicationFactory(
+                container.GetConnectionString(), config))
+            {
+                _ = secondFactory.CreateClient();
+            }
+
+            using var db = CreateInspectionContext(container.GetConnectionString());
+            Assert.Equal(23, await db.Regions.CountAsync(
+                TestContext.Current.CancellationToken));
+            Assert.Equal(5, await db.Quests.CountAsync(
+                quest => AssessmentDataSeed.QuestIds.Contains(quest.Id),
+                TestContext.Current.CancellationToken));
+            Assert.Equal(5, await db.QuestImages.CountAsync(
+                image => AssessmentDataSeed.QuestIds.Contains(image.QuestId),
+                TestContext.Current.CancellationToken));
+            Assert.Equal(
+                operatorEditedTitle,
+                await db.Quests
+                    .Where(quest => quest.Id == AssessmentDataSeed.QuestIds[0])
+                    .Select(quest => quest.Title)
+                    .SingleAsync(TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            await container.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ProductionAssessmentData_ReservedIdentityCollisionRollsBackAllWrites()
+    {
+        await using var container = new PostgreSqlBuilder()
+            .WithImage("postgres:17-alpine")
+            .Build();
+        await container.StartAsync(TestContext.Current.CancellationToken);
+
+        try
+        {
+            var conflictingUserId = Guid.NewGuid();
+            using (var preDb = CreateInspectionContext(container.GetConnectionString()))
+            {
+                await preDb.Database.MigrateAsync(TestContext.Current.CancellationToken);
+                preDb.Set<ApplicationUser>().Add(new ApplicationUser
+                {
+                    Id = conflictingUserId,
+                    UserName = "existing-assessment-email-owner",
+                    NormalizedUserName = "EXISTING-ASSESSMENT-EMAIL-OWNER",
+                    Email = "assessment-showcase-curator@kiwimpact.invalid",
+                    NormalizedEmail = "ASSESSMENT-SHOWCASE-CURATOR@KIWIMPACT.INVALID",
+                    EmailConfirmed = false,
+                    PasswordHash = null,
+                    LockoutEnabled = true,
+                });
+                await preDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            using var factory = new NonDevelopmentWebApplicationFactory(
+                container.GetConnectionString(),
+                new Dictionary<string, string?>
+                {
+                    ["Seed:AssessmentData"] = "true",
+                });
+            var exception = Assert.Throws<InvalidOperationException>(
+                () => _ = factory.CreateClient());
+            Assert.Contains("reserved by another user", exception.Message);
+
+            using var db = CreateInspectionContext(container.GetConnectionString());
+            Assert.Equal(0, await db.Regions.CountAsync(
+                TestContext.Current.CancellationToken));
+            Assert.Equal(0, await db.Quests.CountAsync(
+                TestContext.Current.CancellationToken));
+            Assert.Null(await db.Set<ApplicationUser>().SingleOrDefaultAsync(
+                user => user.Id == AssessmentDataSeed.CuratorUserId,
+                TestContext.Current.CancellationToken));
+            Assert.NotNull(await db.Set<ApplicationUser>().SingleOrDefaultAsync(
+                user => user.Id == conflictingUserId,
+                TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -528,10 +714,14 @@ internal sealed class NonDevelopmentWebApplicationFactory
     : WebApplicationFactory<Program>
 {
     private readonly string _connectionString;
+    private readonly Dictionary<string, string?> _config;
 
-    public NonDevelopmentWebApplicationFactory(string connectionString)
+    public NonDevelopmentWebApplicationFactory(
+        string connectionString,
+        Dictionary<string, string?>? config = null)
     {
         _connectionString = connectionString;
+        _config = config ?? [];
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -539,11 +729,16 @@ internal sealed class NonDevelopmentWebApplicationFactory
         builder.UseEnvironment("Production"); // NOT Development
 
         builder.ConfigureAppConfiguration((_, configuration) =>
-            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            var values = new Dictionary<string, string?>
             {
                 ["CompletionCodes:HmacKey"] = Convert.ToBase64String(
                     Enumerable.Range(1, 32).Select(value => (byte)value).ToArray()),
-            }));
+            };
+            foreach (var item in _config)
+                values[item.Key] = item.Value;
+            configuration.AddInMemoryCollection(values);
+        });
 
         builder.ConfigureServices(services =>
         {

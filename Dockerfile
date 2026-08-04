@@ -39,7 +39,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
 USER root
-RUN apk add --no-cache su-exec && \
+RUN apk add --no-cache su-exec tzdata && \
     mkdir -p /var/lib/kiwimpact/keys && \
     chown -R app:app /var/lib/kiwimpact
 COPY --from=backend-build --chown=app:app /out/app ./

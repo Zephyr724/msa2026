@@ -132,8 +132,9 @@ Do not add Nginx, Caddy, Traefik, or another reverse proxy unless the selected p
 | trusted proxy/network settings | Provider-specific non-secret allowlist/trust mode |
 | Data Protection key path/application name | Non-secret stable values; path on durable storage |
 | `Seed__Roles` | Explicit policy; normally true only for approved first/release initialization |
-| `Seed__Region`, `Seed__DemoQuests` | False unless assessment data initialization is separately approved |
+| `Seed__Region`, `Seed__DemoQuests` | False in Production; these remain Development-only implementation paths |
 | `Seed__DemoAccounts` | False unless the human approves demo accounts |
+| `Seed__AssessmentData` | Default false; an explicitly approved, bounded, one-shot production assessment bootstrap may temporarily set true, then must return to false after verification |
 | demo emails/passwords | Omit when disabled; otherwise secret storage only |
 | auth rate-limit settings | Non-secret accepted defaults unless measured change is approved |
 | logging levels | Information/Warning baseline; no sensitive payloads or secret values |
