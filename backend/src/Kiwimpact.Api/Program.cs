@@ -178,7 +178,7 @@ if (!string.IsNullOrWhiteSpace(googleClientId) &&
             options.ClaimActions.Add(new JsonKeyClaimAction(
                 "urn:google:email_verified",
                 System.Security.Claims.ClaimValueTypes.Boolean,
-                "verified_email"));
+                "email_verified"));
         });
 }
 
