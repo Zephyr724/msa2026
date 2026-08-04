@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Kiwimpact.Api.Hosting;
 using Kiwimpact.Api.Reconciliation;
 using Kiwimpact.Api.Hubs;
 using Kiwimpact.Api.Security;
@@ -39,6 +40,16 @@ builder.Services.AddControllers(options =>
 // Problem Details for consistent error responses
 builder.Services.AddProblemDetails();
 builder.Services.AddSignalR();
+
+var railwayHostingEnabled = builder.Configuration.GetValue<bool>(
+    RailwayForwardedHeaders.SectionName + ":Enabled");
+if (railwayHostingEnabled)
+{
+    RailwayForwardedHeaders.ValidateDataProtectionConfiguration(
+        builder.Configuration);
+    builder.Services.Configure<ForwardedHeadersOptions>(
+        RailwayForwardedHeaders.Configure);
+}
 
 var dataProtection = builder.Services
     .AddDataProtection()
@@ -334,6 +345,11 @@ var app = builder.Build();
 
 // ── Middleware Pipeline ──────────────────────────────────────────────
 app.UseExceptionHandler();
+
+if (railwayHostingEnabled)
+{
+    app.UseForwardedHeaders();
+}
 
 // HTTPS redirection enabled only in non-Development environments
 // so the local HTTP Vite proxy remains usable during development.
