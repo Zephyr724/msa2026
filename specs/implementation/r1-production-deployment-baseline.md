@@ -2,11 +2,11 @@
 
 ## 1. Status
 
-- **Status:** Approved and frozen for later implementation — provider selection deferred
+- **Status:** Railway selected; local provider adaptation awaiting review closure
 - **Date:** 2026-07-25
-- **Implementation:** Not started
-- **Deployment/provider:** Not selected; this task created no resources, secrets, database, DNS, or public deployment
-- **Topology decision:** ADR-0009 is accepted; acceptance does not authorize implementation or deployment
+- **Implementation:** Railway adapter implemented locally on 2026-08-03; not committed or deployed
+- **Deployment/provider:** Railway, Southeast Asia (Singapore); public deployment not yet triggered
+- **Topology decision:** ADR-0009 remains accepted; deployment still requires explicit approval
 - **Branch baseline:** `feat/r1-production-deployment-baseline` at `6dcc40e`, including merged Slice 4A
 
 ## 2. Goal
@@ -164,7 +164,12 @@ Railway sources: [Dockerfiles](https://docs.railway.com/builds/dockerfiles), [pu
 
 Azure sources: [Container Apps ingress](https://learn.microsoft.com/en-us/azure/container-apps/ingress-overview), [storage mounts](https://learn.microsoft.com/en-us/azure/container-apps/storage-mounts), [billing](https://learn.microsoft.com/en-us/azure/container-apps/billing), [quotas](https://learn.microsoft.com/en-us/azure/container-apps/quotas), [managed PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/overview), and [PostgreSQL pricing](https://azure.microsoft.com/en-us/pricing/details/postgresql/flexible-server/).
 
-No option is selected. Railway is the simplest cost/operations candidate only if the key-volume/non-root issue is explicitly resolved. Azure is the stronger managed/security fit at greater setup and likely cost.
+Selection update (2026-08-03): the human selected Railway with the application
+and PostgreSQL services in Southeast Asia (Singapore), approved the root-owned
+volume adapter that immediately drops application privileges, and attached the
+application key volume. Exact service variables, remaining operator actions,
+verification, and rollback boundaries are maintained in
+[`r1-railway-production-runbook.md`](./r1-railway-production-runbook.md).
 
 ## 13. CI/release boundary
 

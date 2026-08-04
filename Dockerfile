@@ -39,12 +39,15 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
 USER root
-RUN mkdir -p /var/lib/kiwimpact/keys && \
+RUN apk add --no-cache su-exec && \
+    mkdir -p /var/lib/kiwimpact/keys && \
     chown -R app:app /var/lib/kiwimpact
 COPY --from=backend-build --chown=app:app /out/app ./
 COPY --from=backend-build --chown=app:app /out/migrate ./migrate
 COPY --from=frontend-build --chown=app:app /src/frontend/dist ./wwwroot
-RUN test -f /app/wwwroot/index.html && test -x /app/migrate
+COPY --chown=root:root docker/entrypoint.sh /usr/local/bin/kiwimpact-entrypoint
+RUN chmod 0755 /usr/local/bin/kiwimpact-entrypoint && \
+    test -f /app/wwwroot/index.html && test -x /app/migrate
 
 USER app
 ENV ASPNETCORE_HTTP_PORTS=8080
@@ -55,4 +58,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=4 \
   CMD wget -q -O /dev/null http://127.0.0.1:8080/health/live || exit 1
 
-ENTRYPOINT ["dotnet", "Kiwimpact.Api.dll"]
+ENTRYPOINT ["/usr/local/bin/kiwimpact-entrypoint"]
+CMD ["dotnet", "Kiwimpact.Api.dll"]

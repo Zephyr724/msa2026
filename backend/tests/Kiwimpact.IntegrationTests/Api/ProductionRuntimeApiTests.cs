@@ -170,6 +170,34 @@ public sealed class ProductionRuntimeApiTests : IClassFixture<CustomWebApplicati
     }
 
     [Fact]
+    public async Task RailwayInternalReadinessHostRemainsHttp200InProduction()
+    {
+        using var host = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+            builder.UseWebRoot(_webRoot);
+            builder.UseSetting(
+                "AllowedHosts",
+                "kiwimpact-production.up.railway.app;healthcheck.railway.app");
+            builder.UseSetting("HttpsRedirection:Enabled", "false");
+        });
+        using var client = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            "/health/ready");
+        request.Headers.Host = "healthcheck.railway.app";
+
+        var response = await client.SendAsync(
+            request,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public void SharedFilesystemKeysUnprotectAcrossApplicationHosts()
     {
         var keyPath = Path.Combine(_temporaryRoot, "keys");
