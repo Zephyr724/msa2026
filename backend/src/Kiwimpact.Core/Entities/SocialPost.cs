@@ -105,6 +105,79 @@ public sealed class SocialPost
         UpdatedAt = now.ToUniversalTime();
     }
 
+    public void Update(
+        Guid? questId,
+        string title,
+        string content,
+        IReadOnlyList<SocialPostImageDetails> images,
+        IReadOnlyList<string> tags,
+        DateTimeOffset now)
+    {
+        if (questId.HasValue && questId.Value == Guid.Empty)
+            throw new ArgumentException("The related Quest identifier is invalid.");
+
+        ArgumentNullException.ThrowIfNull(images);
+        ArgumentNullException.ThrowIfNull(tags);
+        if (images.Count > MaxImages)
+            throw new ArgumentException($"A post can contain at most {MaxImages} images.");
+        if (tags.Count > MaxTags)
+            throw new ArgumentException($"A post can contain at most {MaxTags} tags.");
+
+        var normalizedTitle = NormalizeRequired(title, MaxTitleLength, "Post title");
+        var normalizedContent = NormalizeRequired(content, MaxContentLength, "Post content");
+        var nextImages = images
+            .Select((image, index) => SocialPostImage.Create(Id, image, index))
+            .ToArray();
+        var nextTags = new Dictionary<string, SocialPostTag>(StringComparer.Ordinal);
+        foreach (var tag in tags)
+        {
+            var nextTag = SocialPostTag.Create(Id, tag);
+            nextTags.TryAdd(nextTag.NormalizedName, nextTag);
+        }
+
+        QuestId = questId;
+        Title = normalizedTitle;
+        Content = normalizedContent;
+
+        var nextImageOrders = nextImages.Select(image => image.SortOrder).ToHashSet();
+        foreach (var existing in Images.Where(image => !nextImageOrders.Contains(image.SortOrder)).ToArray())
+            Images.Remove(existing);
+        foreach (var nextImage in nextImages)
+        {
+            var existing = Images.SingleOrDefault(image => image.SortOrder == nextImage.SortOrder);
+            if (existing is null)
+            {
+                nextImage.Post = this;
+                Images.Add(nextImage);
+            }
+            else
+            {
+                existing.Url = nextImage.Url;
+                existing.AltText = nextImage.AltText;
+            }
+        }
+
+        foreach (var existing in Tags.Where(tag => !nextTags.ContainsKey(tag.NormalizedName)).ToArray())
+            Tags.Remove(existing);
+        foreach (var nextTag in nextTags.Values)
+        {
+            var existing = Tags.SingleOrDefault(tag => tag.NormalizedName == nextTag.NormalizedName);
+            if (existing is null)
+            {
+                nextTag.Post = this;
+                Tags.Add(nextTag);
+            }
+            else
+            {
+                existing.Name = nextTag.Name;
+            }
+        }
+
+        ImageUrl = nextImages.FirstOrDefault()?.Url;
+        ImageAltText = nextImages.FirstOrDefault()?.AltText;
+        UpdatedAt = now.ToUniversalTime();
+    }
+
     private static string NormalizeRequired(string value, int maxLength, string label)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);

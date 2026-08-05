@@ -28,6 +28,16 @@ public interface ISocialFeedService
         bool isHidden,
         CancellationToken ct = default);
 
+    Task<SocialPostItem> UpdatePostAsync(
+        Guid postId,
+        Guid actorUserId,
+        Guid? questId,
+        string title,
+        string content,
+        IReadOnlyList<SocialPostImageDetails> images,
+        IReadOnlyList<string> tags,
+        CancellationToken ct = default);
+
     Task DeletePostAsync(
         Guid postId,
         Guid actorUserId,

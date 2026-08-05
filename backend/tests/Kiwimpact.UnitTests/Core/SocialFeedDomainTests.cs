@@ -130,6 +130,47 @@ public sealed class SocialFeedDomainTests
     }
 
     [Fact]
+    public void PostUpdate_ReplacesEditableContentWithoutChangingVisibilityOrCreationTime()
+    {
+        var post = SocialPost.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Original title",
+            "Original content",
+            [
+                new SocialPostImageDetails("https://images.example.test/one.jpg", "First"),
+                new SocialPostImageDetails("https://images.example.test/two.jpg", "Second"),
+            ],
+            ["Original", "Keep"],
+            true,
+            Now);
+
+        post.Update(
+            null,
+            "  Updated title  ",
+            "  Updated content  ",
+            [new SocialPostImageDetails("https://images.example.test/new.jpg", "New first")],
+            ["Keep", "Fresh", "fresh"],
+            Now.AddMinutes(10));
+
+        Assert.Null(post.QuestId);
+        Assert.Equal("Updated title", post.Title);
+        Assert.Equal("Updated content", post.Content);
+        var image = Assert.Single(post.Images);
+        Assert.Equal("https://images.example.test/new.jpg", image.Url);
+        Assert.Equal("New first", image.AltText);
+        Assert.Equal(image.Url, post.ImageUrl);
+        Assert.Equal(["Fresh", "Keep"], post.Tags.Select(tag => tag.Name).Order());
+        Assert.True(post.IsHidden);
+        Assert.Equal(Now.ToUniversalTime(), post.CreatedAt);
+        Assert.Equal(Now.AddMinutes(10).ToUniversalTime(), post.UpdatedAt);
+
+        Assert.Throws<ArgumentException>(() => post.Update(
+            null, " ", "Content", [], [], Now.AddMinutes(20)));
+        Assert.Equal("Updated title", post.Title);
+    }
+
+    [Fact]
     public void CommentCreate_NormalizesContentAndSupportsRootOrReply()
     {
         var postId = Guid.NewGuid();

@@ -293,6 +293,43 @@ public sealed class SocialFeedApiTests
             });
         var created = await ReadJsonAsync(createdResponse);
         var postId = created.GetProperty("id").GetGuid();
+        var update = new
+        {
+            questId = (Guid?)null,
+            title = "Updated stream cleanup gallery",
+            content = "Updated complete story with related impact.",
+            images = new[]
+            {
+                new
+                {
+                    imageUrl = "https://images.example.test/updated.jpg",
+                    imageAltText = "Updated stream view",
+                },
+            },
+            tags = new[] { "StreamCare", "Updated" },
+        };
+        using var forbiddenPostEdit = await SendJsonWithCsrfAsync(
+            other,
+            HttpMethod.Patch,
+            $"/api/v1/social/posts/{postId}",
+            update);
+        using var editedPost = await SendJsonWithCsrfAsync(
+            author,
+            HttpMethod.Patch,
+            $"/api/v1/social/posts/{postId}",
+            update);
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenPostEdit.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, editedPost.StatusCode);
+        var editedPostJson = await ReadJsonAsync(editedPost);
+        Assert.Equal("Updated stream cleanup gallery", editedPostJson.GetProperty("title").GetString());
+        Assert.Equal("Updated complete story with related impact.", editedPostJson.GetProperty("content").GetString());
+        Assert.Equal(JsonValueKind.Null, editedPostJson.GetProperty("quest").ValueKind);
+        Assert.Equal(1, editedPostJson.GetProperty("images").GetArrayLength());
+        Assert.Equal(
+            "https://images.example.test/updated.jpg",
+            editedPostJson.GetProperty("images")[0].GetProperty("imageUrl").GetString());
+        Assert.Equal(2, editedPostJson.GetProperty("tags").GetArrayLength());
+        Assert.False(editedPostJson.GetProperty("isHidden").GetBoolean());
 
         var otherFeedBeforeHide = await ReadJsonAsync(await other.GetAsync(
             "/api/v1/social/posts",
@@ -424,7 +461,7 @@ public sealed class SocialFeedApiTests
     }
 
     [Fact]
-    public async Task CommentsAllowOneReplyLevelAndReturnNestedThreads()
+    public async Task CommentsFlattenRepliesToRepliesIntoTheSecondLevel()
     {
         var author = await CreateAuthenticatedClientAsync("Comment Author");
         var post = await CreatePostAsync(author, "Discuss this local action.");
@@ -443,11 +480,12 @@ public sealed class SocialFeedApiTests
             new { content = "Direct reply", parentCommentId = rootId });
         var reply = await ReadJsonAsync(replyResponse);
         var replyId = reply.GetProperty("id").GetGuid();
-        var tooDeep = await SendJsonWithCsrfAsync(
+        var flattenedResponse = await SendJsonWithCsrfAsync(
             author,
             HttpMethod.Post,
             $"/api/v1/social/posts/{postId}/comments",
             new { content = "Third level", parentCommentId = replyId });
+        var flattened = await ReadJsonAsync(flattenedResponse);
         var updatedRoot = await SendJsonWithCsrfAsync(
             author,
             HttpMethod.Patch,
@@ -465,7 +503,8 @@ public sealed class SocialFeedApiTests
             new { content = "Missing comment" });
         Assert.Equal(HttpStatusCode.Created, rootResponse.StatusCode);
         Assert.Equal(HttpStatusCode.Created, replyResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, tooDeep.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, flattenedResponse.StatusCode);
+        Assert.Equal(rootId, flattened.GetProperty("parentCommentId").GetGuid());
         Assert.Equal(HttpStatusCode.OK, updatedRoot.StatusCode);
         Assert.Equal(HttpStatusCode.OK, updatedReply.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, missingEdit.StatusCode);
@@ -500,12 +539,14 @@ public sealed class SocialFeedApiTests
             SocialFeedService.MaxReplyPreviewSize,
             thread.GetProperty("replies").GetArrayLength());
         Assert.Equal(
-            SocialFeedService.MaxReplyPreviewSize + 1,
+            SocialFeedService.MaxReplyPreviewSize + 2,
             thread.GetProperty("replyCount").GetInt32());
         Assert.True(thread.GetProperty("hasMoreReplies").GetBoolean());
         var nested = thread.GetProperty("replies")[0];
         Assert.Equal(rootId, nested.GetProperty("parentCommentId").GetGuid());
         Assert.Equal("Updated direct reply", nested.GetProperty("content").GetString());
+        Assert.Equal("Third level", thread.GetProperty("replies")[1].GetProperty("content").GetString());
+        Assert.Equal(rootId, thread.GetProperty("replies")[1].GetProperty("parentCommentId").GetGuid());
         Assert.True(thread.GetProperty("canEdit").GetBoolean());
         Assert.True(nested.GetProperty("canEdit").GetBoolean());
     }
@@ -546,6 +587,17 @@ public sealed class SocialFeedApiTests
             $"/api/v1/social/posts/{postId}/comments/{commentId}",
             new { content = "Guest edit" },
             TestContext.Current.CancellationToken);
+        using var guestPostEdit = await guest.PatchAsJsonAsync(
+            $"/api/v1/social/posts/{postId}",
+            new
+            {
+                questId = (Guid?)null,
+                title = "Guest edit",
+                content = "Guest edit",
+                images = Array.Empty<object>(),
+                tags = Array.Empty<string>(),
+            },
+            TestContext.Current.CancellationToken);
         using var missingLikeCsrf = await author.PutAsync(
             $"/api/v1/social/posts/{postId}/like",
             null,
@@ -568,6 +620,17 @@ public sealed class SocialFeedApiTests
             $"/api/v1/social/posts/{postId}/comments/{commentId}",
             new { content = "Missing token edit" },
             TestContext.Current.CancellationToken);
+        using var missingPostEditCsrf = await author.PatchAsJsonAsync(
+            $"/api/v1/social/posts/{postId}",
+            new
+            {
+                questId = (Guid?)null,
+                title = "Missing token edit",
+                content = "Missing token edit",
+                images = Array.Empty<object>(),
+                tags = Array.Empty<string>(),
+            },
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Unauthorized, guestLike.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, guestUnlike.StatusCode);
@@ -575,12 +638,14 @@ public sealed class SocialFeedApiTests
         Assert.Equal(HttpStatusCode.Unauthorized, guestDelete.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, guestVisibility.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, guestCommentEdit.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, guestPostEdit.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingLikeCsrf.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingUnlikeCsrf.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingCommentCsrf.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingDeleteCsrf.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingVisibilityCsrf.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingCommentEditCsrf.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, missingPostEditCsrf.StatusCode);
     }
 
     [Fact]

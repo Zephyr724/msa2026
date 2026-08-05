@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -120,6 +120,7 @@ function renderPage(initialEntry = '/community') {
 
 describe('Community post discovery and detail', () => {
   afterEach(() => {
+    vi.useRealTimers();
     resetCsrfToken();
     vi.unstubAllGlobals();
   });
@@ -141,7 +142,7 @@ describe('Community post discovery and detail', () => {
     const card = await screen.findByRole('link', { name: `Open post: ${post.title}` });
     expect(card).toHaveTextContent(post.title);
     expect(card).toHaveTextContent(post.authorDisplayName);
-    expect(card).toHaveTextContent(`Related Quest · ${post.quest?.title}`);
+    expect(card).toHaveTextContent(`Quest · ${post.quest?.title}`);
     expect(screen.getByLabelText('7 likes')).toBeInTheDocument();
     expect(screen.queryByText(post.content)).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '2 comments' })).not.toBeInTheDocument();
@@ -241,6 +242,16 @@ describe('Community post discovery and detail', () => {
     });
     let rootContent = 'This is a great place to start.';
     let editBody: unknown;
+    let replyBody: unknown;
+    const replies: SocialCommentThreadDto['replies'] = [{
+      id: '44444444-4444-4444-8444-444444444444',
+      postId: post.id,
+      parentCommentId: rootId,
+      content: 'I can bring reusable gloves.',
+      authorDisplayName: 'Hana',
+      createdAtUtc: '2026-07-31T09:06:00.000Z',
+      canEdit: false,
+    }];
     const thread = (): SocialCommentThreadDto => ({
       id: rootId,
       postId: post.id,
@@ -248,17 +259,9 @@ describe('Community post discovery and detail', () => {
       authorDisplayName: 'Aroha',
       createdAtUtc: '2026-07-31T09:05:00.000Z',
       canEdit: true,
-      replyCount: 1,
+      replyCount: replies.length,
       hasMoreReplies: false,
-      replies: [{
-        id: '44444444-4444-4444-8444-444444444444',
-        postId: post.id,
-        parentCommentId: rootId,
-        content: 'I can bring reusable gloves.',
-        authorDisplayName: 'Hana',
-        createdAtUtc: '2026-07-31T09:06:00.000Z',
-        canEdit: false,
-      }],
+      replies,
     });
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -268,6 +271,19 @@ describe('Community post discovery and detail', () => {
         editBody = JSON.parse(String(init.body));
         rootContent = (editBody as { content: string }).content;
         return Promise.resolve(jsonResponse({}, 200));
+      }
+      if (url.endsWith(`/v1/social/posts/${post.id}/comments`) && init?.method === 'POST') {
+        replyBody = JSON.parse(String(init.body));
+        replies.push({
+          id: '55555555-5555-4555-8555-555555555555',
+          postId: post.id,
+          parentCommentId: rootId,
+          content: (replyBody as { content: string }).content,
+          authorDisplayName: 'Aroha',
+          createdAtUtc: '2026-07-31T09:07:00.000Z',
+          canEdit: true,
+        });
+        return Promise.resolve(jsonResponse({}, 201));
       }
       if (url.includes(`/v1/social/posts/${post.id}/comments`)) return Promise.resolve(jsonResponse(commentPage([thread()])));
       if (url.endsWith(`/v1/social/posts/${post.id}`)) return Promise.resolve(jsonResponse(post));
@@ -287,6 +303,14 @@ describe('Community post discovery and detail', () => {
     expect(await screen.findByText(rootContent)).toBeInTheDocument();
     expect(screen.getByText('I can bring reusable gloves.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Edit reply by Hana/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reply to Hana' }));
+    await user.type(screen.getByLabelText('Write a reply to Hana'), 'Replying to the second-level comment.');
+    await user.click(screen.getByRole('button', { name: 'Send reply' }));
+    await waitFor(() => expect(replyBody).toEqual({
+      content: 'Replying to the second-level comment.',
+      parentCommentId: replies[0]?.id,
+    }));
+    expect(await screen.findByText('Replying to the second-level comment.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Edit comment by Aroha' }));
     const editor = screen.getByLabelText('Edit comment');
     await user.clear(editor);
@@ -302,12 +326,28 @@ describe('Community post discovery and detail', () => {
     let post = socialPost({ authorDisplayName: 'Aroha', canDelete: true });
     let deleted = false;
     let likeAttempts = 0;
+    let editBody: Record<string, unknown> | null = null;
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith('/v1/auth/me')) return Promise.resolve(jsonResponse(session));
       if (url.endsWith('/v1/auth/csrf-token')) return Promise.resolve(jsonResponse({ token: 'manage-token' }));
       if (url.endsWith(`/v1/social/posts/${post.id}/visibility`) && init?.method === 'PATCH') {
         post = { ...post, isHidden: true };
+        return Promise.resolve(jsonResponse(post));
+      }
+      if (url.endsWith(`/v1/social/posts/${post.id}`) && init?.method === 'PATCH') {
+        editBody = JSON.parse(String(init.body)) as Record<string, unknown>;
+        post = {
+          ...post,
+          title: String(editBody.title),
+          content: String(editBody.content),
+          images: (editBody.images as SocialPostDto['images']).map((image, sortOrder) => ({
+            ...image,
+            sortOrder,
+          })),
+          tags: editBody.tags as string[],
+          quest: editBody.questId ? post.quest : null,
+        };
         return Promise.resolve(jsonResponse(post));
       }
       if (url.endsWith(`/v1/social/posts/${post.id}/like`) && init?.method === 'PUT') {
@@ -321,11 +361,42 @@ describe('Community post discovery and detail', () => {
         return Promise.resolve(new Response(null, { status: 204 }));
       }
       if (url.includes(`/v1/social/posts/${post.id}/comments`)) return Promise.resolve(jsonResponse(commentPage([])));
+      if (url.includes('/v1/quests')) return Promise.resolve(jsonResponse(questPage));
       if (url.endsWith(`/v1/social/posts/${post.id}`)) return Promise.resolve(jsonResponse(post));
       if (url.includes('/v1/social/posts')) return Promise.resolve(jsonResponse(postPage([])));
       return Promise.resolve(jsonResponse({}, 500));
     }));
     renderPage(`/community/posts/${post.id}`);
+
+    await user.click((await screen.findAllByRole('button', { name: 'Edit post' }))[0]);
+    const editDialog = await screen.findByRole('dialog', { name: 'Edit post' });
+    expect(editDialog).toHaveTextContent('Current related Quest');
+    expect(editDialog).toHaveTextContent('Community Stream Cleanup');
+    const title = screen.getByLabelText(/^Title/);
+    vi.useFakeTimers();
+    fireEvent.change(title, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    const floatingError = screen.getByRole('alert');
+    expect(floatingError).toHaveTextContent('Add a title for your post.');
+    expect(floatingError).toHaveClass('alert-error', 'inset-x-0', 'bottom-full', 'rounded-2xl');
+    expect(screen.getByTestId('post-composer-actions')).toContainElement(floatingError);
+    act(() => vi.advanceTimersByTime(8_000));
+    expect(screen.queryByText('Add a title for your post.')).not.toBeInTheDocument();
+    vi.useRealTimers();
+    await user.type(title, 'Edited stream story');
+    const body = screen.getByLabelText(/^Body/);
+    await user.clear(body);
+    await user.type(body, 'Edited details from the stream.');
+    await user.click(screen.getByRole('button', { name: 'Remove related Quest' }));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(editBody).toMatchObject({
+      questId: null,
+      title: 'Edited stream story',
+      content: 'Edited details from the stream.',
+      tags: ['StreamCare'],
+    }));
+    expect(await screen.findByRole('heading', { name: 'Edited stream story' })).toBeInTheDocument();
+    expect(screen.getByText('Edited details from the stream.')).toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: 'Like post' }));
     const likeError = await screen.findByText('Please wait before reacting again.');

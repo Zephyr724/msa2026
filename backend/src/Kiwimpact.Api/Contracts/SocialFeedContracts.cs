@@ -8,6 +8,13 @@ public sealed record CreateSocialPostRequest(
     IReadOnlyList<string>? Tags,
     bool IsHidden = false);
 
+public sealed record UpdateSocialPostRequest(
+    Guid? QuestId,
+    string Title,
+    string Content,
+    IReadOnlyList<CreateSocialPostImageRequest>? Images,
+    IReadOnlyList<string>? Tags);
+
 public sealed record SetSocialPostVisibilityRequest(bool IsHidden);
 
 public sealed record CreateSocialPostImageRequest(

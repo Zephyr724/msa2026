@@ -6,6 +6,7 @@ import type {
   SocialPostDto,
   SocialPostPage,
   UpdateSocialCommentInput,
+  UpdateSocialPostInput,
 } from '../../types/social';
 import {
   validateSocialCommentPage,
@@ -49,6 +50,26 @@ export async function createSocialPost(
     body: JSON.stringify(input),
     signal,
   }));
+}
+
+export async function updateSocialPost(
+  input: UpdateSocialPostInput,
+  signal?: AbortSignal,
+): Promise<SocialPostDto> {
+  return validateSocialPost(await apiFetch<unknown>(
+    `/v1/social/posts/${encodeURIComponent(input.postId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        questId: input.questId,
+        title: input.title,
+        content: input.content,
+        images: input.images,
+        tags: input.tags,
+      }),
+      signal,
+    },
+  ));
 }
 
 export async function deleteSocialPost(

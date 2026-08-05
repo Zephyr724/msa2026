@@ -6,7 +6,6 @@ public enum SocialFeedError
     NotFound,
     Forbidden,
     InvalidReplyParent,
-    ReplyDepthExceeded,
 }
 
 public sealed class SocialFeedException : Exception

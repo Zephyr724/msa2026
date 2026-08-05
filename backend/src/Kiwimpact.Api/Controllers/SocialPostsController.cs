@@ -112,6 +112,47 @@ public sealed class SocialPostsController : ControllerBase
         }
     }
 
+    /// <summary>Edit the content of a social post owned by the authenticated user.</summary>
+    [HttpPatch("{postId:guid}")]
+    [Authorize(Roles = WriterRoles)]
+    [EnableRateLimiting(SocialRateLimitPolicies.Publish)]
+    [ProducesResponseType(typeof(SocialPostDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> Update(
+        Guid postId,
+        UpdateSocialPostRequest request,
+        CancellationToken ct)
+    {
+        if (TryGetActorId() is not { } actorId)
+            return Unauthorized();
+
+        try
+        {
+            var post = await _service.UpdatePostAsync(
+                postId,
+                actorId,
+                request.QuestId,
+                request.Title,
+                request.Content,
+                (request.Images ?? [])
+                    .Select(image => new SocialPostImageDetails(
+                        image.ImageUrl,
+                        image.ImageAltText))
+                    .ToArray(),
+                request.Tags ?? [],
+                ct);
+            return Ok(ToDto(post));
+        }
+        catch (SocialFeedException exception)
+        {
+            return ToProblem(exception);
+        }
+    }
+
     /// <summary>Switch an owned published post between public and hidden.</summary>
     [HttpPatch("{postId:guid}/visibility")]
     [Authorize(Roles = WriterRoles)]
@@ -324,8 +365,7 @@ public sealed class SocialPostsController : ControllerBase
             SocialFeedError.NotFound => ProblemDetailsHelper.NotFound(exception.Message),
             SocialFeedError.Forbidden => ProblemDetailsHelper.Forbidden(exception.Message),
             SocialFeedError.Validation or
-            SocialFeedError.InvalidReplyParent or
-            SocialFeedError.ReplyDepthExceeded =>
+            SocialFeedError.InvalidReplyParent =>
                 ProblemDetailsHelper.Validation(exception.Message),
             _ => ProblemDetailsHelper.Validation("Social request failed."),
         };

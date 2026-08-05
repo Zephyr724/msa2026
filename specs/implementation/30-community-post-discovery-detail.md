@@ -32,7 +32,9 @@ conflicting Community feed/card and comment-edit deferral in Slice 29.
    discussion, and a viewport-sticky engagement bar.
 6. Comments load only in post detail. The author of a root comment or direct
    reply may edit its bounded text inline. Other users never receive that edit
-   capability, and backend ownership remains authoritative.
+   capability, and backend ownership remains authoritative. A user may reply
+   to either a root comment or a direct reply; replies to replies are flattened
+   into the same root thread and never create a third visual or persisted level.
 7. Authenticated users can select `My posts` from Community. It lists only
    their own public and hidden posts and preserves URL-owned search state.
 8. `New post` is a persistent floating action on the right side of Community,
@@ -43,6 +45,10 @@ conflicting Community feed/card and comment-edit deferral in Slice 29.
 10. Search, pagination, public/hidden privacy, multi-image publishing,
     deletion, likes, two-level comments, CSRF, role authorization, actor rate
     limits, and neutral public author projections retain their accepted rules.
+11. The post author may edit the title, body, ordered image URL/alternative-text
+    set, tags, and optional Related Quest from opened detail. Visibility remains
+    a separate explicit control. Non-authors receive no edit entry and backend
+    ownership is authoritative.
 
 ## API contract delta
 
@@ -54,6 +60,12 @@ conflicting Community feed/card and comment-edit deferral in Slice 29.
   reply owned by the caller, uses the existing comment rate-limit policy, and
   requires antiforgery. Missing comments return 404; non-owners return 403.
 - Comment read DTOs expose `canEdit` without exposing internal user IDs.
+- `PATCH /api/v1/social/posts/{postId}` replaces the owned post's editable
+  content fields. A newly selected Related Quest must be published; preserving
+  an unchanged historical Quest does not depend on its current lifecycle.
+- `POST /api/v1/social/posts/{postId}/comments` accepts a root or reply as its
+  target. When the target is already a reply, the stored parent is resolved to
+  that reply's root comment.
 
 ## Verification contract
 
@@ -72,6 +84,6 @@ conflicting Community feed/card and comment-edit deferral in Slice 29.
 ## Deferred
 
 - Comment deletion and edit history/timestamps.
-- Post editing and draft persistence.
+- Draft persistence.
 - Binary image upload, public profiles, follows, chat, notifications, and
   recommendation ranking.

@@ -50,7 +50,7 @@ export default function SocialPostCard({ post }: { post: SocialPostDto }) {
           </h2>
           {post.quest && (
             <p className="mt-1.5 truncate text-[0.7rem] font-semibold text-primary/80">
-              Related Quest · {post.quest.title}
+              Quest · {post.quest.title}
             </p>
           )}
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-content">

@@ -70,6 +70,15 @@ export interface CreateSocialPostInput {
   isHidden: boolean;
 }
 
+export interface UpdateSocialPostInput {
+  postId: string;
+  questId: string | null;
+  title: string;
+  content: string;
+  images: CreateSocialPostInput['images'];
+  tags: string[];
+}
+
 export interface CreateSocialCommentInput {
   postId: string;
   content: string;

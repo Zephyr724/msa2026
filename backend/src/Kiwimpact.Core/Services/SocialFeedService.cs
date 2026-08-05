@@ -99,6 +99,36 @@ public sealed class SocialFeedService : ISocialFeedService
             ct);
     }
 
+    public async Task<SocialPostItem> UpdatePostAsync(
+        Guid postId,
+        Guid actorUserId,
+        Guid? questId,
+        string title,
+        string content,
+        IReadOnlyList<SocialPostImageDetails> images,
+        IReadOnlyList<string> tags,
+        CancellationToken ct = default)
+    {
+        ValidateIdentifiers(postId, actorUserId);
+        try
+        {
+            return await _repository.UpdatePostAsync(
+                postId,
+                actorUserId,
+                questId,
+                title,
+                content,
+                images,
+                tags,
+                DateTimeOffset.UtcNow,
+                ct);
+        }
+        catch (ArgumentException exception)
+        {
+            throw Error(SocialFeedError.Validation, exception.Message);
+        }
+    }
+
     public Task DeletePostAsync(
         Guid postId,
         Guid actorUserId,

@@ -524,12 +524,13 @@ draft persistence, or moderation tooling.
 | `GET` | `/api/v1/social/posts` | None / Member+ for `mine=true` | Newest-first post feed. Supports case-insensitive `search` over title, content, tags, related Quest title, and author display name, plus `page` (1–10,000), `pageSize` (maximum 24), and authenticated `mine=true`. Guests see public posts; an authenticated viewer additionally sees their own hidden posts. `mine=true` returns only the caller's public and hidden posts. |
 | `GET` | `/api/v1/social/posts/{postId}` | None | Read one public post, or an owned hidden post. Inaccessible hidden posts return 404. |
 | `POST` | `/api/v1/social/posts` | Member+ | Publish `{ questId?, title, content, images, tags, isHidden }`. A related Quest is optional but strongly recommended; when supplied it must exist and be Published. Images are zero to nine ordered HTTPS URL/alternative-text pairs; tags are bounded and case-insensitively unique. |
+| `PATCH` | `/api/v1/social/posts/{postId}` | Member+ | Author-only replacement of `{ questId?, title, content, images, tags }`. A changed non-null Quest must currently be Published; visibility is managed separately. |
 | `PATCH` | `/api/v1/social/posts/{postId}/visibility` | Member+ | Author-only switch of an existing published post between public and hidden. Returns the authoritative post. |
 | `DELETE` | `/api/v1/social/posts/{postId}` | Member+ | Author-only permanent deletion. Returns 204; owned images, tags, likes, and comments cascade. |
 | `PUT` | `/api/v1/social/posts/{postId}/like` | Member+ | Idempotently set the caller's like. Returns authoritative aggregate count and caller state. |
 | `DELETE` | `/api/v1/social/posts/{postId}/like` | Member+ | Idempotently remove the caller's like. Returns authoritative aggregate count and caller state. |
 | `GET` | `/api/v1/social/posts/{postId}/comments` | None | Page top-level comments (page 1–10,000; maximum 20 roots) and include at most the first 20 direct replies per root. Each root reports authoritative `replyCount` and `hasMoreReplies`. |
-| `POST` | `/api/v1/social/posts/{postId}/comments` | Member+ | Create a root comment or a direct reply using optional `parentCommentId`. |
+| `POST` | `/api/v1/social/posts/{postId}/comments` | Member+ | Create a root comment or reply using optional `parentCommentId`. When the target is already a reply, the new reply is flattened under that target's root thread. |
 | `PATCH` | `/api/v1/social/posts/{postId}/comments/{commentId}` | Member+ | Author-only bounded content update for a root comment or direct reply. Returns the authoritative comment. |
 
 **Privacy and validation rules:**
@@ -553,8 +554,8 @@ draft persistence, or moderation tooling.
   author can restore visibility or delete the post; non-authors receive 403 on
   those ownership endpoints. Existing engagement is retained while hidden and
   becomes visible again after restoration.
-- A reply parent must exist on the same post and must be a top-level comment.
-  Replying to a reply returns 400.
+- A reply target must exist on the same post. Targeting a reply resolves its
+  root as the persisted parent, so discussion remains exactly two levels deep.
 - Comment thread and reply DTOs expose viewer-specific `canEdit` without
   exposing the author user ID. Only the comment author can update content.
 - Reply previews are deliberately bounded to 20 per returned root so a public
@@ -594,7 +595,7 @@ draft persistence, or moderation tooling.
 | Role      | Abilities                                                                                                                                                              |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Guest     | Public quest discovery, leaderboards (Auckland/NZ), regions, achievements catalog and nationwide stats, community challenges, social feed and comments read            |
-| Member    | All Guest abilities + self-profile, participation, completion, Passport, achievements, trophy/cosmetic profile, Share Card, publish/like/comment/reply/edit-own-comment and My posts                 |
+| Member    | All Guest abilities + self-profile, participation, completion, Passport, achievements, trophy/cosmetic profile, Share Card, publish/edit-own-post/like/comment/reply/edit-own-comment and My posts                 |
 | Organizer | All Member abilities + CRUD for owned quests, completion codes, images for owned quests                                                                                |
 | Admin     | All Organizer abilities + manage all quests, review claims, manage external sources, manage community challenges, manage regions                                     |
 
@@ -620,7 +621,7 @@ The following endpoints require rate limiting:
 | `/api/v1/auth/forgot-password`     | 3     | per IP per 15 minutes |
 | `/api/v1/auth/reset-password`      | 3     | per IP per 15 minutes |
 | `/api/v1/auth/resend-confirmation` | 3     | per IP per 15 minutes |
-| `POST /api/v1/social/posts`, `PATCH .../visibility`, `DELETE .../{postId}` | 6 shared | per authenticated user per minute |
+| `POST /api/v1/social/posts`, `PATCH .../{postId}`, `PATCH .../visibility`, `DELETE .../{postId}` | 6 shared | per authenticated user per minute |
 | `POST /api/v1/social/posts/{postId}/comments`, `PATCH .../comments/{commentId}` | 30 shared | per authenticated user per minute |
 | `PUT/DELETE /api/v1/social/posts/{postId}/like` | 120 | per authenticated user per minute |
 

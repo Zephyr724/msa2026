@@ -14,13 +14,15 @@ import {
   type FormEvent,
   type KeyboardEvent,
   type MouseEvent,
+  useCallback,
   useEffect,
   useRef,
   useState,
 } from 'react';
 import { useQuestList } from '../../hooks/useQuests';
-import { useCreateSocialPost } from '../../hooks/useSocialFeed';
+import { useCreateSocialPost, useUpdateSocialPost } from '../../hooks/useSocialFeed';
 import { ApiError } from '../../lib/api/apiFetch';
+import type { SocialPostDto } from '../../types/social';
 
 const MAX_IMAGES = 9;
 const MAX_TAGS = 10;
@@ -34,17 +36,22 @@ interface SocialPostComposerProps {
   open: boolean;
   onClose: () => void;
   onPublished: () => void;
+  post?: SocialPostDto;
 }
 
 export default function SocialPostComposer({
   open,
   onClose,
   onPublished,
+  post,
 }: SocialPostComposerProps) {
   const createPost = useCreateSocialPost();
+  const updatePost = useUpdateSocialPost();
+  const isEditing = Boolean(post);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const errorTimerRef = useRef<number | null>(null);
   const [questSearch, setQuestSearch] = useState('');
   const [selectedQuestId, setSelectedQuestId] = useState('');
   const [title, setTitle] = useState('');
@@ -53,13 +60,50 @@ export default function SocialPostComposer({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isHidden, setIsHidden] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
   const quests = useQuestList({
     page: 1,
     pageSize: 20,
     search: questSearch.trim() || undefined,
     sortBy: 'startAt',
   }, open);
+
+  const dismissError = useCallback(() => {
+    if (errorTimerRef.current !== null) {
+      window.clearTimeout(errorTimerRef.current);
+      errorTimerRef.current = null;
+    }
+    setErrorNotice(null);
+  }, []);
+
+  const showError = useCallback((message: string) => {
+    if (errorTimerRef.current !== null) window.clearTimeout(errorTimerRef.current);
+    setErrorNotice(message);
+    errorTimerRef.current = window.setTimeout(() => {
+      errorTimerRef.current = null;
+      setErrorNotice(null);
+    }, 8_000);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setQuestSearch('');
+    setSelectedQuestId(post?.quest?.id ?? '');
+    setTitle(post?.title ?? '');
+    setContent(post?.content ?? '');
+    setImages(post?.images.map((image) => ({
+      url: image.imageUrl,
+      altText: image.imageAltText,
+    })) ?? []);
+    setTags(post?.tags ?? []);
+    setTagInput('');
+    setIsHidden(post?.isHidden ?? false);
+    dismissError();
+  }, [dismissError, open, post]);
+
+  useEffect(() => () => {
+    if (errorTimerRef.current !== null) window.clearTimeout(errorTimerRef.current);
+  }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -85,12 +129,13 @@ export default function SocialPostComposer({
     setTags([]);
     setTagInput('');
     setIsHidden(false);
-    setValidationError(null);
+    dismissError();
     createPost.reset();
+    updatePost.reset();
   }
 
   function closeDialog() {
-    if (createPost.isPending) return;
+    if (createPost.isPending || updatePost.isPending) return;
     resetForm();
     onClose();
   }
@@ -99,20 +144,20 @@ export default function SocialPostComposer({
     const value = tagInput.trim().replace(/^#+/, '').trim();
     if (!value) return;
     if (value.length > 30) {
-      setValidationError('Each tag must be 30 characters or fewer.');
+      showError('Each tag must be 30 characters or fewer.');
       return;
     }
     if (tags.some((tag) => tag.localeCompare(value, undefined, { sensitivity: 'accent' }) === 0)) {
-      setValidationError('That tag is already added.');
+      showError('That tag is already added.');
       return;
     }
     if (tags.length >= MAX_TAGS) {
-      setValidationError(`Add no more than ${MAX_TAGS} tags.`);
+      showError(`Add no more than ${MAX_TAGS} tags.`);
       return;
     }
     setTags((current) => [...current, value]);
     setTagInput('');
-    setValidationError(null);
+    dismissError();
   }
 
   function handleTagKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -123,23 +168,23 @@ export default function SocialPostComposer({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setValidationError(null);
+    dismissError();
     const normalizedTitle = title.trim();
     const normalizedContent = content.trim();
     if (!normalizedTitle) {
-      setValidationError('Add a title for your post.');
+      showError('Add a title for your post.');
       return;
     }
     if (normalizedTitle.length > 120) {
-      setValidationError('Post title must be 120 characters or fewer.');
+      showError('Post title must be 120 characters or fewer.');
       return;
     }
     if (!normalizedContent) {
-      setValidationError('Write something about your local action.');
+      showError('Write something about your local action.');
       return;
     }
     if (normalizedContent.length > 2_000) {
-      setValidationError('Post content must be 2,000 characters or fewer.');
+      showError('Post content must be 2,000 characters or fewer.');
       return;
     }
 
@@ -149,31 +194,42 @@ export default function SocialPostComposer({
     }));
     for (const image of normalizedImages) {
       if (!image.imageUrl || !image.imageAltText) {
-        setValidationError('Every image needs both an HTTPS URL and a description.');
+        showError('Every image needs both an HTTPS URL and a description.');
         return;
       }
       try {
         const url = new URL(image.imageUrl);
         if (url.protocol !== 'https:' || url.username || url.password) throw new Error();
       } catch {
-        setValidationError('Every image URL must be a public HTTPS address.');
+        showError('Every image URL must be a public HTTPS address.');
         return;
       }
       if (image.imageAltText.length > 200) {
-        setValidationError('Image descriptions must be 200 characters or fewer.');
+        showError('Image descriptions must be 200 characters or fewer.');
         return;
       }
     }
 
     try {
-      await createPost.mutateAsync({
-        questId: selectedQuestId || null,
-        title: normalizedTitle,
-        content: normalizedContent,
-        images: normalizedImages,
-        tags,
-        isHidden,
-      });
+      if (post) {
+        await updatePost.mutateAsync({
+          postId: post.id,
+          questId: selectedQuestId || null,
+          title: normalizedTitle,
+          content: normalizedContent,
+          images: normalizedImages,
+          tags,
+        });
+      } else {
+        await createPost.mutateAsync({
+          questId: selectedQuestId || null,
+          title: normalizedTitle,
+          content: normalizedContent,
+          images: normalizedImages,
+          tags,
+          isHidden,
+        });
+      }
       resetForm();
       onPublished();
       onClose();
@@ -182,15 +238,22 @@ export default function SocialPostComposer({
     }
   }
 
-  const serverError = createPost.error instanceof ApiError && createPost.error.status === 429
-    ? 'You are publishing quickly. Wait a moment and try again.'
-    : createPost.isError
-      ? 'Your post could not be published. Check the fields and try again.'
+  const mutation = isEditing ? updatePost : createPost;
+  const serverError = mutation.error instanceof ApiError && mutation.error.status === 429
+    ? `You are ${isEditing ? 'editing' : 'publishing'} quickly. Wait a moment and try again.`
+    : mutation.isError
+      ? `Your post could not be ${isEditing ? 'updated' : 'published'}. Check the fields and try again.`
       : null;
+  const pending = createPost.isPending || updatePost.isPending;
+  const dialogTitleId = isEditing ? 'edit-post-dialog-title' : 'create-post-dialog-title';
+
+  useEffect(() => {
+    if (serverError) showError(serverError);
+  }, [serverError, showError]);
 
   return (
     <dialog
-      aria-labelledby="create-post-dialog-title"
+      aria-labelledby={dialogTitleId}
       className="modal modal-bottom bg-black/55 p-0 backdrop-blur-sm sm:modal-middle"
       onCancel={(event) => {
         event.preventDefault();
@@ -204,13 +267,13 @@ export default function SocialPostComposer({
       <div className="modal-box max-h-[94dvh] max-w-3xl overflow-hidden rounded-t-[1.75rem] border border-base-300 bg-base-100 p-0 sm:rounded-[1.75rem]">
         <div className="flex items-start justify-between border-b border-base-300 px-5 py-4 sm:px-6">
           <div>
-            <p className="kiwi-stat-label">Share an impact story</p>
-            <h2 className="mt-1 text-2xl" id="create-post-dialog-title">Create a new post</h2>
+            <p className="kiwi-stat-label">{isEditing ? 'Refine your impact story' : 'Share an impact story'}</p>
+            <h2 className="mt-1 text-2xl" id={dialogTitleId}>{isEditing ? 'Edit post' : 'Create a new post'}</h2>
           </div>
           <button
-            aria-label="Close create post dialog"
+            aria-label={isEditing ? 'Close edit post dialog' : 'Close create post dialog'}
             className="btn btn-ghost btn-sm btn-square"
-            disabled={createPost.isPending}
+            disabled={pending}
             onClick={closeDialog}
             type="button"
           >
@@ -229,6 +292,14 @@ export default function SocialPostComposer({
               <p className="mt-1 text-xs text-muted-content">
                 Strongly recommended: connect this story to the action that made it possible. You can publish without one.
               </p>
+              {isEditing && post?.quest && selectedQuestId === post.quest.id && (
+                <div className="mt-3 rounded-xl border border-primary/25 bg-primary/8 p-3">
+                  <span className="text-[0.65rem] font-bold uppercase tracking-wide text-muted-content">
+                    Current related Quest
+                  </span>
+                  <strong className="mt-0.5 block text-sm text-primary">{post.quest.title}</strong>
+                </div>
+              )}
               <label className="relative mt-3 block">
                 <span className="sr-only">Search published Quests</span>
                 <Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-content" />
@@ -270,7 +341,7 @@ export default function SocialPostComposer({
                       key={quest.id}
                       onClick={() => {
                         setSelectedQuestId(quest.id);
-                        setValidationError(null);
+                        dismissError();
                       }}
                       type="button"
                     >
@@ -456,7 +527,7 @@ export default function SocialPostComposer({
               )}
             </section>
 
-            <fieldset>
+            {!isEditing && <fieldset>
               <legend className="font-extrabold">Visibility</legend>
               <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-base-200 p-1.5">
                 <button
@@ -478,22 +549,25 @@ export default function SocialPostComposer({
                   <span className="mt-0.5 block text-xs font-normal">You can make it public later</span>
                 </button>
               </div>
-            </fieldset>
+            </fieldset>}
 
-            {(validationError || serverError) && (
-              <div className="alert alert-error rounded-2xl" role="alert">
-                {validationError ?? serverError}
-              </div>
-            )}
           </div>
 
-          <div className="flex flex-col-reverse gap-2 border-t border-base-300 bg-base-100 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
-            <button className="btn btn-ghost" disabled={createPost.isPending} onClick={closeDialog} type="button">
+          <div className="relative flex flex-col-reverse gap-2 border-t border-base-300 bg-base-100 px-5 py-4 sm:flex-row sm:justify-end sm:px-6" data-testid="post-composer-actions">
+            {errorNotice && (
+              <div
+                className="alert alert-error absolute inset-x-0 bottom-full z-30 rounded-2xl px-5 py-3 text-sm font-semibold shadow-2xl sm:px-6"
+                role="alert"
+              >
+                {errorNotice}
+              </div>
+            )}
+            <button className="btn btn-ghost" disabled={pending} onClick={closeDialog} type="button">
               Cancel
             </button>
-            <button className="btn btn-primary rounded-full px-7" disabled={createPost.isPending} type="submit">
+            <button className="btn btn-primary rounded-full px-7" disabled={pending} type="submit">
               <Send aria-hidden="true" className="size-4" />
-              {createPost.isPending ? 'Publishing…' : 'Publish post'}
+              {pending ? (isEditing ? 'Saving…' : 'Publishing…') : (isEditing ? 'Save changes' : 'Publish post')}
             </button>
           </div>
         </form>

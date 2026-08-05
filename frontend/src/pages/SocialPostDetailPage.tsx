@@ -8,6 +8,7 @@ import {
   Link2,
   MapPin,
   MessageCircle,
+  Pencil,
   Trash2,
   X,
 } from 'lucide-react';
@@ -16,6 +17,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import SocialComments from '../components/social/SocialComments';
 import SocialPostDeleteDialog from '../components/social/SocialPostDeleteDialog';
 import SocialPostImageCarousel from '../components/social/SocialPostImageCarousel';
+import SocialPostComposer from '../components/social/SocialPostComposer';
 import { useAuthQuery } from '../hooks/useAuth';
 import {
   useDeleteSocialPost,
@@ -35,6 +37,7 @@ export default function SocialPostDetailPage() {
   const setVisibility = useSetSocialPostVisibility();
   const deletePost = useDeleteSocialPost();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const post = postQuery.data;
   const returnTo = typeof location.state === 'object' &&
     location.state !== null &&
@@ -107,6 +110,7 @@ export default function SocialPostDetailPage() {
             {post.isHidden && <span className="badge badge-warning badge-sm gap-1"><EyeOff aria-hidden="true" className="size-3" />Only you</span>}
             {post.canDelete && (
               <div className="flex">
+                <button aria-label="Edit post" className="btn btn-ghost btn-sm btn-square" onClick={() => setEditOpen(true)} type="button"><Pencil aria-hidden="true" className="size-4" /></button>
                 <button aria-label={post.isHidden ? 'Make post public' : 'Hide post'} className="btn btn-ghost btn-sm btn-square" disabled={setVisibility.isPending} onClick={() => setVisibility.mutate({ postId: post.id, isHidden: !post.isHidden })} type="button">
                   {post.isHidden ? <Eye aria-hidden="true" className="size-4" /> : <EyeOff aria-hidden="true" className="size-4" />}
                 </button>
@@ -136,6 +140,7 @@ export default function SocialPostDetailPage() {
                 {post.isHidden && <span className="badge badge-warning gap-1"><EyeOff aria-hidden="true" className="size-3" />Only you</span>}
                 {post.canDelete && (
                   <div className="flex">
+                    <button aria-label="Edit post" className="btn btn-ghost btn-sm btn-square" onClick={() => setEditOpen(true)} title="Edit post" type="button"><Pencil aria-hidden="true" className="size-4" /></button>
                     <button aria-label={post.isHidden ? 'Make post public' : 'Hide post'} className="btn btn-ghost btn-sm btn-square" disabled={setVisibility.isPending} onClick={() => setVisibility.mutate({ postId: post.id, isHidden: !post.isHidden })} title={post.isHidden ? 'Make public' : 'Hide from everyone else'} type="button">
                       {post.isHidden ? <Eye aria-hidden="true" className="size-4" /> : <EyeOff aria-hidden="true" className="size-4" />}
                     </button>
@@ -187,6 +192,14 @@ export default function SocialPostDetailPage() {
 
       {post && (
         <SocialPostDeleteDialog error={deleteError} onClose={() => { deletePost.reset(); setDeleteOpen(false); }} onConfirm={() => void confirmDelete()} open={deleteOpen} pending={deletePost.isPending} postId={post.id} title={post.title} />
+      )}
+      {post && (
+        <SocialPostComposer
+          onClose={() => setEditOpen(false)}
+          onPublished={() => setEditOpen(false)}
+          open={editOpen}
+          post={post}
+        />
       )}
     </div>
   );

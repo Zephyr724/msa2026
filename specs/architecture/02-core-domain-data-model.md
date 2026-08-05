@@ -550,7 +550,7 @@ The code-only achievement evaluator and presentation enums are
 | UserAchievement | The Member (self) | Self read; System awards |
 | CommunityChallenge | Admin | Guest and Member: public aggregate read. Admin: create and manage. Organizer: no special management privilege beyond public/member read. Private personal contribution data remains available only to the owning Member through Passport endpoints. |
 | Region | System (seed) | Public read (active only); Admin manages seed |
-| SocialPost | Author for creation, visibility, and deletion; public read | Authenticated Member+ creates with an optional related Quest; when supplied, it must currently be Published. Only the author changes public/hidden visibility or deletes. Hidden posts are author-only. API never returns the internal author user ID. |
+| SocialPost | Author for creation, content editing, visibility, and deletion; public read | Authenticated Member+ creates with an optional related Quest; when supplied or changed, it must currently be Published. Only the author replaces editable content, changes public/hidden visibility, or deletes. Hidden posts are author-only. API never returns the internal author user ID. |
 | SocialPostLike | The Member (self) | Authenticated user sets/removes only their own like; public responses expose aggregate count only. |
 | SocialComment | Author for creation and content update; public read | Authenticated Member+ creates roots/direct replies and may edit only their own bounded comment content. Deletion remains deferred. API returns viewer-specific `canEdit` but never the internal author user ID. |
 

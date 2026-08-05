@@ -16,7 +16,11 @@ interface SocialCommentsProps {
 
 export default function SocialComments({ postId, commentCount, canWrite }: SocialCommentsProps) {
   const [content, setContent] = useState('');
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{
+    commentId: string;
+    threadId: string;
+    author: string;
+  } | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
@@ -119,7 +123,7 @@ export default function SocialComments({ postId, commentCount, canWrite }: Socia
                   <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed">{thread.content}</p>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {canWrite && (
-                      <button className="btn btn-ghost btn-xs -ml-2 rounded-full" onClick={() => { setReplyingTo((value) => value === thread.id ? null : thread.id); setReplyContent(''); }} type="button">
+                      <button className="btn btn-ghost btn-xs -ml-2 rounded-full" onClick={() => { setReplyingTo((value) => value?.commentId === thread.id ? null : { commentId: thread.id, threadId: thread.id, author: thread.authorDisplayName }); setReplyContent(''); }} type="button">
                         <CornerDownRight aria-hidden="true" className="size-3.5" />Reply
                       </button>
                     )}
@@ -140,11 +144,18 @@ export default function SocialComments({ postId, commentCount, canWrite }: Socia
                 ) : (
                   <>
                     <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed">{reply.content}</p>
-                    {reply.canEdit && (
-                      <button aria-label={`Edit reply by ${reply.authorDisplayName}`} className="btn btn-ghost btn-xs mt-1 -ml-2 rounded-full" onClick={() => beginEdit(reply.id, reply.content)} type="button">
-                        <Pencil aria-hidden="true" className="size-3" />Edit
-                      </button>
-                    )}
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {canWrite && (
+                        <button aria-label={`Reply to ${reply.authorDisplayName}`} className="btn btn-ghost btn-xs -ml-2 rounded-full" onClick={() => { setReplyingTo((value) => value?.commentId === reply.id ? null : { commentId: reply.id, threadId: thread.id, author: reply.authorDisplayName }); setReplyContent(''); }} type="button">
+                          <CornerDownRight aria-hidden="true" className="size-3.5" />Reply
+                        </button>
+                      )}
+                      {reply.canEdit && (
+                        <button aria-label={`Edit reply by ${reply.authorDisplayName}`} className="btn btn-ghost btn-xs rounded-full" onClick={() => beginEdit(reply.id, reply.content)} type="button">
+                          <Pencil aria-hidden="true" className="size-3" />Edit
+                        </button>
+                      )}
+                    </div>
                   </>
                 )}
               </CommentShell>
@@ -152,10 +163,10 @@ export default function SocialComments({ postId, commentCount, canWrite }: Socia
 
             {thread.hasMoreReplies && <p className="ml-10 text-xs font-semibold text-primary">Showing the first {thread.replies.length} of {thread.replyCount} replies.</p>}
 
-            {replyingTo === thread.id && (
-              <form className="ml-8 flex gap-2" onSubmit={(event) => void submit(event, thread.id)}>
-                <label className="sr-only" htmlFor={`reply-${thread.id}`}>Write a reply</label>
-                <input className="input input-bordered input-sm min-w-0 flex-1 rounded-full" id={`reply-${thread.id}`} maxLength={1_000} onChange={(event) => setReplyContent(event.target.value)} placeholder={`Reply to ${thread.authorDisplayName}`} value={replyContent} />
+            {replyingTo?.threadId === thread.id && (
+              <form className="ml-8 flex gap-2" onSubmit={(event) => void submit(event, replyingTo.commentId)}>
+                <label className="sr-only" htmlFor={`reply-${replyingTo.commentId}`}>Write a reply to {replyingTo.author}</label>
+                <input autoFocus className="input input-bordered input-sm min-w-0 flex-1 rounded-full" id={`reply-${replyingTo.commentId}`} maxLength={1_000} onChange={(event) => setReplyContent(event.target.value)} placeholder={`Reply to ${replyingTo.author}`} value={replyContent} />
                 <button aria-label="Send reply" className="btn btn-primary btn-sm btn-circle" disabled={createComment.isPending || !replyContent.trim()} type="submit"><Send aria-hidden="true" className="size-4" /></button>
               </form>
             )}

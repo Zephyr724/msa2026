@@ -15,6 +15,7 @@ import {
   setSocialPostLike,
   setSocialPostVisibility,
   updateSocialComment,
+  updateSocialPost,
 } from '../lib/api/social';
 import { ApiError } from '../lib/api/apiFetch';
 import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
@@ -65,6 +66,18 @@ export function useCreateSocialPost() {
     mutationFn: (input: Parameters<typeof createSocialPost>[0]) =>
       executePrivateRequest(client, (signal) => createSocialPost(input, signal)),
     onSuccess: () => client.invalidateQueries({ queryKey: socialKeys.feeds }),
+  });
+}
+
+export function useUpdateSocialPost() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof updateSocialPost>[0]) =>
+      executePrivateRequest(client, (signal) => updateSocialPost(input, signal)),
+    onSuccess: async (post) => {
+      client.setQueryData(socialKeys.detail(post.id), post);
+      await client.invalidateQueries({ queryKey: socialKeys.feeds });
+    },
   });
 }
 

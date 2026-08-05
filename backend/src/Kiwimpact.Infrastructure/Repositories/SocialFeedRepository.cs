@@ -109,6 +109,45 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         return (await HydratePostItemsAsync([row], ct)).Single();
     }
 
+    public async Task<SocialPostItem> UpdatePostAsync(
+        Guid postId,
+        Guid actorUserId,
+        Guid? questId,
+        string title,
+        string content,
+        IReadOnlyList<SocialPostImageDetails> images,
+        IReadOnlyList<string> tags,
+        DateTimeOffset now,
+        CancellationToken ct = default)
+    {
+        var post = await _db.SocialPosts
+            .Include(item => item.Images)
+            .Include(item => item.Tags)
+            .SingleOrDefaultAsync(item => item.Id == postId, ct);
+        if (post is null)
+            throw Error(SocialFeedError.NotFound, "Post not found.");
+        if (post.AuthorUserId != actorUserId)
+            throw Error(SocialFeedError.Forbidden, "Only the post author can edit this post.");
+        if (questId != post.QuestId && questId.HasValue && !await _db.Quests
+            .AsNoTracking()
+            .AnyAsync(
+                quest => quest.Id == questId.Value && quest.Status == QuestStatus.Published,
+                ct))
+        {
+            throw Error(
+                SocialFeedError.Validation,
+                "The related Quest must exist and be published.");
+        }
+
+        post.Update(questId, title, content, images, tags, now);
+        await _db.SaveChangesAsync(ct);
+        var row = await ProjectPosts(
+                _db.SocialPosts.AsNoTracking().Where(item => item.Id == postId),
+                actorUserId)
+            .SingleAsync(ct);
+        return (await HydratePostItemsAsync([row], ct)).Single();
+    }
+
     public async Task DeletePostAsync(
         Guid postId,
         Guid actorUserId,
@@ -310,12 +349,18 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
                 ct))
             throw Error(SocialFeedError.NotFound, "Post not found.");
 
+        var effectiveParentCommentId = parentCommentId;
         if (parentCommentId.HasValue)
         {
             var parent = await _db.SocialComments
                 .AsNoTracking()
                 .Where(comment => comment.Id == parentCommentId.Value)
-                .Select(comment => new { comment.PostId, comment.ParentCommentId })
+                .Select(comment => new
+                {
+                    comment.Id,
+                    comment.PostId,
+                    comment.ParentCommentId,
+                })
                 .SingleOrDefaultAsync(ct);
             if (parent is null || parent.PostId != postId)
             {
@@ -323,18 +368,25 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
                     SocialFeedError.InvalidReplyParent,
                     "Parent comment was not found on this post.");
             }
-            if (parent.ParentCommentId.HasValue)
+            if (parent.ParentCommentId.HasValue && !await _db.SocialComments
+                .AsNoTracking()
+                .AnyAsync(comment =>
+                    comment.Id == parent.ParentCommentId.Value &&
+                    comment.PostId == postId &&
+                    comment.ParentCommentId == null,
+                    ct))
             {
                 throw Error(
-                    SocialFeedError.ReplyDepthExceeded,
-                    "Replies can only be added to top-level comments.");
+                    SocialFeedError.InvalidReplyParent,
+                    "Parent comment was not found on this post.");
             }
+            effectiveParentCommentId = parent.ParentCommentId ?? parent.Id;
         }
 
         var comment = SocialComment.Create(
             postId,
             authorUserId,
-            parentCommentId,
+            effectiveParentCommentId,
             content,
             now);
         _db.SocialComments.Add(comment);

@@ -24,6 +24,17 @@ public interface ISocialFeedRepository
         Guid viewerUserId,
         CancellationToken ct = default);
 
+    Task<SocialPostItem> UpdatePostAsync(
+        Guid postId,
+        Guid actorUserId,
+        Guid? questId,
+        string title,
+        string content,
+        IReadOnlyList<SocialPostImageDetails> images,
+        IReadOnlyList<string> tags,
+        DateTimeOffset now,
+        CancellationToken ct = default);
+
     Task DeletePostAsync(
         Guid postId,
         Guid actorUserId,
