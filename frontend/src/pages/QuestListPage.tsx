@@ -8,7 +8,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import QuestCard from '../components/quest/QuestCard.tsx';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
@@ -34,6 +34,7 @@ const SORT_OPTIONS = [
 ];
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
+const SEARCH_DEBOUNCE_MS = 300;
 
 function parseFiltersFromParams(sp: URLSearchParams): QuestFilters {
   // Discovery filters live in the URL so a filtered result can be refreshed,
@@ -125,10 +126,22 @@ export default function QuestListPage() {
     setSearchParams(filtersToParams(next));
   }, [searchParams, setSearchParams]);
 
-  function handleSearch(event: FormEvent) {
-    event.preventDefault();
-    updateFilters({ search: searchInput.trim() || undefined });
-  }
+  useEffect(() => {
+    const search = searchInput.trim() || undefined;
+    if (search === filters.search) return;
+
+    const timeout = window.setTimeout(() => {
+      const next = {
+        ...parseFiltersFromParams(searchParams),
+        search,
+        page: 1,
+      };
+      // Live search should not add one browser-history entry per query.
+      setSearchParams(filtersToParams(next), { replace: true });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [filters.search, searchInput, searchParams, setSearchParams]);
 
   function clearFilters() {
     setSearchInput('');
@@ -153,7 +166,10 @@ export default function QuestListPage() {
         </header>
 
         <section aria-label="Quest discovery controls" className="mt-7">
-          <form className="grid grid-cols-[1fr_auto] gap-3 sm:grid-cols-[1fr_auto_auto_auto]" onSubmit={handleSearch}>
+          <form
+            className="grid grid-cols-[1fr_auto] gap-3 sm:grid-cols-[1fr_auto_auto_auto]"
+            onSubmit={(event) => event.preventDefault()}
+          >
             <label className="input input-bordered flex h-11 w-full items-center gap-3 rounded-[0.875rem] bg-base-100">
               <Search aria-hidden="true" className="size-5 text-muted-content" />
               <span className="sr-only">Search quests</span>

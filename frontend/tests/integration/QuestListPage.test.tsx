@@ -184,6 +184,43 @@ describe('Quest discovery URL and card behavior', () => {
     expect(screen.getByLabelText('Search quests')).toHaveValue('first');
   });
 
+  it('searches after a short typing pause without requiring form submission', async () => {
+    vi.useFakeTimers();
+    try {
+      const { router } = renderQuestList();
+      const input = screen.getByLabelText('Search quests');
+
+      fireEvent.change(input, { target: { value: 'backyard' } });
+      expect(new URLSearchParams(router.state.location.search).get('search')).toBeNull();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(299);
+      });
+      expect(new URLSearchParams(router.state.location.search).get('search')).toBeNull();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(new URLSearchParams(router.state.location.search).get('search'))
+        .toBe('backyard');
+      expect(router.state.historyAction).toBe('REPLACE');
+      expect(mockUseQuestList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'backyard' }),
+      );
+
+      fireEvent.change(input, { target: { value: '' } });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300);
+      });
+      expect(new URLSearchParams(router.state.location.search).get('search')).toBeNull();
+      expect(mockUseQuestList).toHaveBeenLastCalledWith(
+        expect.not.objectContaining({ search: expect.anything() }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('renders dated and undated states, registration/source labels, and a missing-image fallback', () => {
     mockUseQuestList.mockReturnValue({
       data: questPage([datedQuest, undatedQuest]),
