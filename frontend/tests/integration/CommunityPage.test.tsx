@@ -143,7 +143,7 @@ describe('Community post discovery and detail', () => {
     expect(card).toHaveTextContent(post.title);
     expect(card).toHaveTextContent(post.authorDisplayName);
     expect(card).toHaveTextContent(`Quest · ${post.quest?.title}`);
-    expect(screen.getByLabelText('7 likes')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in to like post' })).toHaveTextContent('7');
     expect(screen.queryByText(post.content)).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '2 comments' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in to create a post' })).toHaveClass('fixed', 'right-4');
@@ -153,6 +153,39 @@ describe('Community post discovery and detail', () => {
     expect(await screen.findByText(post.content)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Community Stream Cleanup/ })).toHaveAttribute('href', `/quests/${post.quest?.id}`);
     expect(await screen.findByRole('heading', { name: '2 comments' })).toBeInTheDocument();
+  });
+
+  it('likes from the card without opening it while every other card area opens the post', async () => {
+    const user = userEvent.setup();
+    let post = socialPost();
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) return Promise.resolve(jsonResponse(session));
+      if (url.endsWith('/v1/auth/csrf-token')) return Promise.resolve(jsonResponse({ token: 'card-like-token' }));
+      if (url.endsWith(`/v1/social/posts/${post.id}/like`) && init?.method === 'PUT') {
+        post = { ...post, isLikedByViewer: true, likeCount: 8 };
+        return Promise.resolve(jsonResponse({ likeCount: 8, isLikedByViewer: true }));
+      }
+      if (url.includes(`/v1/social/posts/${post.id}/comments`)) return Promise.resolve(jsonResponse(commentPage([])));
+      if (url.endsWith(`/v1/social/posts/${post.id}`)) return Promise.resolve(jsonResponse(post));
+      if (url.includes('/v1/social/posts')) return Promise.resolve(jsonResponse(postPage([post])));
+      return Promise.resolve(jsonResponse({}, 500));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { router } = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Like post' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(`/v1/social/posts/${post.id}/like`),
+      expect.objectContaining({ method: 'PUT' }),
+    ));
+    expect(router.state.location.pathname).toBe('/community');
+    expect(await screen.findByRole('button', { name: 'Unlike post' })).toHaveTextContent('8');
+
+    await user.click(screen.getByRole('link', { name: `Open post: ${post.title}` }));
+    expect(router.state.location.pathname).toBe(`/community/posts/${post.id}`);
+    expect(await screen.findByText(post.content)).toBeInTheDocument();
   });
 
   it('keeps search in the URL and supports a signed-in My posts view', async () => {
