@@ -693,6 +693,25 @@ describe('PassportPage', () => {
     // Dates use <time dateTime>.
     expect(container.querySelector('time'))
       .toHaveAttribute('dateTime', '2026-07-20T09:00:00.0000000Z');
+
+    const completedStamp = screen.getByRole('img', {
+      name: 'Mission complete, verified',
+    });
+    expect(completedStamp).toHaveClass('opacity-80');
+    expect(completedStamp).toHaveTextContent('MISSION');
+    expect(completedStamp).toHaveTextContent('COMPLETE');
+    expect(completedStamp.querySelector('[data-stamp-mask="transparent-field"]'))
+      .toBeInTheDocument();
+    expect(completedStamp.querySelector('[data-stamp-seal="edge"]'))
+      .toHaveAttribute('fill', 'currentColor');
+    expect(completedStamp.querySelector('[data-stamp-field="transparent"]'))
+      .toHaveAttribute('fill', 'none');
+    expect(completedStamp.querySelector('[data-stamp-field="transparent"]'))
+      .toHaveAttribute('stroke-width', '1.5');
+    expect(completedStamp.querySelector('[data-stamp-line="mission-complete"]'))
+      .toHaveAttribute('fill', 'white');
+    expect(completedStamp.querySelector('[data-stamp-band="mission-complete"]'))
+      .toHaveAttribute('fill', 'currentColor');
   });
 
   it('F22: uses stacked regions and the Figma responsive achievement grid', async () => {

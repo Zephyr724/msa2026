@@ -1,6 +1,5 @@
 import {
   Award,
-  Check,
   Info,
   Share2,
   Sparkles,
@@ -10,6 +9,7 @@ import { CATEGORY_PRESENTATION } from '../../lib/questPresentation.ts';
 import CategoryEmblem from '../quest/CategoryEmblem.tsx';
 import type { PassportCompletionItem as PassportCompletionItemData } from '../../types/passport.ts';
 import QuestImage from '../quest/QuestImage.tsx';
+import MissionCompletedStamp from './MissionCompletedStamp.tsx';
 
 /**
  * One Verified completion-history row. XP renders only from the
@@ -46,17 +46,17 @@ export default function CompletionHistoryItem({
             title={item.questTitle}
             width={320}
           />
-          <span
-            aria-label={status.label}
-            className={`absolute inset-0 m-auto grid size-8 place-items-center rounded-full text-white shadow-md ${
-              item.status === 'Verified' ? 'bg-primary/90' : 'bg-zinc-700/85'
-            }`}
-            role="img"
-          >
-            {item.status === 'Verified'
-              ? <Check aria-hidden="true" className="size-4" strokeWidth={2.5} />
-              : <Info aria-hidden="true" className="size-4" strokeWidth={2.5} />}
-          </span>
+          {item.status === 'Verified' ? (
+            <MissionCompletedStamp className="absolute inset-0 m-auto h-[5.875rem] w-[6.875rem] max-w-none text-primary opacity-80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]" />
+          ) : (
+            <span
+              aria-label={status.label}
+              className="absolute inset-0 m-auto grid size-8 place-items-center rounded-full bg-zinc-700/85 text-white shadow-md"
+              role="img"
+            >
+              <Info aria-hidden="true" className="size-4" strokeWidth={2.5} />
+            </span>
+          )}
         </figure>
 
         <div className="flex min-w-0 flex-1 flex-col p-4">
