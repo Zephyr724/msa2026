@@ -475,16 +475,17 @@ if (seedRoles || seedAssessmentData || seedAssessmentAccounts ||
                 Enabled: true,
                 Accounts: assessmentPersonas));
 
-        await using var assessmentActivityTransaction =
+        await using var assessmentExperienceTransaction =
             await db.Database.BeginTransactionAsync();
         try
         {
             await AssessmentActivitySeed.SeedAsync(db, assessmentPersonas);
-            await assessmentActivityTransaction.CommitAsync();
+            await AssessmentSocialSeed.SeedAsync(db, assessmentPersonas);
+            await assessmentExperienceTransaction.CommitAsync();
         }
         catch
         {
-            await assessmentActivityTransaction.RollbackAsync();
+            await assessmentExperienceTransaction.RollbackAsync();
             throw;
         }
     }

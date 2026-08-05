@@ -18,12 +18,19 @@ namespace Kiwimpact.Infrastructure.Data.Seeds;
 public static class AssessmentActivitySeed
 {
     private const int SupportingContributorCount = 4;
-    private static readonly Guid[] SupportingContributorIds =
+    internal static readonly IReadOnlyList<Guid> SupportingContributorIds =
     [
         new("62000000-0000-4000-8000-000000000101"),
         new("62000000-0000-4000-8000-000000000102"),
         new("62000000-0000-4000-8000-000000000103"),
         new("62000000-0000-4000-8000-000000000104"),
+    ];
+    private static readonly IReadOnlyList<string> SupportingDisplayNames =
+    [
+        "Hana R.",
+        "Wiremu K.",
+        "Priya S.",
+        "Finn M.",
     ];
 
     public static async Task SeedAsync(
@@ -244,8 +251,14 @@ public static class AssessmentActivitySeed
             {
                 db.UserProfiles.Add(UserProfile.Create(
                     id,
-                    $"Assessment Contributor {index + 1:D2}",
+                    SupportingDisplayNames[index],
                     seedNow));
+            }
+            else if (profile.DisplayName == $"Assessment Contributor {index + 1:D2}")
+            {
+                // Upgrade only the exact original placeholder. Any reviewer or
+                // operator edit remains authoritative on later starts.
+                profile.UpdateDisplayName(SupportingDisplayNames[index], seedNow);
             }
             users[index] = user;
         }

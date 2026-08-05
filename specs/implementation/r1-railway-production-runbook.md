@@ -184,19 +184,23 @@ roles.
 4. Verify all six logins separately. Check that Member cannot open organizer or
    Admin operations, Organizer can manage owned Quests but cannot review Admin
    claims, and Admin can access both management and review. Confirm Passport,
-   achievements, My Community leaderboard, and history are populated.
+   achievements, My Community leaderboard, history, and the Community feed are
+   populated. The feed fixture contains twenty public assessment stories,
+   twenty-six image rows, sixty tags, eighty likes, and twenty-eight comments.
 5. Set `Seed__AssessmentAccounts=false` and deploy again. Remove the six
    password variables from steady-state service configuration after recording
    them in the private marking channel or approved password manager. The
    account rows and password hashes remain in PostgreSQL.
 
-The seed adds fictional, explicitly assessment-scoped completion history to the
-six reviewers and four credentialless supporting contributors. The latter have
-no password, confirmed email, role, claim, login, or token and exist only so the
-shared Home Community reaches the accepted ten-active-member privacy threshold.
-The fictional account history is not evidence that a real reviewer attended an
-official event. Re-enabling the account flag reconciles display names, roles,
-and passwords; treat it as a privileged rotation operation.
+The seed adds fictional, explicitly assessment-scoped completion history and
+community stories to the six reviewers and four credentialless supporting
+contributors. The latter have no password, confirmed email, role, claim, login,
+or token and exist only for the accepted assessment experience. The fictional
+account history and posts are not evidence that a real person attended an
+official event. Post images reuse the credited illustrative Pexels covers from
+the Quest catalogue; they are not provider event documentation. Re-enabling the
+account flag reconciles configured account display names, roles, and passwords;
+treat it as a privileged rotation operation.
 
 Never put reviewer emails or passwords in Git, README examples, logs,
 screenshots, the submission video, or Cypress variables. Supply them only in

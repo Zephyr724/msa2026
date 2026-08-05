@@ -313,6 +313,11 @@ public sealed class SeedConfigurationTests
                 Assert.Equal(38, firstCounts.XpTransactions);
                 Assert.Equal(38, firstCounts.EvidenceDetails);
                 Assert.True(firstCounts.Achievements >= 20);
+                Assert.Equal(20, firstCounts.Posts);
+                Assert.Equal(26, firstCounts.PostImages);
+                Assert.Equal(60, firstCounts.PostTags);
+                Assert.Equal(80, firstCounts.PostLikes);
+                Assert.Equal(28, firstCounts.Comments);
 
                 var configuredEmails = AssessmentTestAccounts
                     .Select(account => account.Email.ToUpperInvariant())
@@ -379,6 +384,80 @@ public sealed class SeedConfigurationTests
                 Assert.Empty(await db.Set<IdentityUserRole<Guid>>()
                     .Where(item => supporterIds.Contains(item.UserId))
                     .ToListAsync(TestContext.Current.CancellationToken));
+
+                var supporterNames = await db.UserProfiles
+                    .Where(profile => supporterIds.Contains(profile.Id))
+                    .Select(profile => profile.DisplayName)
+                    .Order()
+                    .ToListAsync(TestContext.Current.CancellationToken);
+                Assert.Equal(
+                    new[] { "Finn M.", "Hana R.", "Priya S.", "Wiremu K." },
+                    supporterNames);
+
+                var posts = await db.SocialPosts
+                    .Where(post => AssessmentSocialSeed.PostIds.Contains(post.Id))
+                    .Include(post => post.Images)
+                    .Include(post => post.Tags)
+                    .Include(post => post.Likes)
+                    .Include(post => post.Comments)
+                    .ToListAsync(TestContext.Current.CancellationToken);
+                Assert.Equal(20, posts.Count);
+                Assert.Equal(10, posts.Select(post => post.AuthorUserId).Distinct().Count());
+                Assert.Equal(20, posts.Select(post => post.QuestId).Distinct().Count());
+                Assert.All(posts, post =>
+                {
+                    Assert.False(post.IsHidden);
+                    Assert.StartsWith("Fictional showcase · ", post.Title);
+                    Assert.StartsWith(
+                        "Fictional assessment story — no real person, attendance, or evidence is represented.",
+                        post.Content);
+                    Assert.Contains(
+                        post.Tags,
+                        tag => tag.NormalizedName == "ASSESSMENT-SHOWCASE");
+                    Assert.InRange(post.Likes.Count, 2, 6);
+                    Assert.NotEmpty(post.Comments);
+                    Assert.All(post.Images, image =>
+                    {
+                        Assert.StartsWith("https://images.pexels.com/", image.Url);
+                        Assert.StartsWith("Illustrative stock photo:", image.AltText);
+                    });
+                });
+                Assert.Equal(6, posts.Count(post => post.Images.Count == 2));
+                Assert.Equal(14, posts.Count(post => post.Images.Count == 1));
+                Assert.Equal(
+                    20,
+                    posts
+                        .SelectMany(post => post.Images)
+                        .Select(image => image.Url)
+                        .Distinct(StringComparer.Ordinal)
+                        .Count());
+                Assert.Equal(
+                    8,
+                    posts
+                        .SelectMany(post => post.Comments)
+                        .Count(comment => comment.ParentCommentId.HasValue));
+
+                var postToEdit = posts.Single(post =>
+                    post.Id == AssessmentSocialSeed.PostIds[0]);
+                postToEdit.Update(
+                    postToEdit.QuestId,
+                    "Reviewer-edited community story",
+                    postToEdit.Content,
+                    postToEdit.Images
+                        .OrderBy(image => image.SortOrder)
+                        .Select(image => new Kiwimpact.Core.Entities.SocialPostImageDetails(
+                            image.Url,
+                            image.AltText))
+                        .ToArray(),
+                    postToEdit.Tags.Select(tag => tag.Name).ToArray(),
+                    DateTimeOffset.UtcNow);
+                var questCoverToEdit = await db.QuestImages.SingleAsync(
+                    image =>
+                        image.QuestId == AssessmentDataSeed.QuestIds[10] &&
+                        image.IsCover,
+                    TestContext.Current.CancellationToken);
+                questCoverToEdit.ImageUrl = "/images/quests/operator-edited-cover.svg";
+                await db.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
             using (var secondFactory = new NonDevelopmentWebApplicationFactory(
@@ -390,6 +469,20 @@ public sealed class SeedConfigurationTests
 
             using var finalDb = CreateInspectionContext(container.GetConnectionString());
             Assert.Equal(firstCounts, await AssessmentCountsAsync(finalDb));
+            Assert.Equal(
+                "Reviewer-edited community story",
+                await finalDb.SocialPosts
+                    .Where(post => post.Id == AssessmentSocialSeed.PostIds[0])
+                    .Select(post => post.Title)
+                    .SingleAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(
+                "/images/quests/operator-edited-cover.svg",
+                await finalDb.QuestImages
+                    .Where(image =>
+                        image.QuestId == AssessmentDataSeed.QuestIds[10] &&
+                        image.IsCover)
+                    .Select(image => image.ImageUrl)
+                    .SingleAsync(TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -1039,6 +1132,21 @@ public sealed class SeedConfigurationTests
             await db.EvidenceClaimDetails.CountAsync(
                 TestContext.Current.CancellationToken),
             await db.UserAchievements.CountAsync(
+                TestContext.Current.CancellationToken),
+            await db.SocialPosts.CountAsync(
+                post => AssessmentSocialSeed.PostIds.Contains(post.Id),
+                TestContext.Current.CancellationToken),
+            await db.SocialPostImages.CountAsync(
+                image => AssessmentSocialSeed.PostIds.Contains(image.PostId),
+                TestContext.Current.CancellationToken),
+            await db.SocialPostTags.CountAsync(
+                tag => AssessmentSocialSeed.PostIds.Contains(tag.PostId),
+                TestContext.Current.CancellationToken),
+            await db.SocialPostLikes.CountAsync(
+                like => AssessmentSocialSeed.PostIds.Contains(like.PostId),
+                TestContext.Current.CancellationToken),
+            await db.SocialComments.CountAsync(
+                comment => AssessmentSocialSeed.PostIds.Contains(comment.PostId),
                 TestContext.Current.CancellationToken));
 
     private sealed record AssessmentSeedCounts(
@@ -1046,7 +1154,12 @@ public sealed class SeedConfigurationTests
         int Completions,
         int XpTransactions,
         int EvidenceDetails,
-        int Achievements);
+        int Achievements,
+        int Posts,
+        int PostImages,
+        int PostTags,
+        int PostLikes,
+        int Comments);
 
     private sealed record DemoActivityCounts(
         int Users,
