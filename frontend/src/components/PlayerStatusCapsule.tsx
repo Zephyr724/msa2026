@@ -1,4 +1,4 @@
-import { Zap } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProgression } from '../hooks/useProgression.ts';
@@ -50,7 +50,7 @@ export default function PlayerStatusCapsule() {
       <span className="hidden lg:block">
         <RankCrest rankTitle={displayRankTitle} size={24} />
       </span>
-      <Zap aria-hidden="true" className="size-3.5 text-amber-600 dark:text-amber-400" />
+      <Sparkles aria-hidden="true" className="size-3.5 text-amber-600 dark:text-amber-400" />
       <span className="hidden whitespace-nowrap lg:inline">
         {animatedXp} XP · Lv {displayLevel}
       </span>
@@ -82,7 +82,7 @@ export function RewardPreviewStatusCapsule() {
       data-reward-target="xp"
       title="Reward Lab preview XP"
     >
-      <Zap aria-hidden="true" className="size-3.5 text-amber-600 dark:text-amber-400" />
+      <Sparkles aria-hidden="true" className="size-3.5 text-amber-600 dark:text-amber-400" />
       <span className="hidden whitespace-nowrap lg:inline">
         {animatedXp} XP · Lv {level}
       </span>

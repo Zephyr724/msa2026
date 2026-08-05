@@ -4,15 +4,14 @@ import {
   ChevronUp,
   Sparkles,
   X,
-  Zap,
 } from 'lucide-react';
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type FocusEvent,
   type ReactNode,
   type RefObject,
@@ -23,6 +22,27 @@ import {
   type RewardFeedbackEvent,
   type RewardPhase,
 } from './rewardFeedback.ts';
+
+const REWARD_PARTICLE_COUNT = 7;
+const REWARD_PARTICLE_SIZE_PX = 27;
+const REWARD_PARTICLE_INITIAL_DELAY_MS = 480;
+const REWARD_PARTICLE_STAGGER_MS = 130;
+const REWARD_PARTICLE_FIRST_DURATION_MS = 1300;
+const REWARD_PARTICLE_DURATION_STEP_MS = 100;
+const REWARD_PARTICLE_LAST_DURATION_MS = REWARD_PARTICLE_FIRST_DURATION_MS
+  - (REWARD_PARTICLE_COUNT - 1) * REWARD_PARTICLE_DURATION_STEP_MS;
+const REWARD_PARTICLE_END_MS = REWARD_PARTICLE_INITIAL_DELAY_MS
+  + (REWARD_PARTICLE_COUNT - 1) * REWARD_PARTICLE_STAGGER_MS
+  + REWARD_PARTICLE_LAST_DURATION_MS;
+const REWARD_ARRIVAL_MS = REWARD_PARTICLE_END_MS + 40;
+const REWARD_XP_DELAY_MS = 180;
+const REWARD_LEVEL_ARROW_DELAY_MS = REWARD_PARTICLE_END_MS + 1000;
+const REWARD_LEVEL_ARROW_DURATION_MS = 320;
+const REWARD_LEVEL_TARGET_DELAY_MS = REWARD_LEVEL_ARROW_DELAY_MS + 224;
+const REWARD_ACHIEVEMENT_WITH_LEVEL_DELAY_MS = REWARD_LEVEL_ARROW_DELAY_MS
+  + REWARD_LEVEL_ARROW_DURATION_MS
+  + 1000;
+const REWARD_ACHIEVEMENT_NO_LEVEL_DELAY_MS = REWARD_PARTICLE_END_MS + 180;
 
 export default function RewardFeedbackProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<RewardFeedbackEvent[]>([]);
@@ -50,7 +70,7 @@ export default function RewardFeedbackProvider({ children }: { children: ReactNo
     if (!activeReward) return;
     setPhase(prefersReducedMotion(activeReward) ? 'arrived' : 'flying');
     if (prefersReducedMotion(activeReward)) return;
-    const arrivalTimer = window.setTimeout(() => setPhase('arrived'), 680);
+    const arrivalTimer = window.setTimeout(() => setPhase('arrived'), REWARD_ARRIVAL_MS);
     return () => window.clearTimeout(arrivalTimer);
   }, [activeReward]);
 
@@ -90,15 +110,28 @@ function RewardToastHost({
   reward: RewardFeedbackEvent;
 }) {
   const sourceRef = useRef<HTMLDivElement>(null);
-  const timer = usePausableDismiss(onDismiss, 5000);
   const levelUp = reward.level > reward.previousLevel;
   const rankUp = reward.rankTitle !== reward.previousRankTitle;
+  const combinedReward = (levelUp || rankUp) && reward.unlockedAchievements.length > 0;
+  const toastDurationMs = combinedReward ? 10000 : 5000;
+  const timer = usePausableDismiss(onDismiss, toastDurationMs);
   const reduced = prefersReducedMotion(reward);
+  const rewardMotionStyle = {
+    '--kiwi-reward-xp-delay': `${REWARD_XP_DELAY_MS}ms`,
+    '--kiwi-reward-level-arrow-delay': `${REWARD_LEVEL_ARROW_DELAY_MS}ms`,
+    '--kiwi-reward-level-target-delay': `${REWARD_LEVEL_TARGET_DELAY_MS}ms`,
+    '--kiwi-reward-achievement-delay': `${
+      levelUp || rankUp
+        ? REWARD_ACHIEVEMENT_WITH_LEVEL_DELAY_MS
+        : REWARD_ACHIEVEMENT_NO_LEVEL_DELAY_MS
+    }ms`,
+  } as CSSProperties;
 
   return createPortal(
     <div
       className="pointer-events-none fixed inset-x-4 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[70] flex justify-end sm:inset-x-auto sm:right-5 sm:w-[24rem]"
       data-reward-host
+      style={rewardMotionStyle}
     >
       <RewardParticles reduced={reduced} sourceRef={sourceRef} />
       <section
@@ -123,7 +156,47 @@ function RewardToastHost({
           </button>
 
           <div aria-atomic="true" aria-live="polite" role="status">
-            <div className="flex items-center gap-3 pr-10">
+            <h2
+              className="kiwi-reward-congratulation-heading flex w-full justify-center"
+              data-reward-congratulation
+            >
+              <span className="sr-only">Congratulation</span>
+              <svg
+                aria-hidden="true"
+                className="h-[4.75rem] w-[86%] overflow-visible"
+                preserveAspectRatio="xMidYMid meet"
+                viewBox="0 0 320 82"
+              >
+                <defs>
+                  <linearGradient id="kiwi-congratulation-gold" x1="0" x2="1" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#fff0a6" />
+                    <stop offset="38%" stopColor="#f4c542" />
+                    <stop offset="72%" stopColor="#dca21f" />
+                    <stop offset="100%" stopColor="#b97808" />
+                  </linearGradient>
+                  <path
+                    d="M 2 62 Q 160 10 318 62"
+                    fill="none"
+                    id="kiwi-congratulation-arc"
+                  />
+                </defs>
+                <text
+                  className="kiwi-reward-congratulation-text"
+                  lengthAdjust="spacingAndGlyphs"
+                  textLength="310"
+                >
+                  <textPath
+                    href="#kiwi-congratulation-arc"
+                    startOffset="50%"
+                    textAnchor="middle"
+                  >
+                    Congratulation
+                  </textPath>
+                </text>
+              </svg>
+            </h2>
+
+            <div className="-mt-1 flex items-center gap-3 pr-10">
               <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-content shadow-sm">
                 <CheckCircle2 aria-hidden="true" className="size-6" />
               </span>
@@ -136,11 +209,9 @@ function RewardToastHost({
                     </span>
                   )}
                 </div>
-                <h2 className="mt-1 text-xl">
-                  {levelUp
-                    ? 'Congratulations — Level up!'
-                    : 'Congratulations — Quest complete!'}
-                </h2>
+                <h3 className="mt-1 text-xl">
+                  {levelUp ? 'Level up!' : 'Quest complete!'}
+                </h3>
                 <p className="mt-1 truncate text-sm text-muted-content">{reward.questTitle}</p>
               </div>
             </div>
@@ -154,9 +225,20 @@ function RewardToastHost({
                 <span className="block text-[0.65rem] font-extrabold uppercase tracking-[0.12em] text-muted-content">
                   XP earned
                 </span>
-                <strong className="mt-0.5 inline-flex items-center gap-1.5 text-xl text-base-content">
-                  <Zap aria-hidden="true" className="size-5 text-warning" />
-                  +{reward.xpAwarded} XP
+                <strong className="mt-0.5 inline-flex items-center gap-1.5 text-xl">
+                  <Sparkles
+                    aria-hidden="true"
+                    className="kiwi-reward-gold-text size-5"
+                    data-reward-xp-icon
+                  />
+                  <span
+                    className={`kiwi-reward-gold-text inline-block ${
+                      reduced ? '' : 'kiwi-reward-xp-value'
+                    }`}
+                    data-reward-xp-value
+                  >
+                    +{reward.xpAwarded} XP
+                  </span>
                 </strong>
               </span>
               <span className="text-right text-xs font-bold text-muted-content">
@@ -174,8 +256,25 @@ function RewardToastHost({
                     <p className="kiwi-stat-label text-primary">
                       {rankUp ? 'Rank up' : 'Level up'}
                     </p>
-                    <p className="mt-1 font-extrabold">
-                      Level {reward.previousLevel} → Level {reward.level}
+                    <p
+                      aria-label={`Level ${reward.previousLevel} to Level ${reward.level}`}
+                      className="mt-1 flex items-baseline font-extrabold"
+                    >
+                      <span>Level {reward.previousLevel}</span>
+                      <span
+                        aria-hidden="true"
+                        className={reduced ? 'mx-2' : 'kiwi-reward-level-arrow'}
+                        data-reward-level-arrow
+                      >
+                        →
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className={reduced ? 'kiwi-reward-level-target-static' : 'kiwi-reward-level-target'}
+                        data-reward-level-target
+                      >
+                        Level {reward.level}
+                      </span>
                     </p>
                     {rankUp && (
                       <p className="mt-0.5 text-sm text-muted-content">
@@ -188,15 +287,24 @@ function RewardToastHost({
             )}
 
             {reward.unlockedAchievements.length > 0 && (
-              <div className="mt-3 rounded-2xl border border-accent/35 bg-accent/10 p-4">
+              <div
+                className="mt-3 rounded-2xl border border-warning/40 bg-warning/10 p-4"
+                data-reward-achievement
+              >
                 <div className="flex items-start gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-content">
-                    <Award aria-hidden="true" className="size-5" />
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-warning/20">
+                    <Award aria-hidden="true" className="kiwi-reward-gold-text size-5" />
                   </span>
                   <div className="min-w-0">
-                    <p className="kiwi-stat-label">Achievement unlocked</p>
+                    <p className="kiwi-stat-label kiwi-reward-gold-text">Achievement unlocked</p>
                     {reward.unlockedAchievements.slice(0, 2).map((achievement) => (
-                      <p className="mt-1 font-extrabold" key={achievement.achievementId}>
+                      <p
+                        className={`kiwi-reward-gold-text mt-1 font-extrabold ${
+                          reduced ? '' : 'kiwi-reward-achievement-stamp'
+                        }`}
+                        data-reward-achievement-title
+                        key={achievement.achievementId}
+                      >
                         {achievement.name}
                       </p>
                     ))}
@@ -218,7 +326,12 @@ function RewardToastHost({
           <div
             aria-hidden="true"
             className="kiwi-reward-timer absolute bottom-0 left-0 h-0.5 bg-primary"
-            style={{ animation: reduced ? 'none' : 'kiwi-reward-timer 5s linear forwards' }}
+            data-reward-timer
+            style={{
+              animation: reduced
+                ? 'none'
+                : `kiwi-reward-timer ${toastDurationMs}ms linear forwards`,
+            }}
           />
         </div>
       </section>
@@ -234,9 +347,9 @@ function RewardParticles({
   reduced: boolean;
   sourceRef: RefObject<HTMLDivElement | null>;
 }) {
-  const particleRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const particleRefs = useRef<Array<SVGSVGElement | null>>([]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (reduced || !sourceRef.current) return;
     const target = document.querySelector<HTMLElement>('[data-reward-target="xp"]');
     if (!target) return;
@@ -249,45 +362,69 @@ function RewardParticles({
     const endY = targetRect.top + targetRect.height / 2;
     const dx = endX - startX;
     const dy = endY - startY;
-    const arcs = [-72, 54, -34, 78, -58, 30, -88, 46, -20];
-    const animations: Animation[] = [];
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const curveDepth = Math.min(110, Math.max(70, distance * 0.24));
+    const controlX = dx * 0.5 + (-dy / distance) * curveDepth;
+    const controlY = dy * 0.5 + (dx / distance) * curveDepth;
+    const pointOnArc = (progress: number) => {
+      const inverse = 1 - progress;
+      return {
+        x: 2 * inverse * progress * controlX + progress * progress * dx,
+        y: 2 * inverse * progress * controlY + progress * progress * dy,
+      };
+    };
+    const arcPoints = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+      .map((progress) => ({ progress, ...pointOnArc(progress) }));
 
     particleRefs.current.forEach((particle, index) => {
-      if (!particle || typeof particle.animate !== 'function') return;
-      particle.style.left = `${startX}px`;
-      particle.style.top = `${startY}px`;
-      const arc = arcs[index] ?? 0;
-      animations.push(particle.animate([
-        { opacity: 0, transform: 'translate3d(0, 0, 0) rotate(0deg) scale(.35)' },
-        { opacity: 1, offset: 0.16, transform: `translate3d(${arc * 0.18}px, -10px, 0) rotate(50deg) scale(1)` },
-        { opacity: 1, offset: 0.58, transform: `translate3d(${dx * 0.52 + arc}px, ${dy * 0.42 - Math.abs(arc) * 0.25}px, 0) rotate(145deg) scale(.8)` },
-        { opacity: 0, transform: `translate3d(${dx}px, ${dy}px, 0) rotate(260deg) scale(.2)` },
-      ], {
-        delay: 90 + index * 32,
-        duration: 500 + (index % 3) * 45,
-        easing: 'cubic-bezier(.22,.74,.28,1)',
-        fill: 'both',
-      }));
+      if (!particle) return;
+      particle.style.left = `${startX - REWARD_PARTICLE_SIZE_PX / 2}px`;
+      particle.style.top = `${startY - REWARD_PARTICLE_SIZE_PX / 2}px`;
+      arcPoints.forEach(({ progress, x, y }) => {
+        const pointName = String(Math.round(progress * 100)).padStart(2, '0');
+        particle.style.setProperty(`--kiwi-particle-p${pointName}-x`, `${x}px`);
+        particle.style.setProperty(`--kiwi-particle-p${pointName}-y`, `${y}px`);
+      });
+      particle.style.setProperty('--kiwi-particle-end-x', `${dx}px`);
+      particle.style.setProperty('--kiwi-particle-end-y', `${dy}px`);
+      particle.style.setProperty(
+        '--kiwi-particle-delay',
+        `${REWARD_PARTICLE_INITIAL_DELAY_MS + index * REWARD_PARTICLE_STAGGER_MS}ms`,
+      );
+      particle.style.setProperty(
+        '--kiwi-particle-duration',
+        `${REWARD_PARTICLE_FIRST_DURATION_MS - index * REWARD_PARTICLE_DURATION_STEP_MS}ms`,
+      );
+      particle.dataset.ready = 'true';
     });
-
-    return () => animations.forEach((animation) => animation.cancel());
   }, [reduced, sourceRef]);
 
   if (reduced) return null;
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-[71] overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-[71] overflow-visible"
       data-reward-particles
     >
-      {Array.from({ length: 9 }, (_, index) => (
-        <span
-          className={`fixed block bg-warning shadow-[0_0_10px_color-mix(in_oklab,var(--color-warning)_65%,transparent)] ${
-            index % 3 === 0 ? 'size-2 rotate-45 rounded-[2px]' : 'size-1.5 rounded-full'
-          }`}
+      {Array.from({ length: REWARD_PARTICLE_COUNT }, (_, index) => (
+        <svg
+          aria-hidden="true"
+          className="kiwi-reward-flight-sparkle kiwi-reward-particle fixed block"
+          data-particle-shape="single-four-point-outline"
+          data-reward-particle
           key={index}
           ref={(element) => { particleRefs.current[index] = element; }}
-        />
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M12 1.5C12.8 7.3 16.7 11.2 22.5 12C16.7 12.8 12.8 16.7 12 22.5C11.2 16.7 7.3 12.8 1.5 12C7.3 11.2 11.2 7.3 12 1.5Z"
+            fill="none"
+            stroke="currentColor"
+            strokeLinejoin="round"
+            strokeWidth="3.168"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
       ))}
     </div>
   );

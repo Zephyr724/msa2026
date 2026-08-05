@@ -1,7 +1,7 @@
 import type { MyProgression } from '../../types/progression.ts';
 import type { PassportSummary } from '../../types/passport.ts';
 import type { AchievementCosmetics } from '../../types/achievement.ts';
-import { CheckCircle2, Flame, Home, Trophy, Zap } from 'lucide-react';
+import { CheckCircle2, Flame, Home, Sparkles, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { deriveLevelProgress } from '../../lib/progressionRules.ts';
 import { RankCrest } from '../game/GameArtwork.tsx';
@@ -61,7 +61,7 @@ export default function PassportSummaryCard({
           </div>
           <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-primary-content/80">
             <span className="inline-flex items-center gap-2">
-              <Zap aria-hidden="true" className="size-4 text-accent" />
+              <Sparkles aria-hidden="true" className="size-4 text-accent" />
               Total XP: <strong>{progression.totalXp} XP</strong>
             </span>
             <span className="inline-flex items-center gap-2">

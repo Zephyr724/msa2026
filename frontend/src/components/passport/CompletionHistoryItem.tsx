@@ -3,7 +3,7 @@ import {
   Check,
   Info,
   Share2,
-  Zap,
+  Sparkles,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CATEGORY_PRESENTATION } from '../../lib/questPresentation.ts';
@@ -72,7 +72,7 @@ export default function CompletionHistoryItem({
             </div>
             {item.status === 'Verified' ? (
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                <Zap aria-hidden="true" className="size-3" />
+                <Sparkles aria-hidden="true" className="size-3" />
                 {item.xpAmount === null ? 'XP pending' : `${item.xpAmount} XP`}
               </span>
             ) : (

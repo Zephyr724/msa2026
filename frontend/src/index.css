@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@500&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@500&family=Manrope:wght@400;500;600;700;800&family=Pinyon+Script&display=swap");
 @import "tailwindcss";
 @plugin "daisyui" {
   themes: false;
@@ -346,6 +346,193 @@
   to { width: 0%; }
 }
 
+@keyframes kiwi-reward-particle-flight {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(-18deg) scale(0.72);
+  }
+  5% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p05-x),
+      var(--kiwi-particle-p05-y),
+      0
+    ) rotate(2deg) scale(1);
+  }
+  10% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p10-x),
+      var(--kiwi-particle-p10-y),
+      0
+    ) rotate(24deg) scale(1.04);
+  }
+  20% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p20-x),
+      var(--kiwi-particle-p20-y),
+      0
+    ) rotate(58deg) scale(1.08);
+  }
+  30% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p30-x),
+      var(--kiwi-particle-p30-y),
+      0
+    ) rotate(92deg) scale(1.04);
+  }
+  40% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p40-x),
+      var(--kiwi-particle-p40-y),
+      0
+    ) rotate(126deg) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p50-x),
+      var(--kiwi-particle-p50-y),
+      0
+    ) rotate(160deg) scale(1.04);
+  }
+  60% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p60-x),
+      var(--kiwi-particle-p60-y),
+      0
+    ) rotate(194deg) scale(1.08);
+  }
+  70% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p70-x),
+      var(--kiwi-particle-p70-y),
+      0
+    ) rotate(228deg) scale(1.04);
+  }
+  80% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p80-x),
+      var(--kiwi-particle-p80-y),
+      0
+    ) rotate(262deg) scale(1);
+  }
+  90% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-p90-x),
+      var(--kiwi-particle-p90-y),
+      0
+    ) rotate(316deg) scale(0.94);
+  }
+  98% {
+    opacity: 1;
+    transform: translate3d(
+      var(--kiwi-particle-end-x),
+      var(--kiwi-particle-end-y),
+      0
+    ) rotate(356deg) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(
+      var(--kiwi-particle-end-x),
+      var(--kiwi-particle-end-y),
+      0
+    ) rotate(360deg) scale(0.86);
+  }
+}
+
+@keyframes kiwi-reward-xp-value-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.78);
+  }
+  62% {
+    opacity: 1;
+    transform: translate3d(0, -2px, 0) scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes kiwi-reward-level-arrow-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(-0.7rem, 0, 0) scaleX(0.2);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scaleX(1);
+  }
+}
+
+@keyframes kiwi-reward-level-target-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(-0.35rem, 0, 0) scale(0.92);
+  }
+  52% {
+    opacity: 1;
+    transform: translate3d(0.08rem, 0, 0) scale(1.04);
+  }
+  62% {
+    opacity: 1;
+    transform: translate3d(-2px, 0, 0) rotate(-0.6deg) scale(1.02);
+  }
+  72% {
+    opacity: 1;
+    transform: translate3d(1.7px, 0, 0) rotate(0.5deg) scale(1.01);
+  }
+  82% {
+    opacity: 1;
+    transform: translate3d(-1px, 0, 0) rotate(-0.3deg) scale(1);
+  }
+  91% {
+    opacity: 1;
+    transform: translate3d(0.5px, 0, 0) rotate(0.15deg) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes kiwi-reward-achievement-stamp {
+  0% {
+    opacity: 0;
+    filter: blur(2px);
+    transform: perspective(700px) translateZ(360px) scale(1.55);
+  }
+  42% {
+    opacity: 1;
+    filter: blur(0);
+    transform: perspective(700px) translateZ(-30px) scale(0.88);
+  }
+  64% {
+    transform: perspective(700px) translateZ(14px) scale(1.07);
+  }
+  82% {
+    transform: perspective(700px) translateZ(-6px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: perspective(700px) translateZ(0) scale(1);
+  }
+}
+
 @keyframes kiwi-xp-receive {
   0% {
     transform: scale(1);
@@ -363,7 +550,70 @@
 }
 
 .kiwi-reward-toast-enter {
-  animation: kiwi-reward-toast-enter 160ms cubic-bezier(.22, .74, .28, 1) both;
+  animation: kiwi-reward-toast-enter 260ms cubic-bezier(.22, .74, .28, 1) both;
+}
+
+.kiwi-reward-congratulation-text {
+  fill: url('#kiwi-congratulation-gold');
+  filter: drop-shadow(0 2px 1px rgb(112 72 4 / 24%));
+  font-family:
+    'Pinyon Script',
+    'Snell Roundhand',
+    cursive;
+  font-size: 43px;
+  font-weight: 550;
+  letter-spacing: 0.015em;
+  paint-order: stroke fill;
+  stroke: rgb(151 99 7 / 48%);
+  stroke-width: 0.58px;
+}
+
+.kiwi-reward-xp-value {
+  animation: kiwi-reward-xp-value-enter 260ms cubic-bezier(.18, .82, .25, 1.18)
+    var(--kiwi-reward-xp-delay) both;
+  transform-origin: left center;
+}
+
+.kiwi-reward-level-arrow {
+  display: inline-block;
+  margin-inline: 0.5rem;
+  animation: kiwi-reward-level-arrow-enter 320ms cubic-bezier(.2, .72, .2, 1)
+    var(--kiwi-reward-level-arrow-delay) both;
+  transform-origin: left center;
+}
+
+.kiwi-reward-level-target,
+.kiwi-reward-level-target-static,
+.kiwi-reward-gold-text {
+  color: #d9a31f;
+  text-shadow: 0 1px 0 rgb(255 246 181 / 45%);
+}
+
+.kiwi-reward-level-target,
+.kiwi-reward-level-target-static {
+  font-size: 1.125em;
+  line-height: 1;
+}
+
+.kiwi-reward-level-target {
+  display: inline-block;
+  animation: kiwi-reward-level-target-enter 480ms cubic-bezier(.18, .82, .25, 1.12)
+    var(--kiwi-reward-level-target-delay) both;
+}
+
+[data-theme='dark'] .kiwi-reward-level-target,
+[data-theme='dark'] .kiwi-reward-level-target-static,
+[data-theme='dark'] .kiwi-reward-gold-text {
+  color: #f2c84b;
+  text-shadow: 0 0 10px rgb(242 200 75 / 20%);
+}
+
+.kiwi-reward-achievement-stamp {
+  display: inline-block;
+  animation: kiwi-reward-achievement-stamp 420ms cubic-bezier(.18, .78, .2, 1.16)
+    var(--kiwi-reward-achievement-delay) both;
+  transform-origin: center;
+  will-change: filter, opacity, transform;
 }
 
 .kiwi-reward-toast-leave {
@@ -372,6 +622,23 @@
 
 .kiwi-xp-receive {
   animation: kiwi-xp-receive 350ms ease-out both;
+}
+
+.kiwi-reward-particle {
+  width: 1.6875rem;
+  height: 1.6875rem;
+  color: #f4c542;
+  filter: drop-shadow(0 0 5px rgb(244 197 66 / 75%));
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.kiwi-reward-particle[data-ready='true'] {
+  animation: kiwi-reward-particle-flight
+    var(--kiwi-particle-duration)
+    linear
+    var(--kiwi-particle-delay)
+    both;
 }
 
 .kiwi-reward-toast:hover .kiwi-reward-timer,

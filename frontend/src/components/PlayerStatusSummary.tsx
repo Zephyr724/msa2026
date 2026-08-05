@@ -1,9 +1,9 @@
 import {
   Flame,
   Home,
+  Sparkles,
   Trophy,
   X,
-  Zap,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -160,7 +160,7 @@ function ProgressDetails({
       <div className="mt-3 max-w-sm">
         <div className="flex items-center justify-between gap-3 text-xs font-bold">
           <span className="inline-flex items-center gap-1.5">
-            <Zap aria-hidden="true" className="size-4 text-amber-600 dark:text-amber-400" />
+            <Sparkles aria-hidden="true" className="size-4 text-amber-600 dark:text-amber-400" />
             {totalXp} XP
           </span>
           <span className="text-muted-content">

@@ -39,6 +39,7 @@ describe('Figma quest colour presentation', () => {
     expect(REGISTRATION_TONES.NoneRequired).toContain('border-zinc-200');
     expect(questHighlightTone('Recommended for you')).toContain('border-violet-200');
     expect(questHighlightTone('Good first Quest')).toContain('border-emerald-200');
+    expect(questHighlightTone('Good first Quest')).toContain('dark:bg-emerald-950/95');
     expect(questHighlightTone('Almost full')).toContain('border-amber-200');
     expect(questHighlightTone('Claim not verified')).toContain('border-red-200');
   });

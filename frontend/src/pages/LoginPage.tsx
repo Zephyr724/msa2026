@@ -4,7 +4,7 @@ import { useLoginMutation } from '../hooks/useAuth.ts';
 import { googleLoginUrl } from '../lib/api/auth.ts';
 import { ApiError } from '../lib/api/apiFetch.ts';
 import {
-  Award, CheckCircle2, IdCard, Leaf, Zap,
+  Award, CheckCircle2, IdCard, Leaf, Sparkles,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -169,7 +169,7 @@ export function AuthCard({ title, intro, children }: AuthCardProps) {
           <div className="relative grid gap-3">
             {[
               [CheckCircle2, 'Verified quest history'],
-              [Zap, 'Server-authoritative XP'],
+              [Sparkles, 'Server-authoritative XP'],
               [Award, 'Achievement milestones'],
               [IdCard, 'Your Impact Passport'],
             ].map(([Icon, label]) => {
