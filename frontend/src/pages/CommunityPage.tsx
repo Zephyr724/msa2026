@@ -173,7 +173,7 @@ export default function CommunityPage() {
 
             {posts.length > 0 && (
               <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4 xl:columns-5">
-                {posts.map((post) => <SocialPostCard key={post.id} post={post} />)}
+                {posts.map((post) => <SocialPostCard canLike={canWrite} key={post.id} post={post} />)}
               </div>
             )}
 

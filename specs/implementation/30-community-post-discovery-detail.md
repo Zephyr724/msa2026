@@ -20,9 +20,12 @@ conflicting Community feed/card and comment-edit deferral in Slice 29.
    contains the cover image, post title, author, like count, and — when present
    — one visually subordinate Related Quest title.
 2. Feed cards do not show the post body, tags, author management controls,
-   carousel controls, like controls, or comments.
-3. Clicking anywhere on a feed card opens `/community/posts/{postId}`. The feed
-   card does not navigate directly to a Quest.
+   carousel controls, or comments. The compact heart is the sole feed-card
+   action and toggles the authenticated viewer's like state.
+3. Clicking anywhere on a feed card except the heart opens
+   `/community/posts/{postId}`. The feed card does not navigate directly to a
+   Quest. For guests, the heart is a sign-in boundary instead of opening the
+   post.
 4. The opened post owns the full content hierarchy: ordered image carousel,
    author and date, title, body, tags, optional Related Quest navigation,
    likes, author visibility/deletion controls, and two-level comments.
@@ -73,7 +76,8 @@ conflicting Community feed/card and comment-edit deferral in Slice 29.
 - PostgreSQL/API coverage for single-post privacy, My posts isolation, comment
   edit ownership, root/reply updates, authentication, antiforgery, and
   unchanged hidden-post boundaries.
-- Frontend integration coverage for compact cards, whole-card navigation,
+- Frontend integration coverage for compact cards, whole-card navigation with
+  the isolated feed-card like action,
   detail-only body/comments/Quest navigation, carousel, inline comment edit,
   My posts, floating composer entry, and management controls.
 - Applicable complete frontend/backend gates from `AGENTS.md`.
