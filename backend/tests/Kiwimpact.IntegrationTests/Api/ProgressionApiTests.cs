@@ -279,13 +279,36 @@ public sealed class ProgressionApiTests
             $"/api/v1/quests/{quest.Id}/redeem",
             new { code });
         Assert.Equal(HttpStatusCode.Created, redeem.StatusCode);
-        var completionJson = await ReadJsonAsync(redeem);
+        var redemptionJson = await ReadJsonAsync(redeem);
+        AssertExactKeys(redemptionJson, "completion", "reward");
+        var completionJson = redemptionJson.GetProperty("completion");
         AssertExactKeys(
             completionJson,
             "completedAtUtc",
             "method",
             "status",
             "verifiedAtUtc");
+        Assert.Equal("Verified", completionJson.GetProperty("status").GetString());
+        Assert.Equal("CompletionCode", completionJson.GetProperty("method").GetString());
+        var rewardJson = redemptionJson.GetProperty("reward");
+        AssertExactKeys(
+            rewardJson,
+            "level",
+            "previousLevel",
+            "previousRankTitle",
+            "previousTotalXp",
+            "rankTitle",
+            "rewardEventId",
+            "totalXp",
+            "unlockedAchievements",
+            "xpAwarded");
+        Assert.Equal(100, rewardJson.GetProperty("xpAwarded").GetInt32());
+        Assert.Equal(0, rewardJson.GetProperty("previousTotalXp").GetInt64());
+        Assert.Equal(100, rewardJson.GetProperty("totalXp").GetInt64());
+        Assert.Equal(1, rewardJson.GetProperty("previousLevel").GetInt32());
+        Assert.Equal(3, rewardJson.GetProperty("level").GetInt32());
+        Assert.Equal("Novice", rewardJson.GetProperty("previousRankTitle").GetString());
+        Assert.Equal("Novice", rewardJson.GetProperty("rankTitle").GetString());
 
         using (var scope = _factory.Services.CreateScope())
         {
@@ -298,6 +321,7 @@ public sealed class ProgressionApiTests
                 TestContext.Current.CancellationToken);
             Assert.Equal(100, xp.XpAmount);
             Assert.Equal(completion.VerifiedAtUtc, xp.CreatedAt);
+            Assert.Equal(xp.Id, rewardJson.GetProperty("rewardEventId").GetGuid());
         }
 
         var progression = await actor.Client.GetAsync(

@@ -77,8 +77,12 @@ public sealed class SocialFeedDomainTests
     }
 
     [Fact]
-    public void PostCreate_RejectsMissingQuestBlankFieldsAndOversizedContent()
+    public void PostCreate_AllowsMissingQuestAndRejectsInvalidQuestBlankFieldsAndOversizedContent()
     {
+        var withoutQuest = SocialPost.Create(
+            Guid.NewGuid(), null, "Title", "Content", [], [], false, Now);
+
+        Assert.Null(withoutQuest.QuestId);
         Assert.Throws<ArgumentException>(() => SocialPost.Create(
             Guid.NewGuid(), Guid.Empty, "Title", "Content", [], [], false, Now));
         Assert.Throws<ArgumentException>(() => SocialPost.Create(
@@ -155,5 +159,19 @@ public sealed class SocialFeedDomainTests
             null,
             new string('x', SocialComment.MaxContentLength + 1),
             Now));
+    }
+
+    [Fact]
+    public void CommentUpdate_NormalizesAndValidatesContent()
+    {
+        var comment = SocialComment.Create(
+            Guid.NewGuid(), Guid.NewGuid(), null, "Original", Now);
+
+        comment.UpdateContent("  More useful context.  ");
+
+        Assert.Equal("More useful context.", comment.Content);
+        Assert.Throws<ArgumentException>(() => comment.UpdateContent("   "));
+        Assert.Throws<ArgumentOutOfRangeException>(() => comment.UpdateContent(
+            new string('x', SocialComment.MaxContentLength + 1)));
     }
 }

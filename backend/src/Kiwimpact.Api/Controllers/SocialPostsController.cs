@@ -31,19 +31,41 @@ public sealed class SocialPostsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> List(
         [FromQuery] string? search = null,
+        [FromQuery] bool mine = false,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 12,
         CancellationToken ct = default)
     {
+        var actorId = TryGetActorId();
+        if (mine && !actorId.HasValue)
+            return Unauthorized();
+
         try
         {
             var result = await _service.ListPostsAsync(
                 search,
                 page,
                 pageSize,
-                TryGetActorId(),
+                actorId,
+                mine,
                 ct);
             return Ok(ToPostPage(result));
+        }
+        catch (SocialFeedException exception)
+        {
+            return ToProblem(exception);
+        }
+    }
+
+    /// <summary>Open one public post, or an owned hidden post.</summary>
+    [HttpGet("{postId:guid}")]
+    [ProducesResponseType(typeof(SocialPostDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Get(Guid postId, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(ToDto(await _service.GetPostAsync(postId, TryGetActorId(), ct)));
         }
         catch (SocialFeedException exception)
         {
@@ -236,6 +258,41 @@ public sealed class SocialPostsController : ControllerBase
         }
     }
 
+    /// <summary>Edit a comment or reply owned by the authenticated user.</summary>
+    [HttpPatch("{postId:guid}/comments/{commentId:guid}")]
+    [Authorize(Roles = WriterRoles)]
+    [EnableRateLimiting(SocialRateLimitPolicies.Comment)]
+    [ProducesResponseType(typeof(SocialCommentCreatedDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> UpdateComment(
+        Guid postId,
+        Guid commentId,
+        UpdateSocialCommentRequest request,
+        CancellationToken ct)
+    {
+        if (TryGetActorId() is not { } actorId)
+            return Unauthorized();
+
+        try
+        {
+            var comment = await _service.UpdateCommentAsync(
+                postId,
+                commentId,
+                actorId,
+                request.Content,
+                ct);
+            return Ok(ToCreatedDto(comment));
+        }
+        catch (SocialFeedException exception)
+        {
+            return ToProblem(exception);
+        }
+    }
+
     private async Task<IActionResult> SetLike(
         Guid postId,
         bool isLiked,
@@ -335,6 +392,7 @@ public sealed class SocialPostsController : ControllerBase
             thread.Comment.Content,
             thread.Comment.AuthorDisplayName,
             thread.Comment.CreatedAt.ToString("O"),
+            thread.Comment.CanEdit,
             thread.Replies.Select(ToReplyDto).ToArray(),
             thread.ReplyCount,
             thread.ReplyCount > thread.Replies.Count);
@@ -347,7 +405,8 @@ public sealed class SocialPostsController : ControllerBase
                 ?? throw new InvalidOperationException("Reply is missing its parent."),
             comment.Content,
             comment.AuthorDisplayName,
-            comment.CreatedAt.ToString("O"));
+            comment.CreatedAt.ToString("O"),
+            comment.CanEdit);
 
     private static SocialCommentCreatedDto ToCreatedDto(SocialCommentItem comment) =>
         new(
@@ -356,5 +415,6 @@ public sealed class SocialPostsController : ControllerBase
             comment.ParentCommentId,
             comment.Content,
             comment.AuthorDisplayName,
-            comment.CreatedAt.ToString("O"));
+            comment.CreatedAt.ToString("O"),
+            comment.CanEdit);
 }

@@ -380,7 +380,6 @@ export default function QuestDetailPage() {
             questTitle={quest.title}
             registrationMode={quest.registrationMode}
             sourceType={quest.sourceType}
-            xpAward={quest.xpAward}
           />
         </aside>
       </main>

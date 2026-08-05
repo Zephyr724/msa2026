@@ -209,8 +209,38 @@ public sealed class QuestCompletionApiTests
             new { code = $"  {plaintext.ToLowerInvariant()}  " });
         Assert.Equal(HttpStatusCode.Created, redeem.StatusCode);
         Assert.Equal(CompletionPath(quest.Id), redeem.Headers.Location?.OriginalString);
-        var completionJson = await ReadJsonAsync(redeem);
-        AssertCompletionDto(completionJson, "Verified", "CompletionCode");
+        var redemptionJson = await ReadJsonAsync(redeem);
+        AssertExactKeys(redemptionJson, "completion", "reward");
+        AssertCompletionDto(
+            redemptionJson.GetProperty("completion"),
+            "Verified",
+            "CompletionCode");
+        var rewardJson = redemptionJson.GetProperty("reward");
+        AssertExactKeys(
+            rewardJson,
+            "level",
+            "previousLevel",
+            "previousRankTitle",
+            "previousTotalXp",
+            "rankTitle",
+            "rewardEventId",
+            "totalXp",
+            "unlockedAchievements",
+            "xpAwarded");
+        Assert.Equal(150, rewardJson.GetProperty("xpAwarded").GetInt32());
+        Assert.Equal(0, rewardJson.GetProperty("previousTotalXp").GetInt64());
+        Assert.Equal(150, rewardJson.GetProperty("totalXp").GetInt64());
+        Assert.Equal(1, rewardJson.GetProperty("previousLevel").GetInt32());
+        Assert.Equal(3, rewardJson.GetProperty("level").GetInt32());
+        Assert.Equal("Novice", rewardJson.GetProperty("previousRankTitle").GetString());
+        Assert.Equal("Novice", rewardJson.GetProperty("rankTitle").GetString());
+        Assert.All(
+            rewardJson.GetProperty("unlockedAchievements").EnumerateArray(),
+            achievement => AssertExactKeys(
+                achievement,
+                "achievementId",
+                "code",
+                "name"));
 
         var stateResponse = await actor.Client.GetAsync(
             CompletionPath(quest.Id),
@@ -225,6 +255,12 @@ public sealed class QuestCompletionApiTests
         var storedCode = await db.CompletionCodes.SingleAsync(
             item => item.QuestId == quest.Id,
             TestContext.Current.CancellationToken);
+        var xp = await db.XpTransactions.SingleAsync(
+            item => item.SourceCompletionId == completion.Id,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(
+            xp.Id,
+            rewardJson.GetProperty("rewardEventId").GetGuid());
         Assert.Equal(QuestCompletionStatus.Verified, completion.Status);
         Assert.Equal(CompletionMethod.CompletionCode, completion.Method);
         Assert.Equal(participation.Id, completion.ParticipationId);

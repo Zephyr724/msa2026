@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import QuestCompletionPanel from '../../src/components/quest/QuestCompletionPanel';
+import RewardFeedbackProvider from '../../src/components/reward/RewardFeedbackProvider';
 import { resetCsrfToken } from '../../src/lib/api/apiFetch';
 import { useUiStore } from '../../src/stores/useUiStore';
 import { createTestQueryClient, jsonResponse } from '../organizerTestUtils';
@@ -38,6 +39,21 @@ const verifiedCompletion = {
   method: 'CompletionCode',
   completedAtUtc: '2026-07-25T09:00:00.0000000+00:00',
   verifiedAtUtc: '2026-07-25T09:00:00.0000000+00:00',
+};
+
+const redemptionResult = {
+  completion: verifiedCompletion,
+  reward: {
+    rewardEventId: '8f43bb27-89c7-4b12-8234-12c70f5d6395',
+    xpAwarded: 50,
+    previousTotalXp: 170,
+    totalXp: 220,
+    previousLevel: 4,
+    level: 4,
+    previousRankTitle: 'Novice',
+    rankTitle: 'Novice',
+    unlockedAchievements: [],
+  },
 };
 
 interface FakeApiOptions {
@@ -88,7 +104,7 @@ function stubParticipantApi({
         return new Promise<Response>(() => {});
       }
       const next = redeems.shift();
-      return Promise.resolve(next ?? jsonResponse(verifiedCompletion, 201));
+      return Promise.resolve(next ?? jsonResponse(redemptionResult, 201));
     }
     return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
   });
@@ -103,12 +119,13 @@ function renderPanel(
   const view = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <QuestCompletionPanel
-          questId={QUEST_ID}
-          questTitle="Dated Stream Cleanup"
-          registrationMode={registrationMode}
-          xpAward={50}
-        />
+        <RewardFeedbackProvider>
+          <QuestCompletionPanel
+            questId={QUEST_ID}
+            questTitle="Dated Stream Cleanup"
+            registrationMode={registrationMode}
+          />
+        </RewardFeedbackProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -219,13 +236,12 @@ describe('Participant quest completion panel', () => {
 
     expect(await screen.findByText('Quest completed. Nice work!')).toBeInTheDocument();
     expect(screen.queryByLabelText('Completion code')).not.toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Quest complete!' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Quest completion reward' }))
+      .toBeInTheDocument();
+    expect(screen.getByText('Congratulations — Quest complete!')).toBeInTheDocument();
     expect(screen.getByText('Dated Stream Cleanup')).toBeInTheDocument();
     expect(screen.getByText('+50 XP')).toBeInTheDocument();
-    expect(screen.getByText('Level 4 · Local Helper')).toBeInTheDocument();
-    expect(screen.getByText('170 total XP')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Passport' }))
-      .toHaveAttribute('href', '/passport');
+    expect(screen.getByText('220 total')).toBeInTheDocument();
 
     const posts = redeemCalls(fetchMock);
     expect(posts).toHaveLength(1);
@@ -238,9 +254,11 @@ describe('Participant quest completion panel', () => {
     expect(fetchMock.mock.calls.filter(([callUrl]) =>
       String(callUrl).endsWith('/completion')).length).toBeGreaterThanOrEqual(2);
 
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(screen.queryByRole('dialog', { name: 'Quest complete!' }))
-      .not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Close reward notification' }));
+    await waitFor(() => expect(
+      screen.queryByRole('region', { name: 'Quest completion reward' }),
+    )
+      .not.toBeInTheDocument());
   });
 
   it('shows bounded feedback for an invalid code and keeps the code out of all stores', async () => {
@@ -456,11 +474,13 @@ describe('Participant quest completion panel', () => {
       return (
         <QueryClientProvider client={queryClient}>
           <MemoryRouter>
-            <QuestCompletionPanel
-              key={questId}
-              questId={questId}
-              registrationMode="Native"
-            />
+            <RewardFeedbackProvider>
+              <QuestCompletionPanel
+                key={questId}
+                questId={questId}
+                registrationMode="Native"
+              />
+            </RewardFeedbackProvider>
           </MemoryRouter>
         </QueryClientProvider>
       );

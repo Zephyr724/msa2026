@@ -29,9 +29,10 @@ notifications, moderation tooling, or file upload.
 - Search is case-insensitive across post title, content, tags, related Quest
   title, and author display name.
 - Authenticated Members, Organizers, and Admins may publish a post.
-- Every new post contains a required title, body, and currently Published Quest
-  relationship, plus optional bounded tags and zero to nine ordered HTTPS image
-  URLs with required alternative text.
+- Every new post contains a required title and body. A currently Published
+  Quest relationship is optional but strongly recommended; when supplied it is
+  validated by the backend. Tags and zero to nine ordered HTTPS image URLs are
+  optional, with alternative text required for every supplied image.
 - A published post may be public or hidden. Hidden posts remain visible to the
   author in their own feed but are undiscoverable and inaccessible to guests
   and other users.

@@ -40,7 +40,7 @@ public sealed class SocialPost
 
     public static SocialPost Create(
         Guid authorUserId,
-        Guid questId,
+        Guid? questId,
         string title,
         string content,
         IReadOnlyList<SocialPostImageDetails> images,
@@ -50,8 +50,8 @@ public sealed class SocialPost
     {
         if (authorUserId == Guid.Empty)
             throw new ArgumentException("An authenticated author is required.");
-        if (questId == Guid.Empty)
-            throw new ArgumentException("A related Quest is required.");
+        if (questId.HasValue && questId.Value == Guid.Empty)
+            throw new ArgumentException("The related Quest identifier is invalid.");
 
         ArgumentNullException.ThrowIfNull(images);
         ArgumentNullException.ThrowIfNull(tags);

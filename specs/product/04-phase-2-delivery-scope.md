@@ -116,10 +116,15 @@ was separately approved by explicit product-owner instruction on 2026-07-31.
 The product correction in
 `specs/implementation/29-community-posts-product-correction.md` was approved on
 2026-08-04 and adds the Xiaohongshu-inspired button/modal composition flow,
-required title and Published Quest relationship, tags, ordered URL-based
-multi-image carousel, author deletion, and public/hidden published visibility.
+required title, an optional but strongly recommended Published Quest
+relationship, tags, ordered URL-based multi-image carousel, author deletion,
+and public/hidden published visibility. The optional Quest correction was
+accepted on 2026-08-05.
 Public search/paging, likes, and two-level comments remain part of the accepted
-surface. Draft persistence, public profiles, follows, friends, chat,
+surface. The 2026-08-05 Slice 30 correction makes the feed compact and image-
+first, moves complete content and comments into a responsive post detail,
+adds My posts and author-only comment/reply editing, and makes New post a
+persistent right-side floating action. Draft persistence, public profiles, follows, friends, chat,
 notifications, binary file upload, and moderation tooling remain deferred.
 
 Storybook must not be claimed complete unless the implemented reusable UI

@@ -53,6 +53,26 @@ const noneCompletion = {
   verifiedAtUtc: null,
 };
 
+const redemptionResult = {
+  completion: {
+    status: 'Verified' as const,
+    method: 'CompletionCode' as const,
+    completedAtUtc: '2026-07-25T09:00:00Z',
+    verifiedAtUtc: '2026-07-25T09:00:00Z',
+  },
+  reward: {
+    rewardEventId: '8f43bb27-89c7-4b12-8234-12c70f5d6395',
+    xpAwarded: 50,
+    previousTotalXp: 170,
+    totalXp: 220,
+    previousLevel: 4,
+    level: 4,
+    previousRankTitle: 'Novice',
+    rankTitle: 'Novice',
+    unlockedAchievements: [],
+  },
+};
+
 describe('completion Query hooks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,12 +124,7 @@ describe('completion Query hooks', () => {
   });
 
   it('redeems without a MutationCache entry and invalidates the accepted keys on success', async () => {
-    mockRedeem.mockResolvedValue({
-      status: 'Verified',
-      method: 'CompletionCode',
-      completedAtUtc: '2026-07-25T09:00:00Z',
-      verifiedAtUtc: '2026-07-25T09:00:00Z',
-    });
+    mockRedeem.mockResolvedValue(redemptionResult);
     const queryClient = createQueryClient();
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const { result } = renderHook(
@@ -117,9 +132,11 @@ describe('completion Query hooks', () => {
       { wrapper: wrapper(queryClient) },
     );
 
+    let returned;
     await act(async () => {
-      await result.current('ABCDE23456');
+      returned = await result.current('ABCDE23456');
     });
+    expect(returned).toEqual(redemptionResult);
 
     expect(mockRedeem).toHaveBeenCalledWith(
       questId,
@@ -143,12 +160,7 @@ describe('completion Query hooks', () => {
   });
 
   it('also invalidates the Passport progression and history keys on success (F17)', async () => {
-    mockRedeem.mockResolvedValue({
-      status: 'Verified',
-      method: 'CompletionCode',
-      completedAtUtc: '2026-07-25T09:00:00Z',
-      verifiedAtUtc: '2026-07-25T09:00:00Z',
-    });
+    mockRedeem.mockResolvedValue(redemptionResult);
     const queryClient = createQueryClient();
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const { result } = renderHook(

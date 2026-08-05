@@ -20,7 +20,11 @@ import {
 } from '../lib/api/completion';
 import { ApiError } from '../lib/api/apiFetch';
 import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
-import type { EvidenceClaimInput, GeneratedCompletionCodeDto } from '../types/completion';
+import type {
+  EvidenceClaimInput,
+  GeneratedCompletionCodeDto,
+  RedeemCompletionResultDto,
+} from '../types/completion';
 
 export const completionCodeKeys = {
   status: (questId: string) =>
@@ -178,9 +182,10 @@ export function useGenerateOrRotateCompletionCode(questId: string) {
  */
 export function useRedeemCompletionCode(questId: string) {
   const queryClient = useQueryClient();
-  return useCallback(async (code: string): Promise<void> => {
+  return useCallback(async (code: string): Promise<RedeemCompletionResultDto> => {
+    let result: RedeemCompletionResultDto;
     try {
-      await executePrivateRequest(
+      result = await executePrivateRequest(
         queryClient,
         (signal) => redeemCompletionCode(questId, code, signal),
       );
@@ -191,7 +196,11 @@ export function useRedeemCompletionCode(questId: string) {
       }
       throw error;
     }
-    await syncAuthoritativeCompletion(queryClient, questId);
+    // Start the authoritative refresh without delaying the reward hand-off.
+    // The returned transactional before/after values drive the animation;
+    // queries still converge in the background for every persistent surface.
+    void syncAuthoritativeCompletion(queryClient, questId);
+    return result;
   }, [queryClient, questId]);
 }
 

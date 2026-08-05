@@ -29,6 +29,11 @@ The product owner also required Kimi K3 review and correction of findings:
 
 > 写完让K3审查一次，有问题你记得修复
 
+After recovery and review, the product owner corrected the Quest rule on
+2026-08-05:
+
+> Related Quest 是optional 不是必须，只是强烈推荐
+
 ## Reconstructed implementation instruction
 
 Work as the sole implementation owner in an isolated short-lived feature
@@ -37,9 +42,9 @@ Community product to match `specs/implementation/29-community-posts-product-corr
 
 - Replace the permanent composer with one clear `New post` button and a
   responsive modal/bottom-sheet composer.
-- Require a title, body, and a linked currently Published Quest for every new
-  post. Reuse the existing Quest list/search boundary rather than adding a new
-  dependency.
+- Require a title and body. Make Related Quest optional but visibly and
+  strongly recommended. Reuse the existing Quest list/search boundary; when a
+  Quest is supplied, independently require it to exist and be Published.
 - Accept zero to nine ordered HTTPS image URL plus alternative-text pairs.
 - Accept up to ten bounded tags and expand search to title, body, tags, Quest
   title, and author display name.
@@ -68,4 +73,3 @@ Community product to match `specs/implementation/29-community-posts-product-corr
   unrelated social-network expansion remain outside scope.
 - Do not stage, commit, push, merge, deploy, or create/update a pull request
   without separate explicit product-owner authorization.
-

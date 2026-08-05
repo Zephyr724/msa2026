@@ -34,6 +34,13 @@ The Production assessment catalogue contains ten Admin-curated external
 Quests. Facts were manually checked on 2026-08-04; the provider page remains
 authoritative and must be rechecked before deployment.
 
+Slice 30 extends this original ten-row catalogue with twenty additional
+city-focused activities, bringing the current accepted total to thirty. The
+extension adds Hamilton, Dunedin, Nelson, and Palmerston North regions and
+deepens Auckland, Wellington, Christchurch, and Tauranga coverage. Its source
+and image register lives in
+`specs/implementation/30-real-activity-city-coverage.md`.
+
 | Activity or programme | Authoritative provider |
 | --- | --- |
 | Tūpuna Maunga Community Planting — Maungarei | [Auckland Council / OurAuckland](https://ourauckland.aucklandcouncil.govt.nz/events/2026/05/tupuna-maunga-community-planting-days/) |
@@ -99,7 +106,9 @@ preserved. New rows are insert-only after their first real-source seed.
 - No dependency change.
 - No new authorization role or authentication mechanism.
 - No live provider scraping, API synchronization, or background refresh.
-- No third-party image ingestion.
+- No copying of provider-owned event imagery or uncredited third-party stock
+  imagery. Slice 30 may reference Pexels stock photos only with creator, source,
+  licence, and illustrative-image metadata stored on each Quest image.
 - No claim that fictional reviewer history proves real-world attendance or
   environmental outcomes.
 - No deployment, credential creation in Railway, password disclosure, commit,
@@ -107,8 +116,8 @@ preserved. New rows are insert-only after their first real-source seed.
 
 ## Acceptance criteria
 
-- Production assessment data contains ten real-source Quests spanning council,
-  DOC, NGO, dated, recurring, and self-paced activities.
+- Production assessment data contains thirty real-source Quests spanning
+  council, DOC, NGO, dated, recurring, self-paced, and city-focused activities.
 - Every Quest Detail official-source link is HTTPS and opens in a new tab with
   `noopener noreferrer` through the existing frontend behavior.
 - The existing nine Development personas remain exactly three per accepted
@@ -124,4 +133,3 @@ preserved. New rows are insert-only after their first real-source seed.
   read-only review is requested.
 - Because this is an important authentication/data task, one fresh independent
   reviewer must close all Blocker/Major findings before commit readiness.
-

@@ -1,7 +1,7 @@
 namespace Kiwimpact.Api.Contracts;
 
 public sealed record CreateSocialPostRequest(
-    Guid QuestId,
+    Guid? QuestId,
     string Title,
     string Content,
     IReadOnlyList<CreateSocialPostImageRequest>? Images,
@@ -48,13 +48,16 @@ public sealed record CreateSocialCommentRequest(
     string Content,
     Guid? ParentCommentId);
 
+public sealed record UpdateSocialCommentRequest(string Content);
+
 public sealed record SocialCommentCreatedDto(
     Guid Id,
     Guid PostId,
     Guid? ParentCommentId,
     string Content,
     string AuthorDisplayName,
-    string CreatedAtUtc);
+    string CreatedAtUtc,
+    bool CanEdit);
 
 public sealed record SocialCommentReplyDto(
     Guid Id,
@@ -62,7 +65,8 @@ public sealed record SocialCommentReplyDto(
     Guid ParentCommentId,
     string Content,
     string AuthorDisplayName,
-    string CreatedAtUtc);
+    string CreatedAtUtc,
+    bool CanEdit);
 
 public sealed record SocialCommentThreadDto(
     Guid Id,
@@ -70,6 +74,7 @@ public sealed record SocialCommentThreadDto(
     string Content,
     string AuthorDisplayName,
     string CreatedAtUtc,
+    bool CanEdit,
     IReadOnlyList<SocialCommentReplyDto> Replies,
     int ReplyCount,
     bool HasMoreReplies);

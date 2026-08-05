@@ -126,10 +126,6 @@ export default function SocialPostComposer({
     setValidationError(null);
     const normalizedTitle = title.trim();
     const normalizedContent = content.trim();
-    if (!selectedQuestId) {
-      setValidationError('Choose the Quest this post is connected to.');
-      return;
-    }
     if (!normalizedTitle) {
       setValidationError('Add a title for your post.');
       return;
@@ -171,7 +167,7 @@ export default function SocialPostComposer({
 
     try {
       await createPost.mutateAsync({
-        questId: selectedQuestId,
+        questId: selectedQuestId || null,
         title: normalizedTitle,
         content: normalizedContent,
         images: normalizedImages,
@@ -227,10 +223,11 @@ export default function SocialPostComposer({
             <fieldset>
               <legend className="flex items-center gap-2 font-extrabold">
                 <Link2 aria-hidden="true" className="size-4 text-primary" />
-                Related Quest <span className="text-error">*</span>
+                Related Quest
+                <span className="badge badge-primary badge-sm">Recommended</span>
               </legend>
               <p className="mt-1 text-xs text-muted-content">
-                Connect every story to the action that made it possible.
+                Strongly recommended: connect this story to the action that made it possible. You can publish without one.
               </p>
               <label className="relative mt-3 block">
                 <span className="sr-only">Search published Quests</span>
@@ -312,6 +309,15 @@ export default function SocialPostComposer({
                   );
                 })}
               </div>
+              {selectedQuestId && (
+                <button
+                  className="btn btn-ghost btn-xs mt-2"
+                  onClick={() => setSelectedQuestId('')}
+                  type="button"
+                >
+                  Remove related Quest
+                </button>
+              )}
             </fieldset>
 
             <label className="block">

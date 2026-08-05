@@ -115,6 +115,7 @@ function validateReply(value: unknown): SocialCommentReplyDto {
     content: requiredString(value.content, 'reply content'),
     authorDisplayName: requiredString(value.authorDisplayName, 'reply author'),
     createdAtUtc: requiredString(value.createdAtUtc, 'reply timestamp'),
+    canEdit: booleanValue(value.canEdit, 'reply edit permission'),
   };
 }
 
@@ -128,6 +129,7 @@ function validateThread(value: unknown): SocialCommentThreadDto {
     content: requiredString(value.content, 'comment content'),
     authorDisplayName: requiredString(value.authorDisplayName, 'comment author'),
     createdAtUtc: requiredString(value.createdAtUtc, 'comment timestamp'),
+    canEdit: booleanValue(value.canEdit, 'comment edit permission'),
     replies: value.replies.map(validateReply),
     replyCount: nonNegativeInteger(value.replyCount, 'comment reply count'),
     hasMoreReplies: booleanValue(value.hasMoreReplies, 'comment more replies state'),

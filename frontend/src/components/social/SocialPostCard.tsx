@@ -1,174 +1,70 @@
-import {
-  CalendarDays,
-  Eye,
-  EyeOff,
-  Heart,
-  Link2,
-  LogIn,
-  MapPin,
-  Trash2,
-} from 'lucide-react';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  useDeleteSocialPost,
-  useSetSocialLike,
-  useSetSocialPostVisibility,
-} from '../../hooks/useSocialFeed';
-import { ApiError } from '../../lib/api/apiFetch';
+import { Heart, ImageIcon, Images, LockKeyhole } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import type { SocialPostDto } from '../../types/social';
-import SocialComments from './SocialComments';
-import SocialPostDeleteDialog from './SocialPostDeleteDialog';
-import SocialPostImageCarousel from './SocialPostImageCarousel';
 
-interface SocialPostCardProps {
-  post: SocialPostDto;
-  canWrite: boolean;
-}
-
-export default function SocialPostCard({ post, canWrite }: SocialPostCardProps) {
-  const setLike = useSetSocialLike();
-  const setVisibility = useSetSocialPostVisibility();
-  const deletePost = useDeleteSocialPost();
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const likeError = setLike.error instanceof ApiError && setLike.error.status === 429
-    ? 'Please wait before reacting again.'
-    : setLike.isError
-      ? 'Like could not be updated.'
-      : null;
-  const visibilityError = setVisibility.error instanceof ApiError && setVisibility.error.status === 429
-    ? 'Please wait before changing visibility again.'
-    : setVisibility.isError
-      ? 'Visibility could not be changed.'
-      : null;
-  const deleteError = deletePost.error instanceof ApiError && deletePost.error.status === 429
-    ? 'Please wait before deleting this post.'
-    : deletePost.isError
-      ? 'This post could not be deleted.'
-      : null;
-
-  async function confirmDelete() {
-    try {
-      await deletePost.mutateAsync(post.id);
-      setDeleteOpen(false);
-    } catch {
-      // The confirmation dialog keeps the bounded error visible.
-    }
-  }
+export default function SocialPostCard({ post }: { post: SocialPostDto }) {
+  const location = useLocation();
+  const cover = post.images[0];
 
   return (
-    <article className="kiwi-panel mb-5 inline-block w-full break-inside-avoid overflow-hidden align-top">
-      <header className="flex items-center gap-3 p-4 pb-3">
-        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/12 font-extrabold text-primary">
-          {post.authorDisplayName.slice(0, 1).toUpperCase()}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-extrabold">{post.authorDisplayName}</p>
-          <time className="block text-xs text-muted-content" dateTime={post.createdAtUtc}>{formatTime(post.createdAtUtc)}</time>
-        </div>
-        {post.isHidden && (
-          <span className="badge gap-1 border-warning/30 bg-warning/10 text-warning-content">
-            <EyeOff aria-hidden="true" className="size-3" /> Only you
-          </span>
-        )}
-        {post.canDelete && (
-          <div className="flex shrink-0">
-            <button
-              aria-label={post.isHidden ? 'Make post public' : 'Hide post'}
-              className="btn btn-ghost btn-sm btn-square"
-              disabled={setVisibility.isPending}
-              onClick={() => setVisibility.mutate({ postId: post.id, isHidden: !post.isHidden })}
-              title={post.isHidden ? 'Make public' : 'Hide from everyone else'}
-              type="button"
-            >
-              {post.isHidden ? <Eye aria-hidden="true" className="size-4" /> : <EyeOff aria-hidden="true" className="size-4" />}
-            </button>
-            <button aria-label="Delete post" className="btn btn-ghost btn-sm btn-square text-error" onClick={() => setDeleteOpen(true)} type="button">
-              <Trash2 aria-hidden="true" className="size-4" />
-            </button>
-          </div>
-        )}
-      </header>
-
-      <SocialPostImageCarousel images={post.images} />
-
-      <div className="space-y-3 p-4 pt-3">
-        <h2 className="break-words text-xl leading-snug">{post.title}</h2>
-        {post.quest && (
-          <Link className="group flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/7 p-3 transition-colors hover:border-primary/45" to={`/quests/${post.quest.id}`}>
-            {post.quest.coverImageUrl ? (
-              <img
-                alt=""
-                className="size-12 shrink-0 rounded-xl object-cover"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                src={post.quest.coverImageUrl}
-              />
-            ) : (
-              <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary"><Link2 className="size-5" /></span>
-            )}
-            <span className="min-w-0 flex-1">
-              <span className="kiwi-stat-label">Related Quest</span>
-              <strong className="mt-0.5 block truncate group-hover:text-primary">{post.quest.title}</strong>
-              <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-content">
-                {post.quest.startAtUtc && <span className="inline-flex items-center gap-1"><CalendarDays aria-hidden="true" className="size-3" />{formatDate(post.quest.startAtUtc)}</span>}
-                {post.quest.locationDescription && <span className="inline-flex min-w-0 items-center gap-1"><MapPin aria-hidden="true" className="size-3" /><span className="truncate">{post.quest.locationDescription}</span></span>}
-              </span>
-            </span>
-          </Link>
-        )}
-        <p className="whitespace-pre-wrap break-words text-[0.95rem] leading-7">{post.content}</p>
-        {post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2" aria-label="Post tags">
-            {post.tags.map((tag) => <span className="break-all text-sm font-bold text-primary" key={tag}>#{tag}</span>)}
-          </div>
-        )}
-        <div className="flex items-center justify-between gap-3">
-          {canWrite ? (
-            <button
-              aria-label={post.isLikedByViewer ? 'Unlike post' : 'Like post'}
-              aria-pressed={post.isLikedByViewer}
-              className={`btn btn-sm rounded-full ${post.isLikedByViewer ? 'btn-primary' : 'btn-ghost'}`}
-              disabled={setLike.isPending}
-              onClick={() => setLike.mutate({ postId: post.id, isLiked: !post.isLikedByViewer })}
-              type="button"
-            >
-              <Heart aria-hidden="true" className="size-4" fill={post.isLikedByViewer ? 'currentColor' : 'none'} />
-              {post.likeCount}
-            </button>
+    <article className="mb-5 inline-block w-full break-inside-avoid align-top">
+      <Link
+        aria-label={`Open post: ${post.title}`}
+        className="group block overflow-hidden rounded-2xl bg-base-100 shadow-[0_4px_18px_rgba(24,48,38,0.08)] ring-1 ring-base-300/70 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(24,48,38,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+        state={{ communityReturn: `${location.pathname}${location.search}` }}
+        to={`/community/posts/${post.id}`}
+      >
+        <div className="relative overflow-hidden bg-base-200">
+          {cover ? (
+            <img
+              alt={cover.imageAltText}
+              className="aspect-[4/5] w-full object-cover transition duration-300 group-hover:scale-[1.015]"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              src={cover.imageUrl}
+            />
           ) : (
-            <Link className="btn btn-ghost btn-sm rounded-full" to="/login"><LogIn aria-hidden="true" className="size-4" />Sign in to like · {post.likeCount}</Link>
+            <div className="kiwi-topography grid aspect-[4/3] place-items-center bg-gradient-to-br from-primary/15 via-secondary/70 to-accent/15 p-6 text-center">
+              <span className="grid size-14 place-items-center rounded-full bg-base-100/75 text-primary shadow-sm">
+                <ImageIcon aria-hidden="true" className="size-6" />
+              </span>
+            </div>
+          )}
+          {post.images.length > 1 && (
+            <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 text-xs font-bold text-white">
+              <Images aria-hidden="true" className="size-3.5" />
+              {post.images.length}
+            </span>
+          )}
+          {post.isHidden && (
+            <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 text-xs font-bold text-white">
+              <LockKeyhole aria-hidden="true" className="size-3.5" />
+              Only you
+            </span>
           )}
         </div>
-        {likeError && <p className="text-sm text-error" role="alert">{likeError}</p>}
-        {visibilityError && <p className="text-sm text-error" role="alert">{visibilityError}</p>}
-        <SocialComments canWrite={canWrite} commentCount={post.commentCount} postId={post.id} />
-      </div>
 
-      <SocialPostDeleteDialog
-        error={deleteError}
-        onClose={() => {
-          deletePost.reset();
-          setDeleteOpen(false);
-        }}
-        onConfirm={() => void confirmDelete()}
-        open={deleteOpen}
-        pending={deletePost.isPending}
-        postId={post.id}
-        title={post.title}
-      />
+        <div className="p-3.5">
+          <h2 className="line-clamp-2 break-words text-[0.98rem] font-extrabold leading-snug">
+            {post.title}
+          </h2>
+          {post.quest && (
+            <p className="mt-1.5 truncate text-[0.7rem] font-semibold text-primary/80">
+              Related Quest · {post.quest.title}
+            </p>
+          )}
+          <div className="mt-3 flex items-center gap-2 text-xs text-muted-content">
+            <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/10 text-[0.65rem] font-extrabold text-primary">
+              {post.authorDisplayName.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1 truncate font-semibold">{post.authorDisplayName}</span>
+            <span aria-label={`${post.likeCount} likes`} className="inline-flex shrink-0 items-center gap-1">
+              <Heart aria-hidden="true" className="size-4" fill={post.isLikedByViewer ? 'currentColor' : 'none'} />
+              {post.likeCount}
+            </span>
+          </div>
+        </div>
+      </Link>
     </article>
   );
-}
-
-function formatTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Recently';
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Date to be confirmed';
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
 }

@@ -1,5 +1,10 @@
 # Slice 29 — Community Posts Product Correction
 
+> **Later correction:** Slice 30 supersedes this document's feed-card content,
+> header-positioned `New post` entry, and comment-edit deferral. Slice 29 remains
+> authoritative for publishing fields, persistence, privacy, and carousel
+> mechanics unless Slice 30 explicitly changes their presentation.
+
 - **Status:** Approved for implementation by explicit product-owner correction
 - **Approval date:** 2026-08-04
 - **Database migration approval:** The product owner explicitly approved the
@@ -27,11 +32,12 @@ existing accessibility/security boundaries.
    not permanently embedded in the feed.
 2. Activating `New post` opens a responsive creation dialog: a bottom sheet on
    small screens and a centered modal on larger screens.
-3. Every newly published post requires a non-blank title, a non-blank body, and
-   a related Quest. The backend accepts the Quest only when it exists and is
-   currently `Published`. The relationship then remains as historical context
-   if the Quest later changes lifecycle state; feed reads do not silently
-   remove that context.
+3. Every newly published post requires a non-blank title and non-blank body.
+   A related Quest is optional but strongly recommended in the composer. When
+   supplied, the backend accepts it only when it exists and is currently
+   `Published`. The relationship then remains as historical context if the
+   Quest later changes lifecycle state; feed reads do not silently remove that
+   context.
 4. A post may contain zero to nine ordered images. This Slice accepts HTTPS
    image URLs rather than binary uploads. Every image requires alternative text.
 5. A post may contain up to ten case-insensitively unique tags, each at most 30

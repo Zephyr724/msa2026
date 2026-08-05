@@ -97,14 +97,14 @@ public sealed class SeedConfigurationTests
             _ = factory.CreateClient();
 
             using var db = CreateInspectionContext(container.GetConnectionString());
-            Assert.Equal(27, await db.Regions.CountAsync(
+            Assert.Equal(31, await db.Regions.CountAsync(
                 TestContext.Current.CancellationToken));
 
             var quests = await db.Quests
                 .Where(quest => AssessmentDataSeed.QuestIds.Contains(quest.Id))
                 .Include(quest => quest.Images)
                 .ToListAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(10, quests.Count);
+            Assert.Equal(30, quests.Count);
             Assert.All(quests, quest =>
             {
                 Assert.Equal(QuestStatus.Published, quest.Status);
@@ -114,6 +114,27 @@ public sealed class SeedConfigurationTests
                 Assert.Equal(ExternalSourceStatus.Current, quest.ExternalSourceStatus);
                 Assert.NotNull(quest.SourceCheckedAt);
                 Assert.Single(quest.Images, image => image.IsCover);
+            });
+            var pexelsCovers = quests
+                .SelectMany(quest => quest.Images)
+                .Where(image => image.SourceUrl != null &&
+                    image.SourceUrl.Contains("pexels.com/photo/", StringComparison.Ordinal))
+                .ToList();
+            Assert.Equal(20, pexelsCovers.Count);
+            Assert.Equal(20, pexelsCovers
+                .Select(image => image.SourceUrl)
+                .Distinct(StringComparer.Ordinal)
+                .Count());
+            Assert.Equal(20, pexelsCovers
+                .Select(image => image.ImageUrl)
+                .Distinct(StringComparer.Ordinal)
+                .Count());
+            Assert.All(pexelsCovers, image =>
+            {
+                Assert.StartsWith("https://images.pexels.com/", image.ImageUrl);
+                Assert.False(string.IsNullOrWhiteSpace(image.CreatorName));
+                Assert.Contains("Pexels licence", image.LicenceNote, StringComparison.Ordinal);
+                Assert.Contains("not documentation", image.LicenceNote, StringComparison.Ordinal);
             });
             Assert.Contains(quests, quest => quest.Latitude.HasValue);
             Assert.Contains(quests, quest =>
@@ -140,6 +161,25 @@ public sealed class SeedConfigurationTests
                 quest.ExternalSourceUrl!.Contains(
                     "doc.govt.nz",
                     StringComparison.Ordinal));
+            Assert.Equal(5, quests.Count(quest =>
+                quest.LocationRegionId == RegionSeed.AucklandId ||
+                quest.LocationRegionId == RegionSeed.MaungakiekieTamakiId ||
+                quest.LocationRegionId == RegionSeed.HibiscusBaysId ||
+                quest.LocationRegionId == RegionSeed.WaitakereRangesId));
+            Assert.Equal(4, quests.Count(quest =>
+                quest.LocationRegionId == AssessmentDataSeed.WellingtonCityId));
+            Assert.Equal(4, quests.Count(quest =>
+                quest.LocationRegionId == AssessmentDataSeed.ChristchurchCityId));
+            Assert.Equal(3, quests.Count(quest =>
+                quest.LocationRegionId == AssessmentDataSeed.HamiltonCityId));
+            Assert.Equal(4, quests.Count(quest =>
+                quest.LocationRegionId == AssessmentDataSeed.TaurangaCityId));
+            Assert.Equal(3, quests.Count(quest =>
+                quest.LocationRegionId == AssessmentDataSeed.DunedinCityId));
+            Assert.Equal(2, quests.Count(quest =>
+                quest.LocationRegionId == AssessmentDataSeed.NelsonCityId));
+            Assert.Single(quests, quest =>
+                quest.LocationRegionId == AssessmentDataSeed.PalmerstonNorthCityId);
 
             var curator = await db.Set<ApplicationUser>()
                 .SingleAsync(
@@ -209,12 +249,12 @@ public sealed class SeedConfigurationTests
             }
 
             using var db = CreateInspectionContext(container.GetConnectionString());
-            Assert.Equal(27, await db.Regions.CountAsync(
+            Assert.Equal(31, await db.Regions.CountAsync(
                 TestContext.Current.CancellationToken));
-            Assert.Equal(10, await db.Quests.CountAsync(
+            Assert.Equal(30, await db.Quests.CountAsync(
                 quest => AssessmentDataSeed.QuestIds.Contains(quest.Id),
                 TestContext.Current.CancellationToken));
-            Assert.Equal(10, await db.QuestImages.CountAsync(
+            Assert.Equal(30, await db.QuestImages.CountAsync(
                 image => AssessmentDataSeed.QuestIds.Contains(image.QuestId),
                 TestContext.Current.CancellationToken));
             Assert.Equal(
@@ -268,7 +308,7 @@ public sealed class SeedConfigurationTests
             using (var db = CreateInspectionContext(container.GetConnectionString()))
             {
                 firstCounts = await AssessmentCountsAsync(db);
-                Assert.Equal(10, firstCounts.Quests);
+                Assert.Equal(30, firstCounts.Quests);
                 Assert.Equal(38, firstCounts.Completions);
                 Assert.Equal(38, firstCounts.XpTransactions);
                 Assert.Equal(38, firstCounts.EvidenceDetails);

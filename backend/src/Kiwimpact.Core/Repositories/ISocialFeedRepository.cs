@@ -11,6 +11,12 @@ public interface ISocialFeedRepository
         int page,
         int pageSize,
         Guid? viewerUserId,
+        bool mine,
+        CancellationToken ct = default);
+
+    Task<SocialPostItem> GetPostAsync(
+        Guid postId,
+        Guid? viewerUserId,
         CancellationToken ct = default);
 
     Task<SocialPostItem> AddPostAsync(
@@ -50,5 +56,12 @@ public interface ISocialFeedRepository
         Guid? parentCommentId,
         string content,
         DateTimeOffset now,
+        CancellationToken ct = default);
+
+    Task<SocialCommentItem> UpdateCommentAsync(
+        Guid postId,
+        Guid commentId,
+        Guid actorUserId,
+        string content,
         CancellationToken ct = default);
 }

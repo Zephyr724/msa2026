@@ -1,11 +1,7 @@
 import {
   CheckCircle2,
   KeyRound,
-  Share2,
-  ShieldCheck,
-  Sparkles,
   X,
-  Zap,
 } from 'lucide-react';
 import {
   useEffect,
@@ -21,10 +17,10 @@ import {
   useRedeemCompletionCode,
 } from '../../hooks/useCompletion.ts';
 import { useMyQuestParticipationQuery } from '../../hooks/useParticipation.ts';
-import { useProgression } from '../../hooks/useProgression.ts';
 import { ApiError } from '../../lib/api/apiFetch.ts';
 import { NORMALIZED_COMPLETION_CODE_PATTERN } from '../../types/completion.ts';
 import type { QuestRegistrationMode } from '../../types/quest.ts';
+import { useRewardFeedback } from '../reward/rewardFeedback.ts';
 
 const INVALID_COMPLETION_CODE_TYPE =
   'https://kiwimpact.app/problems/invalid-completion-code';
@@ -33,7 +29,6 @@ interface QuestCompletionPanelProps {
   questId: string;
   questTitle?: string;
   registrationMode: QuestRegistrationMode | null;
-  xpAward?: number;
 }
 
 /**
@@ -45,16 +40,15 @@ export default function QuestCompletionPanel({
   questId,
   questTitle = 'this quest',
   registrationMode,
-  xpAward = 0,
 }: QuestCompletionPanelProps) {
   const auth = useAuthQuery();
   const participation = useMyQuestParticipationQuery(questId);
   const completion = useMyQuestCompletionQuery(questId);
   const redeem = useRedeemCompletionCode(questId);
+  const { showReward } = useRewardFeedback();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [rewardOpen, setRewardOpen] = useState(false);
   const [codeInput, setCodeInput] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -89,12 +83,10 @@ export default function QuestCompletionPanel({
     setSubmitError(null);
     setPending(true);
     try {
-      await redeem(normalized);
+      const result = await redeem(normalized);
       setCodeInput('');
       setDialogOpen(false);
-      // The reward overlay opens only after the mutation has refreshed the
-      // authoritative completion and progression queries.
-      setRewardOpen(true);
+      showReward({ ...result.reward, questTitle });
     } catch (error) {
       setSubmitError(redeemErrorMessage(error));
     } finally {
@@ -161,28 +153,16 @@ export default function QuestCompletionPanel({
 
   if (completion.data.status === 'Verified') {
     return (
-      <>
-        <CompletionShell>
-          <p className="flex items-center gap-2 font-bold text-success" role="status">
-            <CheckCircle2 aria-hidden="true" className="size-5" />
-            Quest completed. Nice work!
-          </p>
-          <dl className="mt-4 grid gap-3 text-sm">
-            <Timestamp label="Completed" value={completion.data.completedAtUtc} />
-            <Timestamp label="Verified" value={completion.data.verifiedAtUtc} />
-          </dl>
-        </CompletionShell>
-        {rewardOpen && (
-          <CompletionRewardOverlay
-            onClose={() => {
-              setRewardOpen(false);
-              queueMicrotask(() => triggerRef.current?.focus());
-            }}
-            questTitle={questTitle}
-            xpAward={xpAward}
-          />
-        )}
-      </>
+      <CompletionShell>
+        <p className="flex items-center gap-2 font-bold text-success" role="status">
+          <CheckCircle2 aria-hidden="true" className="size-5" />
+          Quest completed. Nice work!
+        </p>
+        <dl className="mt-4 grid gap-3 text-sm">
+          <Timestamp label="Completed" value={completion.data.completedAtUtc} />
+          <Timestamp label="Verified" value={completion.data.verifiedAtUtc} />
+        </dl>
+      </CompletionShell>
     );
   }
 
@@ -320,111 +300,7 @@ export default function QuestCompletionPanel({
         </div>
       </dialog>
 
-      {rewardOpen && (
-        <CompletionRewardOverlay
-          onClose={() => {
-            setRewardOpen(false);
-            queueMicrotask(() => triggerRef.current?.focus());
-          }}
-          questTitle={questTitle}
-          xpAward={xpAward}
-        />
-      )}
     </>
-  );
-}
-
-function CompletionRewardOverlay({
-  onClose,
-  questTitle,
-  xpAward,
-}: {
-  onClose: () => void;
-  questTitle: string;
-  xpAward: number;
-}) {
-  const progression = useProgression();
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
-
-  return (
-    <dialog
-      aria-labelledby="reward-title"
-      className="modal bg-primary/95 p-4 text-primary-content backdrop-blur-xl"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(event: MouseEvent<HTMLDialogElement>) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-      open
-    >
-      <div className="relative w-full max-w-xl overflow-hidden rounded-[2rem] border border-primary-content/20 bg-primary-content/10 p-6 text-center shadow-2xl sm:p-9">
-        <Sparkles aria-hidden="true" className="absolute left-8 top-8 size-7 text-accent" />
-        <Sparkles aria-hidden="true" className="absolute bottom-12 right-10 size-5 text-accent" />
-        <span className="mx-auto grid size-16 place-items-center rounded-full border border-accent/50 bg-accent/15 text-accent">
-          <CheckCircle2 aria-hidden="true" className="size-9" />
-        </span>
-        <p className="mt-5 text-sm font-extrabold uppercase tracking-[0.14em] text-primary-content/70">
-          Verified
-        </p>
-        <h2 className="mt-2 text-4xl" id="reward-title">Quest complete!</h2>
-        <p className="mx-auto mt-3 max-w-md text-primary-content/75">{questTitle}</p>
-
-        <div className="mt-7 rounded-2xl border border-primary-content/15 bg-primary-content/10 p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary-content/65">
-            XP earned
-          </p>
-          <p className="mt-2 inline-flex items-center gap-2 text-4xl font-extrabold">
-            <Zap aria-hidden="true" className="size-7 text-accent" />
-            +{xpAward} XP
-          </p>
-        </div>
-
-        {progression.data && (
-          <div className="mt-4 rounded-2xl border border-primary-content/15 bg-primary-content/10 p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary-content/65">
-              Current progress
-            </p>
-            <p className="mt-2 text-xl font-bold">
-              Level {progression.data.level} · {progression.data.rankTitle}
-            </p>
-            <p className="mt-1 text-sm text-primary-content/70">
-              {progression.data.totalXp} total XP
-            </p>
-          </div>
-        )}
-
-        <p className="mt-5 flex items-center justify-center gap-2 text-sm text-primary-content/75">
-          <ShieldCheck aria-hidden="true" className="size-4" />
-          Saved to your Impact Passport
-        </p>
-        <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link className="btn border-0 bg-primary-content text-primary hover:bg-primary-content/90" to="/passport">
-            View Passport
-          </Link>
-          <Link
-            className="btn border-primary-content/30 bg-transparent text-primary-content hover:bg-primary-content/10"
-            to="/passport/share"
-          >
-            <Share2 aria-hidden="true" className="size-4" />
-            Create Share Card
-          </Link>
-          <button
-            className="btn border-primary-content/30 bg-transparent text-primary-content hover:bg-primary-content/10"
-            onClick={onClose}
-            ref={closeRef}
-            type="button"
-          >
-            Continue
-          </button>
-        </div>
-      </div>
-    </dialog>
   );
 }
 

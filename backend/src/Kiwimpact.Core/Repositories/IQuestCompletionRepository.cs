@@ -18,7 +18,7 @@ public interface IQuestCompletionRepository
         bool isAdmin,
         CancellationToken ct = default);
 
-    Task<MyQuestCompletionState> RedeemAsync(
+    Task<CompletionRedemptionResult> RedeemAsync(
         Guid questId,
         Guid actorId,
         string? submittedCode,

@@ -42,6 +42,29 @@ export interface MyQuestCompletionDto {
   verifiedAtUtc: string | null;
 }
 
+export interface CompletionRewardAchievementDto {
+  achievementId: string;
+  code: string;
+  name: string;
+}
+
+export interface CompletionRewardDto {
+  rewardEventId: string;
+  xpAwarded: number;
+  previousTotalXp: number;
+  totalXp: number;
+  previousLevel: number;
+  level: number;
+  previousRankTitle: string;
+  rankTitle: string;
+  unlockedAchievements: CompletionRewardAchievementDto[];
+}
+
+export interface RedeemCompletionResultDto {
+  completion: MyQuestCompletionDto;
+  reward: CompletionRewardDto;
+}
+
 export interface EvidenceClaimInput {
   description: string;
   evidenceUrl: string | null;

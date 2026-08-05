@@ -54,4 +54,19 @@ public sealed class SocialComment
             CreatedAt = now.ToUniversalTime(),
         };
     }
+
+    public void UpdateContent(string content)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+
+        var normalized = content.Trim();
+        if (normalized.Length > MaxContentLength)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(content),
+                $"Comment content must be at most {MaxContentLength} characters.");
+        }
+
+        Content = normalized;
+    }
 }
