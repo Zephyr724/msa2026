@@ -16,19 +16,41 @@ navigation, or presenting projected client-side state as fact.
 ## Accepted experience contract
 
 1. A successful Completion Code redemption presents one non-modal reward Toast
-   near the upper-right surface. It congratulates the member, names the Quest,
-   and shows the XP actually committed by the server.
-2. The Toast can be closed explicitly and otherwise dismisses after five
-   seconds. Auto-dismiss pauses while the Toast is hovered, contains focus, or
-   the document is hidden.
-3. A restrained group of gold particles travels from the XP reward row to the
-   visible header XP target. The target updates from the server-provided
-   previous state to the committed current state when the particles arrive.
-4. When the reward crosses a level or rank boundary, the same Toast includes a
-   prominent level/rank-up panel. This avoids competing duplicate Toasts for a
-   single atomic reward while still explicitly congratulating the upgrade.
-5. Newly committed achievements appear in the same queued reward surface. More
-   than two achievements are summarized rather than expanding without bound.
+   near the upper-right surface. A slightly upward-curved, near-gold
+   `Pinyon Script` `Congratulation` title spans about 86% of the Toast, leaving
+   roughly 7% on either side. Its final 550-weight presentation and restrained
+   outline sit between the earlier medium and heavy refinements. The state,
+   Quest name, and XP actually committed by the server sit beneath it.
+2. The Toast can be closed explicitly. A standard reward otherwise dismisses
+   after five seconds; a combined level/rank-plus-achievement reward remains for
+   ten seconds so the complete sequence is readable. Auto-dismiss pauses while
+   the Toast is hovered, contains focus, or the document is hidden.
+3. Seven clearly visible gold, 27-pixel hollow single four-point sparkle particles
+   (50% larger than the preceding 18-pixel refinement) follow one
+   shared curved path from the XP reward row to the visible header XP target.
+   Each particle contains one rounded outline path with no fill or satellite
+   sparkles; its final 3.168 px stroke applies two successive 20% increases to
+   the original 2.2 px version. Dense Bézier sampling and linear interpolation keep the route
+   smooth. Each later particle has a shorter duration than the preceding one,
+   creating an accelerating stream whose last arrival occurs within two
+   seconds. Particles remain fully legible above the Toast until reaching the
+   navigation target and only disappear at arrival. The target then updates
+   from the server-provided previous state to the committed current state.
+4. Only the near-gold XP amount animates with a compact scale-and-rise entrance;
+   its `Sparkles` icon remains still. The particle stream follows the XP reveal.
+   When the reward crosses a level or rank boundary, the final particle is
+   followed by a one-second pause, then the arrow extends right from the
+   previous level and the new level reveals in near-gold at a slightly enlarged
+   size. Once visible, the new level finishes with a restrained, decaying
+   horizontal shake of about two pixels.
+5. Newly committed achievements appear last in the same queued reward surface.
+   After the level-arrow animation completes, the sequence pauses for one
+   second, then each near-gold achievement title stamps straight down the Z axis
+   from in front of the screen to its final size while its containing panel
+   remains stable. More than two
+   achievements are summarized rather than expanding without bound. If no
+   level/rank change occurred, the stamp follows the particle stream without
+   reserving an absent level step.
 6. Reward events queue and deduplicate in memory by the authoritative reward
    event ID. Persistent completion UI remains available after the transient
    Toast closes.
@@ -38,7 +60,9 @@ navigation, or presenting projected client-side state as fact.
    preserving the complete reward information.
 8. The header exposes an XP target on mobile as well as desktop. Presentation
    uses the current green, warm neutral, amber, rounded-panel, and topographic
-   vocabulary rather than mascots, candy styling, or juvenile copy.
+   vocabulary rather than mascots, candy styling, or juvenile copy. XP uses
+   the `Sparkles` glyph consistently across the product; the lightning-bolt
+   glyph is not used for XP.
 
 ## Authoritative response contract
 
@@ -78,8 +102,8 @@ rank, or achievement unlocks from Quest display data.
   reduced motion.
 - Applicable complete frontend and backend gates from `AGENTS.md`.
 - Real-browser inspection covers light/dark presentation, desktop, 320 px,
-  particle mounting, progression arrival, manual close, five-second close,
-  reduced motion, and horizontal overflow.
+  particle mounting and measured in-flight movement, progression arrival,
+  manual close, five-second close, reduced motion, and horizontal overflow.
 - One independent read-only review is required before commit readiness.
 
 ## Explicitly deferred

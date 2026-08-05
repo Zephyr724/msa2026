@@ -5,8 +5,8 @@ import {
   MapPin,
   Search,
   SlidersHorizontal,
+  Sparkles,
   X,
-  Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -497,7 +497,7 @@ function QuestMapResultList({
                   </span>
                 </button>
                 <span className="hidden items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300 sm:inline-flex">
-                  <Zap aria-hidden="true" className="size-3.5" />
+                  <Sparkles aria-hidden="true" className="size-3.5" />
                   {quest.xpAward} XP
                 </span>
                 {!hasCoordinates && (

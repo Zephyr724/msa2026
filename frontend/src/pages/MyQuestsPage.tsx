@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
-  Zap,
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PlayerStatusSummary from '../components/PlayerStatusSummary.tsx';
@@ -518,7 +517,7 @@ export default function MyQuestsPage() {
         <section className="kiwi-panel mt-10 flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent/15 text-warning">
-              <Zap aria-hidden="true" className="size-5" />
+              <Sparkles aria-hidden="true" className="size-5" />
             </span>
             <div>
               <h2 className="text-xl">Ready for another local action?</h2>
@@ -605,7 +604,7 @@ function QuestGrid({
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                      <Zap aria-hidden="true" className="size-3" />
+                      <Sparkles aria-hidden="true" className="size-3" />
                       {quest.xpAward} XP
                     </span>
                     <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${DIFFICULTY_TONES[quest.difficulty]}`}>

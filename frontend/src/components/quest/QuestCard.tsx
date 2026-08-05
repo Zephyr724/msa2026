@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, MapPin, Zap } from 'lucide-react';
+import { ArrowRight, CalendarDays, MapPin, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { QuestListItemDto } from '../../types/quest.ts';
 import {
@@ -55,12 +55,12 @@ export default function QuestCard({
             />
           </figure>
           {highlight && (
-            <span className={`absolute left-3 top-3 rounded-full border px-2.5 py-1 text-xs font-bold shadow-sm ${questHighlightTone(highlight)}`}>
+            <span className={`absolute left-3 top-3 inline-flex min-h-7 items-center rounded-md border px-2.5 py-1 text-xs font-extrabold leading-none shadow-md ${questHighlightTone(highlight)}`}>
               {highlight}
             </span>
           )}
           <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-extrabold text-amber-700 shadow-sm backdrop-blur dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-            <Zap aria-hidden="true" className="size-3.5" />
+            <Sparkles aria-hidden="true" className="size-3.5" />
             {quest.xpAward} XP
           </span>
           <span className="absolute -bottom-5 left-4 z-20 drop-shadow-md">

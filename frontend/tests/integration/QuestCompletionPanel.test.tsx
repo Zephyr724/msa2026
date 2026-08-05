@@ -238,7 +238,8 @@ describe('Participant quest completion panel', () => {
     expect(screen.queryByLabelText('Completion code')).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Quest completion reward' }))
       .toBeInTheDocument();
-    expect(screen.getByText('Congratulations — Quest complete!')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Congratulation' })).toBeInTheDocument();
+    expect(screen.getByText('Quest complete!')).toBeInTheDocument();
     expect(screen.getByText('Dated Stream Cleanup')).toBeInTheDocument();
     expect(screen.getByText('+50 XP')).toBeInTheDocument();
     expect(screen.getByText('220 total')).toBeInTheDocument();

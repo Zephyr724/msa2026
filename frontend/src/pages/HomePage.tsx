@@ -10,11 +10,11 @@ import {
   Map,
   MapPin,
   ShieldCheck,
+  Sparkles,
   Target,
   Trophy,
   TrendingUp,
   Users,
-  Zap,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import QuestCard from '../components/quest/QuestCard.tsx';
@@ -54,7 +54,7 @@ const loopSteps = [
   },
   {
     number: '04',
-    Icon: Zap,
+    Icon: Sparkles,
     title: 'Earn XP',
     description: 'Verified completions add server-authoritative XP and progression.',
   },

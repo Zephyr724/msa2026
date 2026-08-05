@@ -101,27 +101,27 @@ export function questHighlightTone(label: string): string {
   // Highlights originate from several workflow surfaces, so presentation is
   // selected from semantic wording instead of duplicating a second status enum.
   if (label.toLowerCase().includes('almost full')) {
-    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/70 dark:bg-amber-950/95 dark:text-amber-100';
   }
   if (label.toLowerCase().includes('recommend')) {
-    return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-700 dark:bg-violet-900/30 dark:text-violet-300';
+    return 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-400/70 dark:bg-violet-950/95 dark:text-violet-100';
   }
   if (label.toLowerCase().includes('first')) {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/70 dark:bg-emerald-950/95 dark:text-emerald-100';
   }
   if (
     label.toLowerCase().includes('ready')
     || label.toLowerCase().includes('completion available')
   ) {
-    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/70 dark:bg-amber-950/95 dark:text-amber-100';
   }
   if (label.toLowerCase().includes('not verified')) {
-    return 'border-red-200 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-400';
+    return 'border-red-200 bg-red-50 text-red-700 dark:border-red-400/70 dark:bg-red-950/95 dark:text-red-100';
   }
   if (label.toLowerCase().includes('cancelled')) {
-    return 'border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400';
+    return 'border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-500 dark:bg-zinc-950/95 dark:text-zinc-100';
   }
-  return 'border-primary/30 bg-primary/10 text-primary';
+  return 'border-primary/30 bg-primary/10 text-primary dark:border-primary/70 dark:bg-emerald-950/95 dark:text-emerald-100';
 }
 
 export function questDiscoveryHighlight(
