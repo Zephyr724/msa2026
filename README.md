@@ -154,6 +154,22 @@ CYPRESS_E2E_MEMBER_EMAIL=member1@kiwimpact.test \
 The command signs in through the real UI. It does not bypass authentication or
 place the password in tracked Cypress source.
 
+#### Development Reward Lab
+
+When the Vite frontend runs in Development, open
+`http://localhost:5173/dev/rewards` or use the flask icon in the desktop
+header. The Reward Lab requires no sign-in and previews every supported reward
+state: standard completion, level up, rank up, achievement unlock, combined
+reward, and reduced motion. Preview rewards are memory-only and do not change
+XP, Passport history, achievements, or leaderboard data. The route is absent
+from Production builds.
+
+Use the Lab first to verify manual close, five-second auto-dismiss, hover/focus
+pause, particle flight, light/dark themes, and a 320 px viewport. Then sign in
+as `member1@kiwimpact.test` with the ignored local `DemoAccounts:Password` and
+redeem a real organizer-issued Completion Code to verify the persisted,
+server-authoritative reward path.
+
 **Selected public endpoints:**
 
 | Endpoint | URL |

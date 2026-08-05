@@ -81,6 +81,29 @@ public sealed record MyQuestCompletionState(
     }
 }
 
+/// <summary>
+/// Server-authoritative progression on one side of a committed completion
+/// reward. Keeping both sides in the redemption result lets clients celebrate
+/// an actual level/rank transition without recreating progression rules.
+/// </summary>
+public sealed record CompletionRewardProgression(
+    long TotalXp,
+    int Level,
+    string RankTitle);
+
+public sealed record CompletionRewardAchievement(
+    Guid AchievementId,
+    string Code,
+    string Name);
+
+public sealed record CompletionRedemptionResult(
+    MyQuestCompletionState Completion,
+    Guid RewardEventId,
+    int XpAwarded,
+    CompletionRewardProgression PreviousProgression,
+    CompletionRewardProgression CurrentProgression,
+    IReadOnlyList<CompletionRewardAchievement> UnlockedAchievements);
+
 public sealed record EvidenceClaimInput(
     string? Description,
     string? EvidenceUrl,

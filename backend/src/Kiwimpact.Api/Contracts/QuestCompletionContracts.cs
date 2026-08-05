@@ -22,6 +22,26 @@ public sealed record MyQuestCompletionDto(
     string? CompletedAtUtc,
     string? VerifiedAtUtc);
 
+public sealed record CompletionRewardAchievementDto(
+    Guid AchievementId,
+    string Code,
+    string Name);
+
+public sealed record CompletionRewardDto(
+    Guid RewardEventId,
+    int XpAwarded,
+    long PreviousTotalXp,
+    long TotalXp,
+    int PreviousLevel,
+    int Level,
+    string PreviousRankTitle,
+    string RankTitle,
+    IReadOnlyList<CompletionRewardAchievementDto> UnlockedAchievements);
+
+public sealed record RedeemCompletionResultDto(
+    MyQuestCompletionDto Completion,
+    CompletionRewardDto Reward);
+
 public sealed class EvidenceClaimRequest
 {
     [Required, MaxLength(EvidenceClaimDetail.MaxDescriptionLength)]

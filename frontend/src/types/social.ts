@@ -38,6 +38,7 @@ export interface SocialCommentReplyDto {
   content: string;
   authorDisplayName: string;
   createdAtUtc: string;
+  canEdit: boolean;
 }
 
 export interface SocialCommentThreadDto {
@@ -46,6 +47,7 @@ export interface SocialCommentThreadDto {
   content: string;
   authorDisplayName: string;
   createdAtUtc: string;
+  canEdit: boolean;
   replies: SocialCommentReplyDto[];
   replyCount: number;
   hasMoreReplies: boolean;
@@ -57,7 +59,7 @@ export interface SocialLikeDto {
 }
 
 export interface CreateSocialPostInput {
-  questId: string;
+  questId: string | null;
   title: string;
   content: string;
   images: Array<{
@@ -72,6 +74,12 @@ export interface CreateSocialCommentInput {
   postId: string;
   content: string;
   parentCommentId: string | null;
+}
+
+export interface UpdateSocialCommentInput {
+  postId: string;
+  commentId: string;
+  content: string;
 }
 
 export type SocialPostPage = PagedResponse<SocialPostDto>;

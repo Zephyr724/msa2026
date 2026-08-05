@@ -24,6 +24,7 @@ public sealed class SocialFeedService : ISocialFeedService
         int page,
         int pageSize,
         Guid? viewerUserId,
+        bool mine,
         CancellationToken ct = default)
     {
         ValidatePage(page, pageSize, MaxPageSize);
@@ -40,12 +41,23 @@ public sealed class SocialFeedService : ISocialFeedService
             page,
             pageSize,
             viewerUserId,
+            mine,
             ct);
+    }
+
+    public Task<SocialPostItem> GetPostAsync(
+        Guid postId,
+        Guid? viewerUserId,
+        CancellationToken ct = default)
+    {
+        if (postId == Guid.Empty)
+            throw Error(SocialFeedError.NotFound, "Post not found.");
+        return _repository.GetPostAsync(postId, viewerUserId, ct);
     }
 
     public Task<SocialPostItem> CreatePostAsync(
         Guid authorUserId,
-        Guid questId,
+        Guid? questId,
         string title,
         string content,
         IReadOnlyList<SocialPostImageDetails> images,
@@ -140,6 +152,31 @@ public sealed class SocialFeedService : ISocialFeedService
                 parentCommentId,
                 content,
                 DateTimeOffset.UtcNow,
+                ct);
+        }
+        catch (ArgumentException exception)
+        {
+            throw Error(SocialFeedError.Validation, exception.Message);
+        }
+    }
+
+    public async Task<SocialCommentItem> UpdateCommentAsync(
+        Guid postId,
+        Guid commentId,
+        Guid actorUserId,
+        string content,
+        CancellationToken ct = default)
+    {
+        ValidateIdentifiers(postId, actorUserId);
+        if (commentId == Guid.Empty)
+            throw Error(SocialFeedError.NotFound, "Comment not found.");
+        try
+        {
+            return await _repository.UpdateCommentAsync(
+                postId,
+                commentId,
+                actorUserId,
+                content,
                 ct);
         }
         catch (ArgumentException exception)

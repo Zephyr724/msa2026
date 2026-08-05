@@ -10,11 +10,17 @@ public interface ISocialFeedService
         int page,
         int pageSize,
         Guid? viewerUserId,
+        bool mine,
+        CancellationToken ct = default);
+
+    Task<SocialPostItem> GetPostAsync(
+        Guid postId,
+        Guid? viewerUserId,
         CancellationToken ct = default);
 
     Task<SocialPostItem> CreatePostAsync(
         Guid authorUserId,
-        Guid questId,
+        Guid? questId,
         string title,
         string content,
         IReadOnlyList<SocialPostImageDetails> images,
@@ -50,6 +56,13 @@ public interface ISocialFeedService
         Guid postId,
         Guid authorUserId,
         Guid? parentCommentId,
+        string content,
+        CancellationToken ct = default);
+
+    Task<SocialCommentItem> UpdateCommentAsync(
+        Guid postId,
+        Guid commentId,
+        Guid actorUserId,
         string content,
         CancellationToken ct = default);
 }

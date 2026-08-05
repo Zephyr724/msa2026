@@ -251,6 +251,28 @@ internal static class DtoMapping
             state.VerifiedAtUtc?.ToString("O"));
     }
 
+    public static RedeemCompletionResultDto ToDto(
+        this CompletionRedemptionResult result)
+    {
+        return new RedeemCompletionResultDto(
+            result.Completion.ToDto(),
+            new CompletionRewardDto(
+                result.RewardEventId,
+                result.XpAwarded,
+                result.PreviousProgression.TotalXp,
+                result.CurrentProgression.TotalXp,
+                result.PreviousProgression.Level,
+                result.CurrentProgression.Level,
+                result.PreviousProgression.RankTitle,
+                result.CurrentProgression.RankTitle,
+                result.UnlockedAchievements
+                    .Select(achievement => new CompletionRewardAchievementDto(
+                        achievement.AchievementId,
+                        achievement.Code,
+                        achievement.Name))
+                    .ToArray()));
+    }
+
     public static MyProgressionDto ToDto(this MyProgressionState state)
     {
         return new MyProgressionDto(

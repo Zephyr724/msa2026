@@ -1,6 +1,7 @@
 import {
   ClipboardList,
   Compass,
+  FlaskConical,
   IdCard,
   LogIn,
   LogOut,
@@ -11,14 +12,17 @@ import {
   UserRoundCog,
   type LucideIcon,
 } from 'lucide-react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import BrandMark from '../components/BrandMark.tsx';
-import PlayerStatusCapsule from '../components/PlayerStatusCapsule.tsx';
+import PlayerStatusCapsule, {
+  RewardPreviewStatusCapsule,
+} from '../components/PlayerStatusCapsule.tsx';
 import ThemeSwitcher from '../components/ThemeSwitcher.tsx';
 import { useAuthQuery, useLogoutMutation } from '../hooks/useAuth.ts';
 import { useThemeSync } from '../hooks/useThemeSync.ts';
 import { useMyAchievementProfile } from '../hooks/useAchievements.ts';
 import { TrophyArtwork } from '../components/game/GameArtwork.tsx';
+import RewardFeedbackProvider from '../components/reward/RewardFeedbackProvider.tsx';
 
 interface NavigationItem {
   label: string;
@@ -42,14 +46,24 @@ const memberNavigation: NavigationItem[] = [
 
 export default function AppShell() {
   useThemeSync();
+  return (
+    <RewardFeedbackProvider>
+      <AppShellContent />
+    </RewardFeedbackProvider>
+  );
+}
+
+function AppShellContent() {
   const auth = useAuthQuery();
   const logout = useLogoutMutation();
+  const location = useLocation();
   const navigate = useNavigate();
   const canManageQuests = auth.data?.roles.some(
     (role) => role === 'Organizer' || role === 'Admin',
   );
   const isAdmin = auth.data?.roles.includes('Admin');
   const navigation = auth.data ? memberNavigation : publicNavigation;
+  const isRewardLab = import.meta.env.DEV && location.pathname === '/dev/rewards';
 
   async function handleLogout() {
     try {
@@ -104,7 +118,21 @@ export default function AppShell() {
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">
-            {auth.data && <PlayerStatusCapsule />}
+            {auth.data
+              ? <PlayerStatusCapsule />
+              : isRewardLab && <RewardPreviewStatusCapsule />}
+            {import.meta.env.DEV && (
+              <NavLink
+                aria-label="Open Reward Lab"
+                className={({ isActive }) =>
+                  `btn btn-ghost btn-sm btn-square hidden sm:inline-flex ${isActive ? 'btn-active' : ''}`
+                }
+                title="Reward Lab"
+                to="/dev/rewards"
+              >
+                <FlaskConical aria-hidden="true" className="size-4" />
+              </NavLink>
+            )}
             <ThemeSwitcher />
 
             {auth.isPending ? (
@@ -176,7 +204,12 @@ export default function AppShell() {
                   <LogIn aria-hidden="true" className="size-4" />
                   Sign in
                 </Link>
-                <Link className="btn btn-primary btn-sm rounded-full px-4" to="/register">
+                <Link
+                  className={`btn btn-primary btn-sm rounded-full px-4 ${
+                    isRewardLab ? 'hidden sm:inline-flex' : ''
+                  }`}
+                  to="/register"
+                >
                   Join free
                 </Link>
               </>

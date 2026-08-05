@@ -3,6 +3,7 @@ using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Repositories;
 using Kiwimpact.Core.Security;
 using Kiwimpact.Core.Services;
+using Kiwimpact.Core.Progression;
 using Kiwimpact.Infrastructure.Achievements;
 using Kiwimpact.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -140,7 +141,7 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
                 active.CreatedAt);
     }
 
-    public async Task<MyQuestCompletionState> RedeemAsync(
+    public async Task<CompletionRedemptionResult> RedeemAsync(
         Guid questId,
         Guid actorId,
         string? submittedCode,
@@ -212,10 +213,15 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
                 profile.HomeCommunityRegionId,
                 timestamp);
             var xp = XpTransaction.CreateFromVerifiedCompletion(completion);
+            var previousProgression = new CompletionRewardProgression(
+                profile.TotalXp,
+                profile.Level,
+                ProgressionRules.RankTitleFor(profile.Level));
             profile.ApplyXpAward(xp.XpAmount, timestamp);
             _db.QuestCompletions.Add(completion);
             _db.XpTransactions.Add(xp);
-            await _achievementAwards.StageMissingAutomaticAwardsAsync(
+            var unlockedDefinitions =
+                await _achievementAwards.StageMissingAutomaticAwardsAsync(
                 profile,
                 xp,
                 completion.QuestCategorySnapshot,
@@ -223,7 +229,21 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
 
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
-            return MyQuestCompletionState.FromCompletion(completion);
+            return new CompletionRedemptionResult(
+                MyQuestCompletionState.FromCompletion(completion),
+                xp.Id,
+                xp.XpAmount,
+                previousProgression,
+                new CompletionRewardProgression(
+                    profile.TotalXp,
+                    profile.Level,
+                    ProgressionRules.RankTitleFor(profile.Level)),
+                unlockedDefinitions
+                    .Select(definition => new CompletionRewardAchievement(
+                        definition.Id,
+                        definition.Code,
+                        definition.Name))
+                    .ToArray());
         }
         catch (DbUpdateException exception)
             when (exception.InnerException is PostgresException

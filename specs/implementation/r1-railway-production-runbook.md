@@ -140,11 +140,12 @@ showcase without enabling either Development demo flag:
    `Seed__DemoAccounts=false`.
 2. Set `Seed__AssessmentData=true` only after the matching migration pre-deploy
    has succeeded. The next application start atomically creates the 23-row
-   Auckland hierarchy, four additional New Zealand territorial-authority
-   locations, ten real provider-backed published Quests, and one credentialless
-   disabled ownership identity. Every Quest uses a project-owned cover and a
-   separately checked official provider URL; no provider image is copied.
-3. Verify the public Quest list returns ten assessment rows, dated items are
+   Auckland hierarchy, eight additional New Zealand territorial-authority
+   locations, thirty real provider-backed published Quests, and one credentialless
+   disabled ownership identity. The original ten Quests use project-owned covers;
+   the twenty city-coverage rows use credited Pexels stock photography with
+   source and licence metadata. No provider event image is copied.
+3. Verify the public Quest list returns thirty assessment rows, dated items are
    still current, the available map markers render, and each Quest Detail
    `Visit official source` action opens the expected council, DOC, or provider
    page. Re-check source facts immediately before deployment; do not publish a
@@ -233,7 +234,7 @@ using isolated Development accounts.
 - After Google sign-in, `/api/v1/users/me/streak` and the weekly Auckland people
   leaderboard return non-500 responses, proving the deployed image can resolve
   Auckland calendar boundaries.
-- Public Quest List and Map views expose the ten approved real-source assessment
+- Public Quest List and Map views expose the thirty approved real-source assessment
   rows; Quest Detail opens each official provider page, and map markers use the
   build-time restricted Google Maps key and Map ID.
 - All six private reviewer logins enforce their exact Member/Organizer/Admin

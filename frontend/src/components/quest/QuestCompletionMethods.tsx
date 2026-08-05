@@ -14,7 +14,6 @@ interface QuestCompletionMethodsProps {
   questTitle: string;
   registrationMode: QuestRegistrationMode | null;
   sourceType: QuestSourceType;
-  xpAward: number;
 }
 
 const METHOD_PRESENTATION = {
@@ -51,7 +50,6 @@ export default function QuestCompletionMethods({
   questTitle,
   registrationMode,
   sourceType,
-  xpAward,
 }: QuestCompletionMethodsProps) {
   const choices: CompletionChoice[] = [
     ...(sourceType === 'OrganizerOwned' && registrationMode === 'Native'
@@ -114,7 +112,6 @@ export default function QuestCompletionMethods({
             questId={questId}
             questTitle={questTitle}
             registrationMode={registrationMode}
-            xpAward={xpAward}
           />
         ) : (
           <TrustedCompletionPanel mode={selected} questId={questId} />

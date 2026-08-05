@@ -3,6 +3,7 @@ import {
   validateCompletionCodeStatus,
   validateGeneratedCompletionCode,
   validateMyQuestCompletion,
+  validateRedeemCompletionResult,
 } from '../../src/lib/validation/completionDto';
 
 const generated = {
@@ -37,6 +38,25 @@ const verifiedCompletion = {
   method: 'CompletionCode',
   completedAtUtc: '2026-07-25T09:00:00.0000000+00:00',
   verifiedAtUtc: '2026-07-25T09:00:00.000Z',
+};
+
+const redemptionResult = {
+  completion: verifiedCompletion,
+  reward: {
+    rewardEventId: '8f43bb27-89c7-4b12-8234-12c70f5d6395',
+    xpAwarded: 50,
+    previousTotalXp: 220,
+    totalXp: 270,
+    previousLevel: 4,
+    level: 5,
+    previousRankTitle: 'Novice',
+    rankTitle: 'Novice',
+    unlockedAchievements: [{
+      achievementId: 'ed2faa73-1947-4b4b-826a-af7384d4ed10',
+      code: 'verified-completions-3',
+      name: 'Building Momentum',
+    }],
+  },
 };
 
 describe('generated Completion Code DTO validation', () => {
@@ -175,6 +195,51 @@ describe('current-user completion state DTO validation', () => {
     expect(() => validateMyQuestCompletion({
       ...verifiedCompletion,
       verifiedAtUtc: null,
+    })).toThrow();
+  });
+});
+
+describe('completion reward DTO validation', () => {
+  it('accepts an exact authoritative before/after reward result', () => {
+    expect(validateRedeemCompletionResult(redemptionResult))
+      .toEqual(redemptionResult);
+  });
+
+  it('rejects inconsistent XP, invalid transitions and extra fields', () => {
+    expect(() => validateRedeemCompletionResult({
+      ...redemptionResult,
+      reward: { ...redemptionResult.reward, totalXp: 999 },
+    })).toThrow();
+    expect(() => validateRedeemCompletionResult({
+      ...redemptionResult,
+      reward: {
+        ...redemptionResult.reward,
+        previousLevel: 5,
+        level: 4,
+      },
+    })).toThrow();
+    expect(() => validateRedeemCompletionResult({
+      ...redemptionResult,
+      reward: { ...redemptionResult.reward, serverSecret: 'nope' },
+    })).toThrow();
+  });
+
+  it('rejects non-verified completion and malformed achievements', () => {
+    expect(() => validateRedeemCompletionResult({
+      ...redemptionResult,
+      completion: {
+        status: 'None',
+        method: null,
+        completedAtUtc: null,
+        verifiedAtUtc: null,
+      },
+    })).toThrow();
+    expect(() => validateRedeemCompletionResult({
+      ...redemptionResult,
+      reward: {
+        ...redemptionResult.reward,
+        unlockedAchievements: [{ name: 'Missing identity' }],
+      },
     })).toThrow();
   });
 });

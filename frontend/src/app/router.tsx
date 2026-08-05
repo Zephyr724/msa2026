@@ -22,6 +22,17 @@ import AdminReviewPage from '../pages/AdminReviewPage.tsx';
 import ShareCardBuilderPage from '../pages/ShareCardBuilderPage.tsx';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage.tsx';
 import CommunityPage from '../pages/CommunityPage.tsx';
+import SocialPostDetailPage from '../pages/SocialPostDetailPage.tsx';
+
+const developmentRoutes = import.meta.env.DEV
+  ? [{
+      path: '/dev/rewards',
+      lazy: async () => {
+        const module = await import('../pages/RewardLabPage.tsx');
+        return { Component: module.default };
+      },
+    }]
+  : [];
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +49,8 @@ export const router = createBrowserRouter([
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/leaderboard', element: <LeaderboardPage /> },
       { path: '/community', element: <CommunityPage /> },
+      { path: '/community/posts/:postId', element: <SocialPostDetailPage /> },
+      ...developmentRoutes,
       {
         element: <RequireAuth />,
         children: [

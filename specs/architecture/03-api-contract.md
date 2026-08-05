@@ -196,6 +196,37 @@
 | `PATCH` | `/api/v1/organizer/quests/{questId}/completion-codes/{codeId}/revoke` | Member+ | Organizer, Admin                                                            | Revoke a code.                                                                        |
 | `POST`  | `/api/v1/quests/{questId}/redeem`                                     | Member+ | Redeem a completion code. Creates Verified QuestCompletion + XpTransaction. |
 
+Successful redemption returns the committed completion and its authoritative
+reward in one exact-key envelope:
+
+```json
+{
+  "completion": {
+    "status": "Verified",
+    "method": "CompletionCode",
+    "completedAtUtc": "2026-08-05T00:00:00.0000000+00:00",
+    "verifiedAtUtc": "2026-08-05T00:00:00.0000000+00:00"
+  },
+  "reward": {
+    "rewardEventId": "00000000-0000-0000-0000-000000000000",
+    "xpAwarded": 50,
+    "previousTotalXp": 170,
+    "totalXp": 220,
+    "previousLevel": 3,
+    "level": 4,
+    "previousRankTitle": "Novice",
+    "rankTitle": "Novice",
+    "unlockedAchievements": []
+  }
+}
+```
+
+`rewardEventId` is the committed XP transaction ID and is suitable for
+client-side duplicate-feedback suppression. XP, level, rank, and newly awarded
+achievement summaries are calculated and committed by the backend; clients do
+not project rewards or recreate progression thresholds. Each unlocked
+achievement contains exactly `achievementId`, `code`, and `name`.
+
 **Important error conditions:**
 
 - Redeem: 400 if code invalid, expired, or revoked.
@@ -490,14 +521,16 @@ draft persistence, or moderation tooling.
 
 | Method | Route | Auth | Purpose |
 | ------ | ----- | ---- | ------- |
-| `GET` | `/api/v1/social/posts` | None | Newest-first post feed. Supports case-insensitive `search` over title, content, tags, related Quest title, and author display name, plus `page` (1–10,000) and `pageSize` (maximum 24). Guests see public posts; an authenticated viewer additionally sees their own hidden posts. |
-| `POST` | `/api/v1/social/posts` | Member+ | Publish `{ questId, title, content, images, tags, isHidden }`. The Quest must exist and be Published. Images are zero to nine ordered HTTPS URL/alternative-text pairs; tags are bounded and case-insensitively unique. |
+| `GET` | `/api/v1/social/posts` | None / Member+ for `mine=true` | Newest-first post feed. Supports case-insensitive `search` over title, content, tags, related Quest title, and author display name, plus `page` (1–10,000), `pageSize` (maximum 24), and authenticated `mine=true`. Guests see public posts; an authenticated viewer additionally sees their own hidden posts. `mine=true` returns only the caller's public and hidden posts. |
+| `GET` | `/api/v1/social/posts/{postId}` | None | Read one public post, or an owned hidden post. Inaccessible hidden posts return 404. |
+| `POST` | `/api/v1/social/posts` | Member+ | Publish `{ questId?, title, content, images, tags, isHidden }`. A related Quest is optional but strongly recommended; when supplied it must exist and be Published. Images are zero to nine ordered HTTPS URL/alternative-text pairs; tags are bounded and case-insensitively unique. |
 | `PATCH` | `/api/v1/social/posts/{postId}/visibility` | Member+ | Author-only switch of an existing published post between public and hidden. Returns the authoritative post. |
 | `DELETE` | `/api/v1/social/posts/{postId}` | Member+ | Author-only permanent deletion. Returns 204; owned images, tags, likes, and comments cascade. |
 | `PUT` | `/api/v1/social/posts/{postId}/like` | Member+ | Idempotently set the caller's like. Returns authoritative aggregate count and caller state. |
 | `DELETE` | `/api/v1/social/posts/{postId}/like` | Member+ | Idempotently remove the caller's like. Returns authoritative aggregate count and caller state. |
 | `GET` | `/api/v1/social/posts/{postId}/comments` | None | Page top-level comments (page 1–10,000; maximum 20 roots) and include at most the first 20 direct replies per root. Each root reports authoritative `replyCount` and `hasMoreReplies`. |
 | `POST` | `/api/v1/social/posts/{postId}/comments` | Member+ | Create a root comment or a direct reply using optional `parentCommentId`. |
+| `PATCH` | `/api/v1/social/posts/{postId}/comments/{commentId}` | Member+ | Author-only bounded content update for a root comment or direct reply. Returns the authoritative comment. |
 
 **Privacy and validation rules:**
 
@@ -508,10 +541,11 @@ draft persistence, or moderation tooling.
 - Post responses contain title, ordered images, tags, optional related-Quest
   summary, aggregate counts, viewer like state, author delete capability, and
   hidden state. They do not expose the author user ID.
-- New posts require a 1–120 character title, 1–2,000 character body, and a
-  related currently Published Quest. A post accepts at most nine images and ten
-  tags; image alternative text is required and bounded to 200 characters. The
-  Quest relationship remains historical context if that Quest later changes
+- New posts require a 1–120 character title and 1–2,000 character body. A
+  related Quest is optional but strongly recommended; when supplied it must be
+  currently Published. A post accepts at most nine images and ten tags; image
+  alternative text is required and bounded to 200 characters. A supplied Quest
+  relationship remains historical context if that Quest later changes
   lifecycle state.
 - Hidden is a published visibility state, not a draft. Only the author can see
   a hidden post in the feed or access its likes/comments. Other users and
@@ -521,6 +555,8 @@ draft persistence, or moderation tooling.
   becomes visible again after restoration.
 - A reply parent must exist on the same post and must be a top-level comment.
   Replying to a reply returns 400.
+- Comment thread and reply DTOs expose viewer-specific `canEdit` without
+  exposing the author user ID. Only the comment author can update content.
 - Reply previews are deliberately bounded to 20 per returned root so a public
   read cannot produce an unbounded response body. Slice 25 does not expose
   independent reply pagination.
@@ -558,7 +594,7 @@ draft persistence, or moderation tooling.
 | Role      | Abilities                                                                                                                                                              |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Guest     | Public quest discovery, leaderboards (Auckland/NZ), regions, achievements catalog and nationwide stats, community challenges, social feed and comments read            |
-| Member    | All Guest abilities + self-profile, participation, completion, Passport, achievements, trophy/cosmetic profile, Share Card, publish/like/comment/reply                 |
+| Member    | All Guest abilities + self-profile, participation, completion, Passport, achievements, trophy/cosmetic profile, Share Card, publish/like/comment/reply/edit-own-comment and My posts                 |
 | Organizer | All Member abilities + CRUD for owned quests, completion codes, images for owned quests                                                                                |
 | Admin     | All Organizer abilities + manage all quests, review claims, manage external sources, manage community challenges, manage regions                                     |
 
@@ -585,7 +621,7 @@ The following endpoints require rate limiting:
 | `/api/v1/auth/reset-password`      | 3     | per IP per 15 minutes |
 | `/api/v1/auth/resend-confirmation` | 3     | per IP per 15 minutes |
 | `POST /api/v1/social/posts`, `PATCH .../visibility`, `DELETE .../{postId}` | 6 shared | per authenticated user per minute |
-| `POST /api/v1/social/posts/{postId}/comments` | 30 | per authenticated user per minute |
+| `POST /api/v1/social/posts/{postId}/comments`, `PATCH .../comments/{commentId}` | 30 shared | per authenticated user per minute |
 | `PUT/DELETE /api/v1/social/posts/{postId}/like` | 120 | per authenticated user per minute |
 
 Exact rate limit values are initial defaults and may be tuned during implementation.

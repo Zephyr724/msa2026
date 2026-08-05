@@ -5,6 +5,7 @@ import {
   type CompletionCodeStatusDto,
   type GeneratedCompletionCodeDto,
   type MyQuestCompletionDto,
+  type RedeemCompletionResultDto,
 } from '../../types/completion';
 
 const statuses = new Set<string>(MY_COMPLETION_STATUSES);
@@ -90,6 +91,77 @@ export function validateMyQuestCompletion(payload: unknown): MyQuestCompletionDt
   }
 
   return payload as unknown as MyQuestCompletionDto;
+}
+
+export function validateRedeemCompletionResult(
+  payload: unknown,
+): RedeemCompletionResultDto {
+  if (
+    !isRecord(payload)
+    || !hasExactKeys(payload, ['completion', 'reward'])
+    || !isRecord(payload.reward)
+    || !hasExactKeys(payload.reward, [
+      'rewardEventId', 'xpAwarded', 'previousTotalXp', 'totalXp',
+      'previousLevel', 'level', 'previousRankTitle', 'rankTitle',
+      'unlockedAchievements',
+    ])
+    || !isUuid(payload.reward.rewardEventId)
+    || !isPositiveSafeInteger(payload.reward.xpAwarded)
+    || !isNonNegativeSafeInteger(payload.reward.previousTotalXp)
+    || !isNonNegativeSafeInteger(payload.reward.totalXp)
+    || payload.reward.totalXp
+      !== payload.reward.previousTotalXp + payload.reward.xpAwarded
+    || !isLevel(payload.reward.previousLevel)
+    || !isLevel(payload.reward.level)
+    || payload.reward.level < payload.reward.previousLevel
+    || typeof payload.reward.previousRankTitle !== 'string'
+    || payload.reward.previousRankTitle.trim().length === 0
+    || typeof payload.reward.rankTitle !== 'string'
+    || payload.reward.rankTitle.trim().length === 0
+    || !Array.isArray(payload.reward.unlockedAchievements)
+    || !payload.reward.unlockedAchievements.every(isRewardAchievement)
+  ) {
+    throw new Error('Completion reward response is not valid.');
+  }
+
+  validateMyQuestCompletion(payload.completion);
+  if ((payload.completion as Record<string, unknown>).status !== 'Verified') {
+    throw new Error('Completion reward response is not valid.');
+  }
+  return payload as unknown as RedeemCompletionResultDto;
+}
+
+function isRewardAchievement(value: unknown): boolean {
+  return isRecord(value)
+    && hasExactKeys(value, ['achievementId', 'code', 'name'])
+    && isUuid(value.achievementId)
+    && typeof value.code === 'string'
+    && value.code.trim().length > 0
+    && typeof value.name === 'string'
+    && value.name.trim().length > 0;
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(value);
+}
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return typeof value === 'number'
+    && Number.isSafeInteger(value)
+    && value >= 0;
+}
+
+function isPositiveSafeInteger(value: unknown): value is number {
+  return isNonNegativeSafeInteger(value) && value > 0;
+}
+
+function isLevel(value: unknown): value is number {
+  return typeof value === 'number'
+    && Number.isInteger(value)
+    && value >= 1
+    && value <= 99;
 }
 
 /** "None" carries no metadata; only Verified requires a verification timestamp. */

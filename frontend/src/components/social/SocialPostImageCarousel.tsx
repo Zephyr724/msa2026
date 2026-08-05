@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef, useState, type UIEvent } from 'react';
 import type { SocialPostImageDto } from '../../types/social';
 
-export default function SocialPostImageCarousel({ images }: { images: SocialPostImageDto[] }) {
+export default function SocialPostImageCarousel({ images, detail = false }: { images: SocialPostImageDto[]; detail?: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -29,12 +29,12 @@ export default function SocialPostImageCarousel({ images }: { images: SocialPost
     <div
       aria-label={`${images.length} post images`}
       aria-roledescription="carousel"
-      className="group relative overflow-hidden bg-base-200"
+      className={`group relative overflow-hidden bg-base-200 ${detail ? 'h-full' : ''}`}
       role="region"
     >
       <div
         aria-label="Image slides"
-        className="flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={`flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${detail ? 'aspect-[4/5] md:h-full md:aspect-auto' : 'aspect-[4/5]'}`}
         onScroll={handleScroll}
         ref={trackRef}
         role="group"

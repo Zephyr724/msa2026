@@ -1,0 +1,77 @@
+# Slice 30 — Community Post Discovery and Detail Correction
+
+- **Status:** Approved by explicit product-owner correction
+- **Approval date:** 2026-08-05
+- **Implementation owner:** Current Codex session
+- **Database migration:** Not required; this Slice changes reads, ownership
+  projections, comment content updates, routing, and presentation only.
+
+## Why this correction exists
+
+Slice 29 delivered the publishing fields and persistence model, but placed the
+full post, Quest card, author controls, likes, and comments directly inside
+each masonry card. The product owner rejected that information hierarchy and
+provided desktop and mobile Xiaohongshu references. This Slice supersedes the
+conflicting Community feed/card and comment-edit deferral in Slice 29.
+
+## Product contract
+
+1. Community is an image-first, responsive masonry discovery feed. A feed card
+   contains the cover image, post title, author, like count, and — when present
+   — one visually subordinate Related Quest title.
+2. Feed cards do not show the post body, tags, author management controls,
+   carousel controls, like controls, or comments.
+3. Clicking anywhere on a feed card opens `/community/posts/{postId}`. The feed
+   card does not navigate directly to a Quest.
+4. The opened post owns the full content hierarchy: ordered image carousel,
+   author and date, title, body, tags, optional Related Quest navigation,
+   likes, author visibility/deletion controls, and two-level comments.
+5. Desktop post detail is a modal-like two-column surface with media on the
+   left and scrollable content/discussion on the right. Mobile post detail is
+   a full-screen sequence of author header, media, content, Related Quest,
+   discussion, and a viewport-sticky engagement bar.
+6. Comments load only in post detail. The author of a root comment or direct
+   reply may edit its bounded text inline. Other users never receive that edit
+   capability, and backend ownership remains authoritative.
+7. Authenticated users can select `My posts` from Community. It lists only
+   their own public and hidden posts and preserves URL-owned search state.
+8. `New post` is a persistent floating action on the right side of Community,
+   above the mobile navigation when present. It is not part of the header or a
+   normal document-flow position. Activating it retains the Slice 29 composer.
+9. Related Quest remains optional but strongly recommended when publishing.
+   It remains subordinate in the feed and becomes navigable only in detail.
+10. Search, pagination, public/hidden privacy, multi-image publishing,
+    deletion, likes, two-level comments, CSRF, role authorization, actor rate
+    limits, and neutral public author projections retain their accepted rules.
+
+## API contract delta
+
+- `GET /api/v1/social/posts/{postId}` reads one public post, or an owned hidden
+  post. Inaccessible hidden posts fail closed as not found.
+- `GET /api/v1/social/posts?mine=true` requires authentication and returns only
+  the caller's own public and hidden posts.
+- `PATCH /api/v1/social/posts/{postId}/comments/{commentId}` updates a root or
+  reply owned by the caller, uses the existing comment rate-limit policy, and
+  requires antiforgery. Missing comments return 404; non-owners return 403.
+- Comment read DTOs expose `canEdit` without exposing internal user IDs.
+
+## Verification contract
+
+- Core unit coverage for normalized, bounded comment updates.
+- PostgreSQL/API coverage for single-post privacy, My posts isolation, comment
+  edit ownership, root/reply updates, authentication, antiforgery, and
+  unchanged hidden-post boundaries.
+- Frontend integration coverage for compact cards, whole-card navigation,
+  detail-only body/comments/Quest navigation, carousel, inline comment edit,
+  My posts, floating composer entry, and management controls.
+- Applicable complete frontend/backend gates from `AGENTS.md`.
+- Real-browser desktop and 390 px mobile inspection for layout, sticky/fixed
+  actions, close/back behavior, and horizontal overflow.
+- One independent Kimi K3 read-only review after implementation evidence.
+
+## Deferred
+
+- Comment deletion and edit history/timestamps.
+- Post editing and draft persistence.
+- Binary image upload, public profiles, follows, chat, notifications, and
+  recommendation ranking.

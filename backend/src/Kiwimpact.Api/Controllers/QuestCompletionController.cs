@@ -31,7 +31,7 @@ public sealed class QuestCompletionController : ControllerBase
     /// <summary>Redeem a Completion Code as the authenticated active participant.</summary>
     [HttpPost("{questId:guid}/redeem")]
     [EnableRateLimiting(CompletionCodeRateLimitPolicies.Redeem)]
-    [ProducesResponseType(typeof(MyQuestCompletionDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(RedeemCompletionResultDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]

@@ -5,6 +5,7 @@ import type {
   SocialLikeDto,
   SocialPostDto,
   SocialPostPage,
+  UpdateSocialCommentInput,
 } from '../../types/social';
 import {
   validateSocialCommentPage,
@@ -16,15 +17,27 @@ import { apiFetch } from './apiFetch';
 
 export async function fetchSocialPosts(
   search: string,
+  mine: boolean,
   page: number,
   pageSize = 12,
   signal?: AbortSignal,
 ): Promise<SocialPostPage> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (search) params.set('search', search);
+  if (mine) params.set('mine', 'true');
   return validateSocialPostPage(
     await apiFetch<unknown>(`/v1/social/posts?${params.toString()}`, { signal }),
   );
+}
+
+export async function fetchSocialPost(
+  postId: string,
+  signal?: AbortSignal,
+): Promise<SocialPostDto> {
+  return validateSocialPost(await apiFetch<unknown>(
+    `/v1/social/posts/${encodeURIComponent(postId)}`,
+    { signal },
+  ));
 }
 
 export async function createSocialPost(
@@ -99,6 +112,20 @@ export async function createSocialComment(
         content: input.content,
         parentCommentId: input.parentCommentId,
       }),
+      signal,
+    },
+  );
+}
+
+export async function updateSocialComment(
+  input: UpdateSocialCommentInput,
+  signal?: AbortSignal,
+): Promise<void> {
+  await apiFetch<unknown>(
+    `/v1/social/posts/${encodeURIComponent(input.postId)}/comments/${encodeURIComponent(input.commentId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ content: input.content }),
       signal,
     },
   );

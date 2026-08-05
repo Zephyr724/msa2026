@@ -24,12 +24,18 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         int page,
         int pageSize,
         Guid? viewerUserId,
+        bool mine,
         CancellationToken ct = default)
     {
         var query = _db.SocialPosts
             .AsNoTracking()
             .Where(post => !post.IsHidden ||
                 (viewerUserId.HasValue && post.AuthorUserId == viewerUserId.Value));
+        if (mine)
+        {
+            query = query.Where(post =>
+                viewerUserId.HasValue && post.AuthorUserId == viewerUserId.Value);
+        }
         if (search is not null)
         {
             var pattern = $"%{EscapeLikePattern(search)}%";
@@ -61,20 +67,36 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
             pageSize);
     }
 
+    public async Task<SocialPostItem> GetPostAsync(
+        Guid postId,
+        Guid? viewerUserId,
+        CancellationToken ct = default)
+    {
+        var query = _db.SocialPosts
+            .AsNoTracking()
+            .Where(post => post.Id == postId &&
+                (!post.IsHidden ||
+                    (viewerUserId.HasValue && post.AuthorUserId == viewerUserId.Value)));
+        var row = await ProjectPosts(query, viewerUserId).SingleOrDefaultAsync(ct);
+        if (row is null)
+            throw Error(SocialFeedError.NotFound, "Post not found.");
+        return (await HydratePostItemsAsync([row], ct)).Single();
+    }
+
     public async Task<SocialPostItem> AddPostAsync(
         SocialPost post,
         Guid viewerUserId,
         CancellationToken ct = default)
     {
-        if (!post.QuestId.HasValue || !await _db.Quests
-                .AsNoTracking()
-                .AnyAsync(
-                    quest => quest.Id == post.QuestId.Value && quest.Status == QuestStatus.Published,
-                    ct))
+        if (post.QuestId.HasValue && !await _db.Quests
+            .AsNoTracking()
+            .AnyAsync(
+                quest => quest.Id == post.QuestId.Value && quest.Status == QuestStatus.Published,
+                ct))
         {
             throw Error(
                 SocialFeedError.Validation,
-                "Choose a published Quest to link to this post.");
+                "The related Quest must exist and be published.");
         }
 
         _db.SocialPosts.Add(post);
@@ -188,7 +210,7 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
             .Where(comment =>
                 comment.PostId == postId && comment.ParentCommentId == null);
         var totalCount = await roots.CountAsync(ct);
-        var rootRows = await ProjectComments(roots)
+        var rootRows = await ProjectComments(roots, viewerUserId)
             .OrderBy(comment => comment.CreatedAt)
             .ThenBy(comment => comment.Id)
             .Skip((page - 1) * pageSize)
@@ -256,7 +278,8 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
                         replyAuthorNames.GetValueOrDefault(
                             comment.AuthorUserId,
                             MissingAuthorDisplayName),
-                        comment.CreatedAt))
+                        comment.CreatedAt,
+                        viewerUserId.HasValue && comment.AuthorUserId == viewerUserId.Value))
                     .ToArray());
 
         var threads = rootRows
@@ -318,7 +341,37 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         await _db.SaveChangesAsync(ct);
 
         var row = await ProjectComments(
-                _db.SocialComments.AsNoTracking().Where(item => item.Id == comment.Id))
+                _db.SocialComments.AsNoTracking().Where(item => item.Id == comment.Id),
+                authorUserId)
+            .SingleAsync(ct);
+        return ToCommentItem(row);
+    }
+
+    public async Task<SocialCommentItem> UpdateCommentAsync(
+        Guid postId,
+        Guid commentId,
+        Guid actorUserId,
+        string content,
+        CancellationToken ct = default)
+    {
+        if (!await _db.SocialPosts.AsNoTracking().AnyAsync(
+                post => post.Id == postId &&
+                    (!post.IsHidden || post.AuthorUserId == actorUserId),
+                ct))
+            throw Error(SocialFeedError.NotFound, "Post not found.");
+
+        var comment = await _db.SocialComments
+            .SingleOrDefaultAsync(item => item.Id == commentId && item.PostId == postId, ct);
+        if (comment is null)
+            throw Error(SocialFeedError.NotFound, "Comment not found.");
+        if (comment.AuthorUserId != actorUserId)
+            throw Error(SocialFeedError.Forbidden, "Only the comment author can edit it.");
+
+        comment.UpdateContent(content);
+        await _db.SaveChangesAsync(ct);
+        var row = await ProjectComments(
+                _db.SocialComments.AsNoTracking().Where(item => item.Id == comment.Id),
+                actorUserId)
             .SingleAsync(ct);
         return ToCommentItem(row);
     }
@@ -421,7 +474,8 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
     }
 
     private IQueryable<SocialCommentProjection> ProjectComments(
-        IQueryable<SocialComment> query)
+        IQueryable<SocialComment> query,
+        Guid? viewerUserId)
     {
         return query.Select(comment => new SocialCommentProjection
         {
@@ -434,6 +488,7 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
                 .Select(profile => profile.DisplayName)
                 .FirstOrDefault() ?? MissingAuthorDisplayName,
             CreatedAt = comment.CreatedAt,
+            CanEdit = viewerUserId.HasValue && comment.AuthorUserId == viewerUserId.Value,
         });
     }
 
@@ -471,7 +526,8 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
             comment.ParentCommentId,
             comment.Content,
             comment.AuthorDisplayName,
-            comment.CreatedAt);
+            comment.CreatedAt,
+            comment.CanEdit);
 
     private static string EscapeLikePattern(string value) =>
         value.Replace(@"\", @"\\", StringComparison.Ordinal)
@@ -511,5 +567,6 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         public string Content { get; init; } = string.Empty;
         public string AuthorDisplayName { get; init; } = string.Empty;
         public DateTimeOffset CreatedAt { get; init; }
+        public bool CanEdit { get; init; }
     }
 }

@@ -399,7 +399,7 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 |--------|------|-------------|
 | `Id` | `uuid` | PK, not null |
 | `AuthorUserId` | `uuid` | Not null. FK → `AspNetUsers.Id`. Cascade delete. |
-| `QuestId` | `uuid?` | Nullable only for posts created before Slice 29. FK → `Quest.Id`. Restrict delete. Every new post must reference a currently Published Quest. |
+| `QuestId` | `uuid?` | Optional. FK → `Quest.Id`. Restrict delete. When supplied for a new post, it must reference a currently Published Quest. |
 | `Title` | `text` (max 120) | Not null, non-blank after application normalization. Existing rows are backfilled from the first 120 characters of Content. |
 | `Content` | `text` (max 2000) | Not null, non-blank after application normalization. |
 | `ImageUrl` | `text` (max 2048) | Nullable legacy compatibility column. New writes use `SocialPostImage`. |
@@ -408,10 +408,11 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 | `CreatedAt` | `timestamp with time zone` | Not null, immutable. |
 | `UpdatedAt` | `timestamp with time zone` | Not null. Advances when the author changes visibility. |
 
-New posts require a currently Published Quest at the application/repository
-boundary. The nullable database column preserves existing posts without
-inventing a relationship. Later Quest lifecycle changes do not erase the
-historical post relationship. A hidden post is readable only by its author;
+Related Quest is optional but strongly recommended. When supplied, the
+application/repository boundary requires a currently Published Quest. The
+nullable database column also preserves existing posts without inventing a
+relationship. Later Quest lifecycle changes do not erase a historical post
+relationship. A hidden post is readable only by its author;
 other viewers receive the same not-found boundary for feed, like, and comment
 access. Existing likes/comments remain stored while hidden and reappear if the
 author restores the post.
@@ -549,9 +550,9 @@ The code-only achievement evaluator and presentation enums are
 | UserAchievement | The Member (self) | Self read; System awards |
 | CommunityChallenge | Admin | Guest and Member: public aggregate read. Admin: create and manage. Organizer: no special management privilege beyond public/member read. Private personal contribution data remains available only to the owning Member through Passport endpoints. |
 | Region | System (seed) | Public read (active only); Admin manages seed |
-| SocialPost | Author for creation, visibility, and deletion; public read | Authenticated Member+ creates against a Published Quest. Only the author changes public/hidden visibility or deletes. Hidden posts are author-only. API never returns the internal author user ID. |
+| SocialPost | Author for creation, visibility, and deletion; public read | Authenticated Member+ creates with an optional related Quest; when supplied, it must currently be Published. Only the author changes public/hidden visibility or deletes. Hidden posts are author-only. API never returns the internal author user ID. |
 | SocialPostLike | The Member (self) | Authenticated user sets/removes only their own like; public responses expose aggregate count only. |
-| SocialComment | Author for creation; public read | Authenticated Member+ creates roots/direct replies. Editing/deletion are outside Slice 25. API never returns the internal author user ID. |
+| SocialComment | Author for creation and content update; public read | Authenticated Member+ creates roots/direct replies and may edit only their own bounded comment content. Deletion remains deferred. API returns viewer-specific `canEdit` but never the internal author user ID. |
 
 ## 7. Transaction Boundaries
 
@@ -624,8 +625,8 @@ comments) was explicitly approved on 2026-07-31 and is no longer deferred.
 13. If exceptional internal data damage leaves a social author without a
     `UserProfile`, public social reads use the neutral `Community member`
     display label instead of exposing an identifier or failing the whole page.
-14. New social posts require a currently Published Quest, a title, and a body.
-    Nullable `QuestId` exists only to preserve legacy rows safely.
+14. New social posts require a title and body. Related Quest is optional but
+    strongly recommended; when supplied, it must currently be Published.
 15. Hidden posts are published records visible only to their author. Other
     viewers cannot discover, like, read comments, or add comments to them.
 

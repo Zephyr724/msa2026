@@ -39,7 +39,8 @@ public sealed class AchievementAwardService
     /// The staged completion's immutable category. Required exactly when
     /// <paramref name="stagedXp"/> is supplied.
     /// </param>
-    public async Task<int> StageMissingAutomaticAwardsAsync(
+    public async Task<IReadOnlyList<AchievementDefinition>>
+        StageMissingAutomaticAwardsAsync(
         UserProfile profile,
         XpTransaction? stagedXp,
         QuestCategory? stagedCategory,
@@ -123,7 +124,11 @@ public sealed class AchievementAwardService
 
         profile.MarkAchievementsEvaluated(
             AchievementCatalog.CurrentEvaluationVersion);
-        return awards.Count;
+        var definitionsById = activeDefinitions.ToDictionary(
+            definition => definition.Id);
+        return awards
+            .Select(award => definitionsById[award.AchievementId])
+            .ToArray();
     }
 
     /// <summary>
@@ -180,7 +185,7 @@ public sealed class AchievementAwardService
                 ct);
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
-            return staged;
+            return staged.Count;
         }
         catch
         {

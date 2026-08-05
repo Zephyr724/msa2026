@@ -33,7 +33,7 @@ public sealed class QuestCompletionService : IQuestCompletionService
         return _repository.GetCodeStatusAsync(questId, actorId, isAdmin, ct);
     }
 
-    public Task<MyQuestCompletionState> RedeemAsync(
+    public Task<CompletionRedemptionResult> RedeemAsync(
         Guid questId,
         Guid actorId,
         string? submittedCode,

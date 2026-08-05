@@ -54,7 +54,8 @@ public sealed record SocialCommentItem(
     Guid? ParentCommentId,
     string Content,
     string AuthorDisplayName,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    bool CanEdit);
 
 public sealed record SocialCommentThread(
     SocialCommentItem Comment,

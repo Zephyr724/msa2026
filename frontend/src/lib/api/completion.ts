@@ -5,11 +5,13 @@ import type {
   EvidenceClaimSummary,
   GeneratedCompletionCodeDto,
   MyQuestCompletionDto,
+  RedeemCompletionResultDto,
 } from '../../types/completion';
 import {
   validateCompletionCodeStatus,
   validateGeneratedCompletionCode,
   validateMyQuestCompletion,
+  validateRedeemCompletionResult,
 } from '../validation/completionDto';
 import { apiFetch } from './apiFetch';
 
@@ -57,13 +59,13 @@ export async function redeemCompletionCode(
   questId: string,
   code: string,
   signal?: AbortSignal,
-): Promise<MyQuestCompletionDto> {
+): Promise<RedeemCompletionResultDto> {
   const payload = await apiFetch<unknown>(`${questPath(questId)}/redeem`, {
     method: 'POST',
     body: JSON.stringify({ code }),
     signal,
   });
-  return validateMyQuestCompletion(payload);
+  return validateRedeemCompletionResult(payload);
 }
 
 export function submitEvidenceClaim(

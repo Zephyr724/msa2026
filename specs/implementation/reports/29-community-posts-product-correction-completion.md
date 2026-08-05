@@ -14,15 +14,21 @@ applicable automated gates were rerun against the recovered files on
 2026-08-05; the current results below supersede the earlier intermittent full-
 suite observation.
 
+The product owner then corrected Related Quest from required to optional but
+strongly recommended. That delta is implemented without another migration:
+`QuestId` was already nullable, unlinked writes now persist null, and a supplied
+Quest must still exist and be Published.
+
 ## Implemented scope
 
 - Replaced the permanently visible Community composer with one `New post`
   button and a controlled responsive dialog: mobile bottom sheet and desktop
   modal, including Escape/backdrop close, pending protection, focus return,
   visible validation, and retry state.
-- Added required post title and required related Quest. The composer searches
-  Published Quests and the backend independently rejects a missing,
-  non-existent, or non-Published Quest.
+- Added required post title plus an optional but strongly recommended related
+  Quest. The composer searches Published Quests without blocking unlinked
+  publishing, and the backend independently rejects a supplied non-existent or
+  non-Published Quest.
 - Added zero to nine ordered HTTPS image URL plus alternative-text pairs with
   previews, add/remove controls, and backend-authoritative validation.
 - Added up to ten bounded tags with case-insensitive per-post deduplication.
@@ -135,22 +141,37 @@ suite observation.
 | Focused `MigrationSmokeTests` selection | Passed: 4 of 4 tests, including first-image preservation on downgrade |
 | `git diff --check` | Passed |
 
+### Optional Related Quest correction
+
+| Command or check | Observed result |
+| --- | --- |
+| `npm run lint` | Passed |
+| `npm run type-check` | Passed |
+| `npm run test -- --run tests/integration/CommunityPage.test.tsx` | Passed: 1 file, 11 tests |
+| Focused social domain unit selection | Passed: 10 of 10 tests |
+| Focused `SocialFeedApiTests` selection | Passed: 8 of 8 tests; null Quest accepted and supplied Draft/nonexistent Quests rejected |
+| `dotnet build Kiwimpact.slnx` | Passed: 0 errors; 5 existing EF1002 warnings in unrelated integration-test source |
+| `git diff --check` | Passed |
+
 ### Applicable complete gates
 
 | Command or check | Observed result |
 | --- | --- |
 | `npm run lint` | Passed |
 | `npm run type-check` | Passed |
-| `npm run test -- --run` | Passed: 49 files, 392 tests |
+| `npm run test -- --run` | Passed: 49 files, 393 tests |
 | `npm run build` | Passed; Vite retained the existing main-chunk size advisory |
 | `dotnet build Kiwimpact.slnx` | Passed: 0 errors; 5 existing EF1002 warnings in unrelated integration-test source |
 | `dotnet test tests/Kiwimpact.UnitTests/Kiwimpact.UnitTests.csproj --no-build` | Passed: 307 tests |
 | `dotnet test tests/Kiwimpact.IntegrationTests/Kiwimpact.IntegrationTests.csproj --no-build` | Passed: 342 tests |
 | `git diff --check` | Passed before evidence generation and again after review/corrections |
 
-The recovery run also repeated the focused Community test (10/10), social API
-selection (8/8), migration smoke selection (4/4), social domain selection
-(10/10), lint, type-check, and diff whitespace check successfully.
+The initial recovery run repeated the focused Community test (10/10), social
+API selection (8/8), migration smoke selection (4/4), social domain selection
+(10/10), lint, type-check, and diff whitespace check successfully. The later
+optional-Quest correction increased the focused Community coverage to 11/11
+and the complete frontend count to 393/393; the full backend counts remained
+307/307 unit and 342/342 integration tests.
 
 ## Real-browser evidence
 
@@ -185,10 +206,11 @@ successfully and the Community observations above were unaffected.
 - Images remain URL-based and load directly from their HTTPS origins. Binary
   upload, object storage, proxying, moderation, and URL availability guarantees
   are outside this Slice.
-- Legacy posts may have no related Quest because the safe migration does not
-  invent relationships. Every new post requires a currently Published Quest.
-- A Quest is checked as Published when a post is created. Its relationship is
-  retained as historical post context if the Quest later changes status.
+- Posts may have no related Quest. The composer strongly recommends the
+  relationship but permits publishing without it.
+- When supplied, a Quest is checked as Published when a post is created. Its
+  relationship is retained as historical post context if the Quest later
+  changes status.
 - Hiding preserves existing likes/comments while making the post and those
   operations unavailable to non-authors; restoring makes that engagement
   visible again.
@@ -229,5 +251,10 @@ the original Major:
 
 The recovered branch received a bounded read-only K3 recovery-integrity
 confirmation: parity confirmed, M1 closed, no original Blocker/Major correction
-missing, and targeted recovery verdict approved. Slice 29 is ready for a commit
-decision.
+missing, and targeted recovery verdict approved.
+
+The later optional-Quest product delta received its own bounded read-only K3
+review: 0 Blocker, 0 Major, 2 Minor, **APPROVED WITH MINORS**. Both Minors were
+corrected in the single concentrated pass and the affected social API selection
+passed 8 of 8. No Blocker/Major closure check was required. Slice 29 is ready
+for a commit decision.
