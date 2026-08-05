@@ -10,9 +10,9 @@ import {
   REGISTRATION_TONES,
   SOURCE_LABELS,
   SOURCE_TONES,
-  questHighlightTone,
 } from '../../lib/questPresentation.ts';
 import CategoryEmblem from './CategoryEmblem.tsx';
+import QuestHighlightBadge from './QuestHighlightBadge.tsx';
 import QuestImage from './QuestImage.tsx';
 
 interface QuestCardProps {
@@ -55,9 +55,7 @@ export default function QuestCard({
             />
           </figure>
           {highlight && (
-            <span className={`absolute left-3 top-3 inline-flex min-h-7 items-center rounded-md border px-2.5 py-1 text-xs font-extrabold leading-none shadow-md ${questHighlightTone(highlight)}`}>
-              {highlight}
-            </span>
+            <QuestHighlightBadge label={highlight} />
           )}
           <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-extrabold text-amber-700 shadow-sm backdrop-blur dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
             <Sparkles aria-hidden="true" className="size-3.5" />
@@ -109,13 +107,15 @@ export default function QuestCard({
             )}
           </div>
 
-          <div className="mt-auto flex items-center justify-between border-t border-base-300 pt-3">
-            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${SOURCE_TONES[quest.sourceType]}`}>
-              {SOURCE_LABELS[quest.sourceType]}
-            </span>
-            <span className="inline-flex items-center gap-1 text-sm font-bold text-primary">
-              View <ArrowRight aria-hidden="true" className="size-4" />
-            </span>
+          <div className="mt-auto pt-4">
+            <div className="flex items-center justify-between border-t border-base-300 pt-3">
+              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${SOURCE_TONES[quest.sourceType]}`}>
+                {SOURCE_LABELS[quest.sourceType]}
+              </span>
+              <span className="inline-flex items-center gap-1 text-sm font-bold text-primary">
+                View <ArrowRight aria-hidden="true" className="size-4" />
+              </span>
+            </div>
           </div>
         </div>
       </article>
