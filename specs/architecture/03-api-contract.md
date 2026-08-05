@@ -483,13 +483,17 @@ Share Card rules enforced by the data returned:
 ### 2.18 Social Posts Feed
 
 This bounded endpoint group was explicitly approved by the product owner on
-2026-07-31. It does not add public profiles, follows, friends, chat,
-notifications, file upload, or moderation tooling.
+2026-07-31 and corrected on 2026-08-04 by
+`specs/implementation/29-community-posts-product-correction.md`. It does not
+add public profiles, follows, friends, chat, notifications, binary file upload,
+draft persistence, or moderation tooling.
 
 | Method | Route | Auth | Purpose |
 | ------ | ----- | ---- | ------- |
-| `GET` | `/api/v1/social/posts` | None | Newest-first post feed. Supports case-insensitive `search` over content and author display name, plus `page` (1–10,000) and `pageSize` (maximum 24). |
-| `POST` | `/api/v1/social/posts` | Member+ | Publish required text with optional HTTPS image URL and required alternative text. |
+| `GET` | `/api/v1/social/posts` | None | Newest-first post feed. Supports case-insensitive `search` over title, content, tags, related Quest title, and author display name, plus `page` (1–10,000) and `pageSize` (maximum 24). Guests see public posts; an authenticated viewer additionally sees their own hidden posts. |
+| `POST` | `/api/v1/social/posts` | Member+ | Publish `{ questId, title, content, images, tags, isHidden }`. The Quest must exist and be Published. Images are zero to nine ordered HTTPS URL/alternative-text pairs; tags are bounded and case-insensitively unique. |
+| `PATCH` | `/api/v1/social/posts/{postId}/visibility` | Member+ | Author-only switch of an existing published post between public and hidden. Returns the authoritative post. |
+| `DELETE` | `/api/v1/social/posts/{postId}` | Member+ | Author-only permanent deletion. Returns 204; owned images, tags, likes, and comments cascade. |
 | `PUT` | `/api/v1/social/posts/{postId}/like` | Member+ | Idempotently set the caller's like. Returns authoritative aggregate count and caller state. |
 | `DELETE` | `/api/v1/social/posts/{postId}/like` | Member+ | Idempotently remove the caller's like. Returns authoritative aggregate count and caller state. |
 | `GET` | `/api/v1/social/posts/{postId}/comments` | None | Page top-level comments (page 1–10,000; maximum 20 roots) and include at most the first 20 direct replies per root. Each root reports authoritative `replyCount` and `hasMoreReplies`. |
@@ -501,6 +505,20 @@ notifications, file upload, or moderation tooling.
   Community, evidence, claim data, or other private profile fields.
 - If an internal author profile is exceptionally absent, public responses use
   the neutral `Community member` display label.
+- Post responses contain title, ordered images, tags, optional related-Quest
+  summary, aggregate counts, viewer like state, author delete capability, and
+  hidden state. They do not expose the author user ID.
+- New posts require a 1–120 character title, 1–2,000 character body, and a
+  related currently Published Quest. A post accepts at most nine images and ten
+  tags; image alternative text is required and bounded to 200 characters. The
+  Quest relationship remains historical context if that Quest later changes
+  lifecycle state.
+- Hidden is a published visibility state, not a draft. Only the author can see
+  a hidden post in the feed or access its likes/comments. Other users and
+  guests receive 404 for hidden-post like/comment reads or writes. Only the
+  author can restore visibility or delete the post; non-authors receive 403 on
+  those ownership endpoints. Existing engagement is retained while hidden and
+  becomes visible again after restoration.
 - A reply parent must exist on the same post and must be a top-level comment.
   Replying to a reply returns 400.
 - Reply previews are deliberately bounded to 20 per returned root so a public
@@ -508,8 +526,8 @@ notifications, file upload, or moderation tooling.
   independent reply pagination.
 - Post content is 1–2000 characters after trimming. Comment content is
   1–1000 characters after trimming. Search is at most 100 characters.
-- Optional image URLs must be absolute HTTPS URLs without embedded
-  credentials. Alternative text is required exactly when an image is present.
+- Image URLs must be absolute HTTPS URLs without embedded credentials.
+  Alternative text is required for every image.
 - All writes require the existing antiforgery token and actor-partitioned rate
   limiting. Anonymous writes return 401.
 - The backend does not fetch, proxy, upload, or moderate linked images.
@@ -566,7 +584,7 @@ The following endpoints require rate limiting:
 | `/api/v1/auth/forgot-password`     | 3     | per IP per 15 minutes |
 | `/api/v1/auth/reset-password`      | 3     | per IP per 15 minutes |
 | `/api/v1/auth/resend-confirmation` | 3     | per IP per 15 minutes |
-| `POST /api/v1/social/posts` | 6 | per authenticated user per minute |
+| `POST /api/v1/social/posts`, `PATCH .../visibility`, `DELETE .../{postId}` | 6 shared | per authenticated user per minute |
 | `POST /api/v1/social/posts/{postId}/comments` | 30 | per authenticated user per minute |
 | `PUT/DELETE /api/v1/social/posts/{postId}/like` | 120 | per authenticated user per minute |
 

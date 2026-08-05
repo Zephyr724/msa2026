@@ -38,6 +38,31 @@ export async function createSocialPost(
   }));
 }
 
+export async function deleteSocialPost(
+  postId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await apiFetch<unknown>(`/v1/social/posts/${encodeURIComponent(postId)}`, {
+    method: 'DELETE',
+    signal,
+  });
+}
+
+export async function setSocialPostVisibility(
+  postId: string,
+  isHidden: boolean,
+  signal?: AbortSignal,
+): Promise<SocialPostDto> {
+  return validateSocialPost(await apiFetch<unknown>(
+    `/v1/social/posts/${encodeURIComponent(postId)}/visibility`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ isHidden }),
+      signal,
+    },
+  ));
+}
+
 export async function setSocialPostLike(
   postId: string,
   isLiked: boolean,

@@ -1,3 +1,4 @@
+using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Queries;
 
 namespace Kiwimpact.Core.Services;
@@ -13,9 +14,23 @@ public interface ISocialFeedService
 
     Task<SocialPostItem> CreatePostAsync(
         Guid authorUserId,
+        Guid questId,
+        string title,
         string content,
-        string? imageUrl,
-        string? imageAltText,
+        IReadOnlyList<SocialPostImageDetails> images,
+        IReadOnlyList<string> tags,
+        bool isHidden,
+        CancellationToken ct = default);
+
+    Task DeletePostAsync(
+        Guid postId,
+        Guid actorUserId,
+        CancellationToken ct = default);
+
+    Task<SocialPostItem> SetPostVisibilityAsync(
+        Guid postId,
+        Guid actorUserId,
+        bool isHidden,
         CancellationToken ct = default);
 
     Task<SocialLikeState> SetLikeAsync(
@@ -28,6 +43,7 @@ public interface ISocialFeedService
         Guid postId,
         int page,
         int pageSize,
+        Guid? viewerUserId,
         CancellationToken ct = default);
 
     Task<SocialCommentItem> CreateCommentAsync(

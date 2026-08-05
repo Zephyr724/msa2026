@@ -1,4 +1,5 @@
 using Kiwimpact.Core.Entities;
+using Kiwimpact.Core.Enums;
 using Kiwimpact.Core.Queries;
 using Kiwimpact.Core.Repositories;
 using Kiwimpact.Core.Services;
@@ -25,12 +26,20 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         Guid? viewerUserId,
         CancellationToken ct = default)
     {
-        var query = _db.SocialPosts.AsNoTracking().AsQueryable();
+        var query = _db.SocialPosts
+            .AsNoTracking()
+            .Where(post => !post.IsHidden ||
+                (viewerUserId.HasValue && post.AuthorUserId == viewerUserId.Value));
         if (search is not null)
         {
             var pattern = $"%{EscapeLikePattern(search)}%";
             query = query.Where(post =>
+                EF.Functions.ILike(post.Title, pattern, @"\") ||
                 EF.Functions.ILike(post.Content, pattern, @"\") ||
+                _db.SocialPostTags.Any(tag =>
+                    tag.PostId == post.Id && EF.Functions.ILike(tag.Name, pattern, @"\")) ||
+                _db.Quests.Any(quest =>
+                    quest.Id == post.QuestId && EF.Functions.ILike(quest.Title, pattern, @"\")) ||
                 _db.UserProfiles.Any(profile =>
                     profile.Id == post.AuthorUserId &&
                     EF.Functions.ILike(profile.DisplayName, pattern, @"\")));
@@ -44,8 +53,9 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
             .Take(pageSize)
             .ToListAsync(ct);
 
+        var items = await HydratePostItemsAsync(rows, ct);
         return new PagedResult<SocialPostItem>(
-            rows.Select(ToPostItem).ToArray(),
+            items,
             totalCount,
             page,
             pageSize);
@@ -56,6 +66,17 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         Guid viewerUserId,
         CancellationToken ct = default)
     {
+        if (!post.QuestId.HasValue || !await _db.Quests
+                .AsNoTracking()
+                .AnyAsync(
+                    quest => quest.Id == post.QuestId.Value && quest.Status == QuestStatus.Published,
+                    ct))
+        {
+            throw Error(
+                SocialFeedError.Validation,
+                "Choose a published Quest to link to this post.");
+        }
+
         _db.SocialPosts.Add(post);
         await _db.SaveChangesAsync(ct);
 
@@ -63,7 +84,49 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
                 _db.SocialPosts.AsNoTracking().Where(item => item.Id == post.Id),
                 viewerUserId)
             .SingleAsync(ct);
-        return ToPostItem(row);
+        return (await HydratePostItemsAsync([row], ct)).Single();
+    }
+
+    public async Task DeletePostAsync(
+        Guid postId,
+        Guid actorUserId,
+        CancellationToken ct = default)
+    {
+        var authorUserId = await _db.SocialPosts
+            .AsNoTracking()
+            .Where(post => post.Id == postId)
+            .Select(post => (Guid?)post.AuthorUserId)
+            .SingleOrDefaultAsync(ct);
+        if (!authorUserId.HasValue)
+            throw Error(SocialFeedError.NotFound, "Post not found.");
+        if (authorUserId.Value != actorUserId)
+            throw Error(SocialFeedError.Forbidden, "Only the post author can delete this post.");
+
+        await _db.SocialPosts
+            .Where(post => post.Id == postId && post.AuthorUserId == actorUserId)
+            .ExecuteDeleteAsync(ct);
+    }
+
+    public async Task<SocialPostItem> SetPostVisibilityAsync(
+        Guid postId,
+        Guid actorUserId,
+        bool isHidden,
+        DateTimeOffset now,
+        CancellationToken ct = default)
+    {
+        var post = await _db.SocialPosts.SingleOrDefaultAsync(post => post.Id == postId, ct);
+        if (post is null)
+            throw Error(SocialFeedError.NotFound, "Post not found.");
+        if (post.AuthorUserId != actorUserId)
+            throw Error(SocialFeedError.Forbidden, "Only the post author can change visibility.");
+
+        post.SetVisibility(isHidden, now);
+        await _db.SaveChangesAsync(ct);
+        var row = await ProjectPosts(
+                _db.SocialPosts.AsNoTracking().Where(item => item.Id == postId),
+                actorUserId)
+            .SingleAsync(ct);
+        return (await HydratePostItemsAsync([row], ct)).Single();
     }
 
     public async Task<SocialLikeState> SetLikeAsync(
@@ -73,7 +136,10 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         DateTimeOffset now,
         CancellationToken ct = default)
     {
-        if (!await _db.SocialPosts.AsNoTracking().AnyAsync(post => post.Id == postId, ct))
+        if (!await _db.SocialPosts.AsNoTracking().AnyAsync(
+                post => post.Id == postId &&
+                    (!post.IsHidden || post.AuthorUserId == userId),
+                ct))
             throw Error(SocialFeedError.NotFound, "Post not found.");
 
         if (isLiked)
@@ -107,9 +173,14 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         Guid postId,
         int page,
         int pageSize,
+        Guid? viewerUserId,
         CancellationToken ct = default)
     {
-        if (!await _db.SocialPosts.AsNoTracking().AnyAsync(post => post.Id == postId, ct))
+        if (!await _db.SocialPosts.AsNoTracking().AnyAsync(
+                post => post.Id == postId &&
+                    (!post.IsHidden ||
+                        (viewerUserId.HasValue && post.AuthorUserId == viewerUserId.Value)),
+                ct))
             throw Error(SocialFeedError.NotFound, "Post not found.");
 
         var roots = _db.SocialComments
@@ -210,7 +281,10 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         DateTimeOffset now,
         CancellationToken ct = default)
     {
-        if (!await _db.SocialPosts.AsNoTracking().AnyAsync(post => post.Id == postId, ct))
+        if (!await _db.SocialPosts.AsNoTracking().AnyAsync(
+                post => post.Id == postId &&
+                    (!post.IsHidden || post.AuthorUserId == authorUserId),
+                ct))
             throw Error(SocialFeedError.NotFound, "Post not found.");
 
         if (parentCommentId.HasValue)
@@ -256,9 +330,29 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         return query.Select(post => new SocialPostProjection
         {
             Id = post.Id,
+            Title = post.Title,
             Content = post.Content,
             ImageUrl = post.ImageUrl,
             ImageAltText = post.ImageAltText,
+            QuestId = post.QuestId,
+            QuestTitle = _db.Quests
+                .Where(quest => quest.Id == post.QuestId)
+                .Select(quest => quest.Title)
+                .FirstOrDefault(),
+            QuestCoverImageUrl = _db.QuestImages
+                .Where(image => image.QuestId == post.QuestId && image.IsCover)
+                .OrderBy(image => image.SortOrder)
+                .ThenBy(image => image.Id)
+                .Select(image => image.ImageUrl)
+                .FirstOrDefault(),
+            QuestLocationDescription = _db.Quests
+                .Where(quest => quest.Id == post.QuestId)
+                .Select(quest => quest.LocationDescription)
+                .FirstOrDefault(),
+            QuestStartAtUtc = _db.Quests
+                .Where(quest => quest.Id == post.QuestId)
+                .Select(quest => quest.StartAtUtc)
+                .FirstOrDefault(),
             AuthorDisplayName = _db.UserProfiles
                 .Where(profile => profile.Id == post.AuthorUserId)
                 .Select(profile => profile.DisplayName)
@@ -269,7 +363,61 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
             CommentCount = _db.SocialComments.Count(comment => comment.PostId == post.Id),
             IsLikedByViewer = viewerUserId.HasValue && _db.SocialPostLikes.Any(like =>
                 like.PostId == post.Id && like.UserId == viewerUserId.Value),
+            CanDelete = viewerUserId.HasValue && post.AuthorUserId == viewerUserId.Value,
+            IsHidden = post.IsHidden,
         });
+    }
+
+    private async Task<IReadOnlyList<SocialPostItem>> HydratePostItemsAsync(
+        IReadOnlyList<SocialPostProjection> posts,
+        CancellationToken ct)
+    {
+        var postIds = posts.Select(post => post.Id).ToArray();
+        if (postIds.Length == 0)
+            return [];
+
+        var imageRows = await _db.SocialPostImages
+            .AsNoTracking()
+            .Where(image => postIds.Contains(image.PostId))
+            .OrderBy(image => image.PostId)
+            .ThenBy(image => image.SortOrder)
+            .Select(image => new
+            {
+                image.PostId,
+                Item = new SocialPostImageItem(image.Url, image.AltText, image.SortOrder),
+            })
+            .ToListAsync(ct);
+        var imagesByPost = imageRows
+            .GroupBy(row => row.PostId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<SocialPostImageItem>)group.Select(row => row.Item).ToArray());
+
+        var tagRows = await _db.SocialPostTags
+            .AsNoTracking()
+            .Where(tag => postIds.Contains(tag.PostId))
+            .OrderBy(tag => tag.PostId)
+            .ThenBy(tag => tag.NormalizedName)
+            .Select(tag => new { tag.PostId, tag.Name })
+            .ToListAsync(ct);
+        var tagsByPost = tagRows
+            .GroupBy(row => row.PostId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<string>)group.Select(row => row.Name).ToArray());
+
+        return posts.Select(post =>
+        {
+            var images = imagesByPost.GetValueOrDefault(post.Id, []);
+            if (images.Count == 0 && post.ImageUrl is not null && post.ImageAltText is not null)
+            {
+                images = [new SocialPostImageItem(post.ImageUrl, post.ImageAltText, 0)];
+            }
+            return ToPostItem(
+                post,
+                images,
+                tagsByPost.GetValueOrDefault(post.Id, []));
+        }).ToArray();
     }
 
     private IQueryable<SocialCommentProjection> ProjectComments(
@@ -289,18 +437,32 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         });
     }
 
-    private static SocialPostItem ToPostItem(SocialPostProjection post) =>
+    private static SocialPostItem ToPostItem(
+        SocialPostProjection post,
+        IReadOnlyList<SocialPostImageItem> images,
+        IReadOnlyList<string> tags) =>
         new(
             post.Id,
+            post.Title,
             post.Content,
-            post.ImageUrl,
-            post.ImageAltText,
+            images,
+            tags,
+            post.QuestId.HasValue && post.QuestTitle is not null
+                ? new SocialPostQuestItem(
+                    post.QuestId.Value,
+                    post.QuestTitle,
+                    post.QuestCoverImageUrl,
+                    post.QuestLocationDescription,
+                    post.QuestStartAtUtc)
+                : null,
             post.AuthorDisplayName,
             post.CreatedAt,
             post.UpdatedAt,
             post.LikeCount,
             post.CommentCount,
-            post.IsLikedByViewer);
+            post.IsLikedByViewer,
+            post.CanDelete,
+            post.IsHidden);
 
     private static SocialCommentItem ToCommentItem(SocialCommentProjection comment) =>
         new(
@@ -322,15 +484,23 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
     private sealed class SocialPostProjection
     {
         public Guid Id { get; init; }
+        public string Title { get; init; } = string.Empty;
         public string Content { get; init; } = string.Empty;
         public string? ImageUrl { get; init; }
         public string? ImageAltText { get; init; }
+        public Guid? QuestId { get; init; }
+        public string? QuestTitle { get; init; }
+        public string? QuestCoverImageUrl { get; init; }
+        public string? QuestLocationDescription { get; init; }
+        public DateTimeOffset? QuestStartAtUtc { get; init; }
         public string AuthorDisplayName { get; init; } = string.Empty;
         public DateTimeOffset CreatedAt { get; init; }
         public DateTimeOffset UpdatedAt { get; init; }
         public int LikeCount { get; init; }
         public int CommentCount { get; init; }
         public bool IsLikedByViewer { get; init; }
+        public bool CanDelete { get; init; }
+        public bool IsHidden { get; init; }
     }
 
     private sealed class SocialCommentProjection

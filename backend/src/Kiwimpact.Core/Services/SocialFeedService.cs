@@ -45,18 +45,24 @@ public sealed class SocialFeedService : ISocialFeedService
 
     public Task<SocialPostItem> CreatePostAsync(
         Guid authorUserId,
+        Guid questId,
+        string title,
         string content,
-        string? imageUrl,
-        string? imageAltText,
+        IReadOnlyList<SocialPostImageDetails> images,
+        IReadOnlyList<string> tags,
+        bool isHidden,
         CancellationToken ct = default)
     {
         try
         {
             var post = SocialPost.Create(
                 authorUserId,
+                questId,
+                title,
                 content,
-                imageUrl,
-                imageAltText,
+                images,
+                tags,
+                isHidden,
                 DateTimeOffset.UtcNow);
             return _repository.AddPostAsync(post, authorUserId, ct);
         }
@@ -64,6 +70,30 @@ public sealed class SocialFeedService : ISocialFeedService
         {
             throw Error(SocialFeedError.Validation, exception.Message);
         }
+    }
+
+    public Task<SocialPostItem> SetPostVisibilityAsync(
+        Guid postId,
+        Guid actorUserId,
+        bool isHidden,
+        CancellationToken ct = default)
+    {
+        ValidateIdentifiers(postId, actorUserId);
+        return _repository.SetPostVisibilityAsync(
+            postId,
+            actorUserId,
+            isHidden,
+            DateTimeOffset.UtcNow,
+            ct);
+    }
+
+    public Task DeletePostAsync(
+        Guid postId,
+        Guid actorUserId,
+        CancellationToken ct = default)
+    {
+        ValidateIdentifiers(postId, actorUserId);
+        return _repository.DeletePostAsync(postId, actorUserId, ct);
     }
 
     public Task<SocialLikeState> SetLikeAsync(
@@ -85,12 +115,13 @@ public sealed class SocialFeedService : ISocialFeedService
         Guid postId,
         int page,
         int pageSize,
+        Guid? viewerUserId,
         CancellationToken ct = default)
     {
         if (postId == Guid.Empty)
             throw Error(SocialFeedError.NotFound, "Post not found.");
         ValidatePage(page, pageSize, MaxCommentPageSize);
-        return _repository.ListCommentsAsync(postId, page, pageSize, ct);
+        return _repository.ListCommentsAsync(postId, page, pageSize, viewerUserId, ct);
     }
 
     public async Task<SocialCommentItem> CreateCommentAsync(

@@ -1,5 +1,7 @@
 using Kiwimpact.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
@@ -59,6 +61,8 @@ public sealed class MigrationSmokeTests : IAsyncLifetime
         Assert.Contains(tables, t => t == "QuestCompletions");
         Assert.Contains(tables, t => t == "CompletionCodes");
         Assert.Contains(tables, t => t == "SocialPosts");
+        Assert.Contains(tables, t => t == "SocialPostImages");
+        Assert.Contains(tables, t => t == "SocialPostTags");
         Assert.Contains(tables, t => t == "SocialPostLikes");
         Assert.Contains(tables, t => t == "SocialComments");
     }
@@ -74,6 +78,71 @@ public sealed class MigrationSmokeTests : IAsyncLifetime
         // Regions table should be empty after migration (seed is separate)
         var regionCount = await db.Regions.CountAsync(TestContext.Current.CancellationToken);
         Assert.Equal(0, regionCount);
+    }
+
+    [Fact]
+    public async Task SocialExpansionMigration_PreservesLegacyDataAndRollbackFirstImage()
+    {
+        using var scope = _services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var migrator = db.Database.GetService<IMigrator>();
+        var ct = TestContext.Current.CancellationToken;
+        await migrator.MigrateAsync("20260731143404_AddSocialPostsFeed", ct);
+
+        var authorId = Guid.NewGuid();
+        var postId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "AspNetUsers"
+                ("Id", "EmailConfirmed", "PhoneNumberConfirmed", "TwoFactorEnabled",
+                 "LockoutEnabled", "AccessFailedCount")
+            VALUES ({authorId}, FALSE, FALSE, FALSE, FALSE, 0);
+
+            INSERT INTO "SocialPosts"
+                ("Id", "AuthorUserId", "Content", "ImageUrl", "ImageAltText",
+                 "CreatedAt", "UpdatedAt")
+            VALUES
+                ({postId}, {authorId}, {"Legacy stream cleanup story"},
+                 {"https://images.example.test/legacy.jpg"}, {"Legacy cleanup photo"},
+                 {now}, {now});
+            """, ct);
+
+        await db.Database.MigrateAsync(ct);
+
+        var post = await db.SocialPosts
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == postId, ct);
+        var image = await db.SocialPostImages
+            .AsNoTracking()
+            .SingleAsync(item => item.PostId == postId, ct);
+        Assert.Equal("Legacy stream cleanup story", post.Title);
+        Assert.Null(post.QuestId);
+        Assert.False(post.IsHidden);
+        Assert.Equal(0, image.SortOrder);
+        Assert.Equal("https://images.example.test/legacy.jpg", image.Url);
+        Assert.Equal("Legacy cleanup photo", image.AltText);
+
+        const string rollbackUrl = "https://images.example.test/rollback-first.jpg";
+        const string rollbackAlt = "First image retained during rollback";
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE "SocialPostImages"
+            SET "Url" = {rollbackUrl}, "AltText" = {rollbackAlt}
+            WHERE "PostId" = {postId} AND "SortOrder" = 0;
+            """, ct);
+        await migrator.MigrateAsync("20260731143404_AddSocialPostsFeed", ct);
+
+        var restoredUrl = await db.Database.SqlQuery<string>($"""
+            SELECT "ImageUrl" AS "Value"
+            FROM "SocialPosts"
+            WHERE "Id" = {postId}
+            """).SingleAsync(ct);
+        var restoredAlt = await db.Database.SqlQuery<string>($"""
+            SELECT "ImageAltText" AS "Value"
+            FROM "SocialPosts"
+            WHERE "Id" = {postId}
+            """).SingleAsync(ct);
+        Assert.Equal(rollbackUrl, restoredUrl);
+        Assert.Equal(rollbackAlt, restoredAlt);
     }
 
     [Fact]

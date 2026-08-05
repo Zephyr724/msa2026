@@ -2,67 +2,107 @@ namespace Kiwimpact.Core.Entities;
 
 public sealed class SocialPost
 {
+    public const int MaxTitleLength = 120;
     public const int MaxContentLength = 2_000;
     public const int MaxImageUrlLength = 2_048;
     public const int MaxImageAltTextLength = 200;
+    public const int MaxImages = 9;
+    public const int MaxTags = 10;
+    public const int MaxTagLength = 30;
 
     internal SocialPost()
     {
+        Title = string.Empty;
         Content = string.Empty;
         Likes = new List<SocialPostLike>();
         Comments = new List<SocialComment>();
+        Images = new List<SocialPostImage>();
+        Tags = new List<SocialPostTag>();
     }
 
     public Guid Id { get; internal set; }
     public Guid AuthorUserId { get; internal set; }
+    public Guid? QuestId { get; internal set; }
+    public string Title { get; internal set; }
     public string Content { get; internal set; }
+    // Retained for a safe additive migration of posts created before multi-image support.
     public string? ImageUrl { get; internal set; }
     public string? ImageAltText { get; internal set; }
+    public bool IsHidden { get; internal set; }
     public DateTimeOffset CreatedAt { get; internal set; }
     public DateTimeOffset UpdatedAt { get; internal set; }
 
     public ICollection<SocialPostLike> Likes { get; internal set; }
     public ICollection<SocialComment> Comments { get; internal set; }
+    public ICollection<SocialPostImage> Images { get; internal set; }
+    public ICollection<SocialPostTag> Tags { get; internal set; }
+    public Quest? Quest { get; internal set; }
 
     public static SocialPost Create(
         Guid authorUserId,
+        Guid questId,
+        string title,
         string content,
-        string? imageUrl,
-        string? imageAltText,
+        IReadOnlyList<SocialPostImageDetails> images,
+        IReadOnlyList<string> tags,
+        bool isHidden,
         DateTimeOffset now)
     {
         if (authorUserId == Guid.Empty)
             throw new ArgumentException("An authenticated author is required.");
+        if (questId == Guid.Empty)
+            throw new ArgumentException("A related Quest is required.");
 
+        ArgumentNullException.ThrowIfNull(images);
+        ArgumentNullException.ThrowIfNull(tags);
+        if (images.Count > MaxImages)
+            throw new ArgumentException($"A post can contain at most {MaxImages} images.");
+        if (tags.Count > MaxTags)
+            throw new ArgumentException($"A post can contain at most {MaxTags} tags.");
+
+        var normalizedTitle = NormalizeRequired(title, MaxTitleLength, "Post title");
         var normalizedContent = NormalizeRequired(
             content,
             MaxContentLength,
             "Post content");
-        var normalizedImageUrl = NormalizeImageUrl(imageUrl);
-        var normalizedAltText = NormalizeOptional(imageAltText);
-
-        if (normalizedImageUrl is null && normalizedAltText is not null)
-            throw new ArgumentException("Image alternative text requires an image URL.");
-        if (normalizedImageUrl is not null && normalizedAltText is null)
-            throw new ArgumentException("Image alternative text is required for an image.");
-        if (normalizedAltText?.Length > MaxImageAltTextLength)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(imageAltText),
-                $"Image alternative text must be at most {MaxImageAltTextLength} characters.");
-        }
 
         var timestamp = now.ToUniversalTime();
-        return new SocialPost
+        var post = new SocialPost
         {
             Id = Guid.NewGuid(),
             AuthorUserId = authorUserId,
+            QuestId = questId,
+            Title = normalizedTitle,
             Content = normalizedContent,
-            ImageUrl = normalizedImageUrl,
-            ImageAltText = normalizedAltText,
+            IsHidden = isHidden,
             CreatedAt = timestamp,
             UpdatedAt = timestamp,
         };
+
+        foreach (var (image, index) in images.Select((value, index) => (value, index)))
+        {
+            var postImage = SocialPostImage.Create(post.Id, image, index);
+            postImage.Post = post;
+            post.Images.Add(postImage);
+        }
+
+        var normalizedTagNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var tag in tags)
+        {
+            var postTag = SocialPostTag.Create(post.Id, tag);
+            if (!normalizedTagNames.Add(postTag.NormalizedName))
+                continue;
+            postTag.Post = post;
+            post.Tags.Add(postTag);
+        }
+
+        return post;
+    }
+
+    public void SetVisibility(bool isHidden, DateTimeOffset now)
+    {
+        IsHidden = isHidden;
+        UpdatedAt = now.ToUniversalTime();
     }
 
     private static string NormalizeRequired(string value, int maxLength, string label)
@@ -79,28 +119,6 @@ public sealed class SocialPost
         return normalized;
     }
 
-    private static string? NormalizeImageUrl(string? value)
-    {
-        var normalized = NormalizeOptional(value);
-        if (normalized is null)
-            return null;
-        if (normalized.Length > MaxImageUrlLength)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(value),
-                $"Image URL must be at most {MaxImageUrlLength} characters.");
-        }
-        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri) ||
-            uri.Scheme != Uri.UriSchemeHttps ||
-            string.IsNullOrWhiteSpace(uri.Host) ||
-            !string.IsNullOrEmpty(uri.UserInfo))
-        {
-            throw new ArgumentException("Image URL must be an absolute HTTPS URL.");
-        }
-
-        return normalized;
-    }
-
-    private static string? NormalizeOptional(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
+
+public sealed record SocialPostImageDetails(string Url, string AltText);

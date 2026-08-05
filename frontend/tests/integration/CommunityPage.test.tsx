@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   createMemoryRouter,
@@ -24,15 +24,25 @@ const session = {
 function socialPost(overrides: Partial<SocialPostDto> = {}): SocialPostDto {
   return {
     id: '22222222-2222-4222-8222-222222222222',
+    title: 'A streamside planting story',
     content: 'Planted native trees beside the stream.',
-    imageUrl: null,
-    imageAltText: null,
+    images: [],
+    tags: ['StreamCare'],
+    quest: {
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      title: 'Community Stream Cleanup',
+      coverImageUrl: '/images/quests/stream-cleanup.svg',
+      locationDescription: 'Oakley Creek',
+      startAtUtc: '2099-08-01T09:00:00.000Z',
+    },
     authorDisplayName: 'Mereana',
     createdAtUtc: '2026-07-31T09:00:00.000Z',
     updatedAtUtc: '2026-07-31T09:00:00.000Z',
     likeCount: 1,
     commentCount: 2,
     isLikedByViewer: false,
+    canDelete: false,
+    isHidden: false,
     ...overrides,
   };
 }
@@ -60,6 +70,38 @@ function commentPage(items: SocialCommentThreadDto[]) {
     hasPreviousPage: false,
   };
 }
+
+const questPage = {
+  items: [{
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    title: 'Community Stream Cleanup',
+    description: 'Restore a local stream.',
+    category: 'CleanReduceWaste',
+    sourceType: 'OrganizerOwned',
+    registrationMode: 'Native',
+    difficulty: 'Easy',
+    xpAward: 50,
+    capacity: 30,
+    availableSpots: 12,
+    startAtUtc: '2099-08-01T09:00:00.000Z',
+    endAtUtc: null,
+    locationRegion: null,
+    locationDescription: 'Oakley Creek',
+    coverImage: {
+      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      imageUrl: '/images/quests/stream-cleanup.svg',
+      altText: 'Volunteers cleaning a stream',
+    },
+    latitude: null,
+    longitude: null,
+  }],
+  page: 1,
+  pageSize: 20,
+  totalCount: 1,
+  totalPages: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
+};
 
 function renderPage(initialEntry = '/community') {
   const router = createMemoryRouter([
@@ -140,7 +182,39 @@ describe('CommunityPage', () => {
       'href',
       '/login',
     );
-    expect(screen.queryByRole('heading', { name: 'Publish a post' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /sign in to create a post/i })).toHaveAttribute(
+      'href',
+      '/login',
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('lets an author retry the required Quest picker', async () => {
+    const user = userEvent.setup();
+    let questAttempts = 0;
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) return Promise.resolve(jsonResponse(session));
+      if (url.includes('/v1/quests')) {
+        questAttempts += 1;
+        return Promise.resolve(questAttempts === 1
+          ? jsonResponse({}, 503)
+          : jsonResponse(questPage));
+      }
+      if (url.includes('/v1/social/posts')) {
+        return Promise.resolve(jsonResponse(postPage([])));
+      }
+      return Promise.resolve(jsonResponse({}, 500));
+    }));
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'New post' }));
+    expect(await screen.findByText('Quests could not be loaded.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByRole('button', { name: /Community Stream Cleanup/ }))
+      .toBeInTheDocument();
+    expect(questAttempts).toBe(2);
   });
 
   it('publishes a validated post and refreshes the feed', async () => {
@@ -152,9 +226,26 @@ describe('CommunityPage', () => {
       if (url.endsWith('/v1/auth/csrf-token')) {
         return Promise.resolve(jsonResponse({ token: 'social-token' }));
       }
+      if (url.includes('/v1/quests')) {
+        return Promise.resolve(jsonResponse(questPage));
+      }
       if (url.endsWith('/v1/social/posts') && init?.method === 'POST') {
-        const body = JSON.parse(String(init.body)) as { content: string };
-        posts = [socialPost({ content: body.content, authorDisplayName: 'Aroha' })];
+        const body = JSON.parse(String(init.body)) as {
+          title: string;
+          content: string;
+          images: SocialPostDto['images'];
+          tags: string[];
+          isHidden: boolean;
+        };
+        posts = [socialPost({
+          title: body.title,
+          content: body.content,
+          images: body.images.map((image, sortOrder) => ({ ...image, sortOrder })),
+          tags: body.tags,
+          authorDisplayName: 'Aroha',
+          canDelete: true,
+          isHidden: body.isHidden,
+        })];
         return Promise.resolve(jsonResponse(posts[0], 201));
       }
       if (url.includes('/v1/social/posts')) {
@@ -165,23 +256,57 @@ describe('CommunityPage', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderPage();
 
-    await user.type(await screen.findByLabelText('What happened?'), 'Cleaned the local stream bank.');
-    await user.click(screen.getByRole('button', { name: 'Publish' }));
+    await user.click(await screen.findByRole('button', { name: 'New post' }));
+    expect(await screen.findByRole('dialog', { name: 'Create a new post' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: /Community Stream Cleanup/ }));
+    await user.type(screen.getByLabelText(/^Title/), 'A cleaner stream in one afternoon');
+    await user.click(screen.getByRole('button', { name: 'Add image' }));
+    await user.type(screen.getByLabelText('Image 1 URL'), 'https://images.example.test/stream-one.jpg');
+    await user.type(screen.getByLabelText('Image 1 description'), 'Volunteers collecting rubbish');
+    await user.click(screen.getByRole('button', { name: 'Add image' }));
+    await user.type(screen.getByLabelText('Image 2 URL'), 'https://images.example.test/stream-two.jpg');
+    await user.type(screen.getByLabelText('Image 2 description'), 'The restored stream bank');
+    await user.type(screen.getByLabelText(/^Body/), 'Cleaned the local stream bank.');
+    const tagInput = screen.getByLabelText('Add a tag');
+    await user.type(tagInput, 'StreamCare');
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.type(tagInput, 'streamcare');
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('That tag is already added.');
+    expect(tagInput).toHaveValue('streamcare');
+    await user.clear(tagInput);
+    await user.click(screen.getByRole('button', { name: /Only me/ }));
+    await user.click(screen.getByRole('button', { name: 'Publish post' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('now in the community feed');
-    expect(await screen.findByText('Cleaned the local stream bank.')).toBeInTheDocument();
+    expect(await screen.findByText('A cleaner stream in one afternoon')).toBeInTheDocument();
+    expect(screen.getByText('Cleaned the local stream bank.')).toBeInTheDocument();
+    expect(screen.getAllByText('#StreamCare').length).toBeGreaterThan(0);
     const publishCall = fetchMock.mock.calls.find(([input, init]) =>
       String(input).endsWith('/v1/social/posts') && init?.method === 'POST');
     expect(JSON.parse(String(publishCall?.[1]?.body))).toEqual({
+      questId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      title: 'A cleaner stream in one afternoon',
       content: 'Cleaned the local stream bank.',
-      imageUrl: null,
-      imageAltText: null,
+      images: [
+        {
+          imageUrl: 'https://images.example.test/stream-one.jpg',
+          imageAltText: 'Volunteers collecting rubbish',
+        },
+        {
+          imageUrl: 'https://images.example.test/stream-two.jpg',
+          imageAltText: 'The restored stream bank',
+        },
+      ],
+      tags: ['StreamCare'],
+      isHidden: true,
     });
   });
 
   it('updates likes immediately and reconciles with the server', async () => {
     const user = userEvent.setup();
-    let post = socialPost();
+    const post = socialPost();
+    let likeWasSaved = false;
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith('/v1/auth/me')) return Promise.resolve(jsonResponse(session));
@@ -189,10 +314,11 @@ describe('CommunityPage', () => {
         return Promise.resolve(jsonResponse({ token: 'like-token' }));
       }
       if (url.endsWith(`/v1/social/posts/${post.id}/like`) && init?.method === 'PUT') {
-        post = { ...post, likeCount: 2, isLikedByViewer: true };
-        return Promise.resolve(jsonResponse({ likeCount: 2, isLikedByViewer: true }));
+        likeWasSaved = true;
+        return Promise.resolve(jsonResponse({ likeCount: 7, isLikedByViewer: true }));
       }
       if (url.includes('/v1/social/posts')) {
+        if (likeWasSaved) return Promise.resolve(jsonResponse({}, 500));
         return Promise.resolve(jsonResponse(postPage([post])));
       }
       return Promise.resolve(jsonResponse({}, 500));
@@ -203,7 +329,91 @@ describe('CommunityPage', () => {
     await user.click(like);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Unlike post' }))
-      .toHaveTextContent('2'));
+      .toHaveTextContent('7'));
+  });
+
+  it('lets readers scroll or click through every image in a post', async () => {
+    const user = userEvent.setup();
+    const longTitle = 'x'.repeat(120);
+    const post = socialPost({
+      title: longTitle,
+      images: [
+        {
+          imageUrl: 'https://images.example.test/one.jpg',
+          imageAltText: 'Volunteers at the start of the Quest',
+          sortOrder: 0,
+        },
+        {
+          imageUrl: 'https://images.example.test/two.jpg',
+          imageAltText: 'The restored stream after the Quest',
+          sortOrder: 1,
+        },
+      ],
+    });
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) return Promise.resolve(new Response(null, { status: 401 }));
+      if (url.includes('/v1/social/posts')) return Promise.resolve(jsonResponse(postPage([post])));
+      return Promise.resolve(jsonResponse({}, 500));
+    }));
+    renderPage();
+
+    expect(await screen.findByText('1 / 2')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: longTitle })).toHaveClass('break-words');
+    expect(screen.getByAltText('Volunteers at the start of the Quest')).toBeInTheDocument();
+    expect(screen.getByAltText('The restored stream after the Quest')).toBeInTheDocument();
+    const slides = screen.getByRole('group', { name: 'Image slides' });
+    expect(slides).toHaveAttribute('tabindex', '0');
+    expect(screen.getByText('1 / 2')).toHaveAttribute('aria-live', 'polite');
+
+    Object.defineProperty(slides, 'clientWidth', { configurable: true, value: 300 });
+    Object.defineProperty(slides, 'scrollLeft', { configurable: true, value: 300, writable: true });
+    fireEvent.scroll(slides);
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Previous image' }));
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next image' }));
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+  });
+
+  it('lets the author hide, restore, and permanently delete a post', async () => {
+    const user = userEvent.setup();
+    let posts = [socialPost({ canDelete: true })];
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) return Promise.resolve(jsonResponse(session));
+      if (url.endsWith('/v1/auth/csrf-token')) {
+        return Promise.resolve(jsonResponse({ token: 'manage-post-token' }));
+      }
+      if (url.endsWith(`/v1/social/posts/${posts[0]?.id}/visibility`) && init?.method === 'PATCH') {
+        const body = JSON.parse(String(init.body)) as { isHidden: boolean };
+        posts = [{ ...posts[0], isHidden: body.isHidden }];
+        return Promise.resolve(jsonResponse(posts[0]));
+      }
+      if (url.endsWith(`/v1/social/posts/${posts[0]?.id}`) && init?.method === 'DELETE') {
+        posts = [];
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (url.includes('/v1/social/posts')) return Promise.resolve(jsonResponse(postPage(posts)));
+      return Promise.resolve(jsonResponse({}, 500));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Hide post' }));
+    expect(await screen.findByText('Only you')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Make post public' }));
+    await waitFor(() => expect(screen.queryByText('Only you')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Delete post' }));
+    expect(screen.getByRole('dialog', { name: 'Delete this post?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Delete permanently' }));
+    expect(await screen.findByRole('heading', { name: 'No community posts yet.' }))
+      .toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input, init]) =>
+      String(input).endsWith('/visibility') && init?.method === 'PATCH')).toBe(true);
+    expect(fetchMock.mock.calls.some(([input, init]) =>
+      String(input).includes('/v1/social/posts/') && init?.method === 'DELETE')).toBe(true);
   });
 
   it('renders two-level comments and submits roots and direct replies', async () => {

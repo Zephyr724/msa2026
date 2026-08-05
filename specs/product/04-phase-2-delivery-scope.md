@@ -113,9 +113,14 @@ marking, based on actual completion quality and evidence.
 
 The bounded social-post feed in `specs/implementation/25-social-posts-feed.md`
 was separately approved by explicit product-owner instruction on 2026-07-31.
-That approval covers public search/paging, authenticated publishing and likes,
-and two-level comments. Public profiles, follows, friends, chat,
-notifications, file upload, and moderation tooling remain deferred.
+The product correction in
+`specs/implementation/29-community-posts-product-correction.md` was approved on
+2026-08-04 and adds the Xiaohongshu-inspired button/modal composition flow,
+required title and Published Quest relationship, tags, ordered URL-based
+multi-image carousel, author deletion, and public/hidden published visibility.
+Public search/paging, likes, and two-level comments remain part of the accepted
+surface. Draft persistence, public profiles, follows, friends, chat,
+notifications, binary file upload, and moderation tooling remain deferred.
 
 Storybook must not be claimed complete unless the implemented reusable UI
 component set is comprehensively integrated.

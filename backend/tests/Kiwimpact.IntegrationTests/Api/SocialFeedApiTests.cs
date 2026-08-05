@@ -17,6 +17,10 @@ public sealed class SocialFeedApiTests
     : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
     private const string Password = "Correct-Horse-Battery-Staple-1!";
+    private static readonly Guid RelatedQuestId =
+        new("11111111-1111-4111-8111-111111111101");
+    private static readonly Guid DraftQuestId =
+        new("11111111-1111-4111-8111-111111111110");
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web);
     private readonly CustomWebApplicationFactory _factory;
@@ -107,12 +111,12 @@ public sealed class SocialFeedApiTests
         using var guest = _factory.CreateClient();
         var guestResponse = await guest.PostAsJsonAsync(
             "/api/v1/social/posts",
-            new { content = "Guest post", imageUrl = (string?)null, imageAltText = (string?)null },
+            PostRequest("Guest post"),
             TestContext.Current.CancellationToken);
         var author = await CreateAuthenticatedClientAsync("Mereana Publisher");
         var missingCsrf = await author.PostAsJsonAsync(
             "/api/v1/social/posts",
-            new { content = "Missing token", imageUrl = (string?)null, imageAltText = (string?)null },
+            PostRequest("Missing token"),
             TestContext.Current.CancellationToken);
         var invalidImage = await SendJsonWithCsrfAsync(
             author,
@@ -120,9 +124,29 @@ public sealed class SocialFeedApiTests
             "/api/v1/social/posts",
             new
             {
+                questId = RelatedQuestId,
+                title = "Unsafe image",
                 content = "Unsafe image",
-                imageUrl = "http://images.example.test/photo.jpg",
-                imageAltText = "A photo",
+                images = new[] { new
+                {
+                    imageUrl = "http://images.example.test/photo.jpg",
+                    imageAltText = "A photo",
+                } },
+                tags = Array.Empty<string>(),
+                isHidden = false,
+            });
+        var unpublishedQuest = await SendJsonWithCsrfAsync(
+            author,
+            HttpMethod.Post,
+            "/api/v1/social/posts",
+            new
+            {
+                questId = DraftQuestId,
+                title = "Internal Quest",
+                content = "This must not publish.",
+                images = Array.Empty<object>(),
+                tags = Array.Empty<string>(),
+                isHidden = false,
             });
         var valid = await SendJsonWithCsrfAsync(
             author,
@@ -130,49 +154,201 @@ public sealed class SocialFeedApiTests
             "/api/v1/social/posts",
             new
             {
+                questId = RelatedQuestId,
+                title = "A safe image post",
                 content = "A safe image post",
-                imageUrl = "https://images.example.test/photo.jpg",
-                imageAltText = "Reusable bags at a community event",
+                images = new[]
+                {
+                    new
+                    {
+                        imageUrl = "https://images.example.test/photo-one.jpg",
+                        imageAltText = "Reusable bags at a community event",
+                    },
+                    new
+                    {
+                        imageUrl = "https://images.example.test/photo-two.jpg",
+                        imageAltText = "Volunteers sorting collected materials",
+                    },
+                },
+                tags = new[] { "WasteFree", "Auckland" },
+                isHidden = false,
             });
 
         Assert.Equal(HttpStatusCode.Unauthorized, guestResponse.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingCsrf.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, invalidImage.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, unpublishedQuest.StatusCode);
         Assert.Equal(HttpStatusCode.Created, valid.StatusCode);
         var json = await ReadJsonAsync(valid);
+        Assert.Equal("A safe image post", json.GetProperty("title").GetString());
+        Assert.Equal(2, json.GetProperty("images").GetArrayLength());
+        Assert.Equal(
+            "https://images.example.test/photo-one.jpg",
+            json.GetProperty("images")[0].GetProperty("imageUrl").GetString());
+        Assert.Equal(0, json.GetProperty("images")[0].GetProperty("sortOrder").GetInt32());
+        Assert.Equal(1, json.GetProperty("images")[1].GetProperty("sortOrder").GetInt32());
+        Assert.Equal(2, json.GetProperty("tags").GetArrayLength());
+        Assert.Equal(RelatedQuestId, json.GetProperty("quest").GetProperty("id").GetGuid());
+        Assert.Equal("Community Stream Cleanup", json.GetProperty("quest").GetProperty("title").GetString());
         Assert.Equal("Mereana Publisher", json.GetProperty("authorDisplayName").GetString());
+        Assert.True(json.GetProperty("canDelete").GetBoolean());
+        Assert.False(json.GetProperty("isHidden").GetBoolean());
         Assert.False(json.TryGetProperty("authorUserId", out _));
+
+        foreach (var searchTerm in new[] { "safe image", "WasteFree", "Community Stream" })
+        {
+            using var searchResponse = await guest.GetAsync(
+                $"/api/v1/social/posts?search={Uri.EscapeDataString(searchTerm)}",
+                TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, searchResponse.StatusCode);
+            Assert.Equal(
+                1,
+                (await ReadJsonAsync(searchResponse)).GetProperty("totalCount").GetInt32());
+        }
     }
 
     [Fact]
     public async Task LikesAreIdempotentAndViewerSpecific()
     {
         var author = await CreateAuthenticatedClientAsync("Post Author");
-        var reader = await CreateAuthenticatedClientAsync("Post Reader");
         var post = await CreatePostAsync(author, "A post worth supporting.");
         var postId = post.GetProperty("id").GetGuid();
 
         var first = await SendJsonWithCsrfAsync(
-            reader, HttpMethod.Put, $"/api/v1/social/posts/{postId}/like", null);
+            author, HttpMethod.Put, $"/api/v1/social/posts/{postId}/like", null);
         var duplicate = await SendJsonWithCsrfAsync(
-            reader, HttpMethod.Put, $"/api/v1/social/posts/{postId}/like", null);
+            author, HttpMethod.Put, $"/api/v1/social/posts/{postId}/like", null);
+        var publicFeed = await ReadJsonAsync(await _factory.CreateClient().GetAsync(
+            "/api/v1/social/posts",
+            TestContext.Current.CancellationToken));
         var authorFeed = await ReadJsonAsync(await author.GetAsync(
             "/api/v1/social/posts",
             TestContext.Current.CancellationToken));
-        var readerFeed = await ReadJsonAsync(await reader.GetAsync(
-            "/api/v1/social/posts",
-            TestContext.Current.CancellationToken));
         var removed = await SendJsonWithCsrfAsync(
-            reader, HttpMethod.Delete, $"/api/v1/social/posts/{postId}/like", null);
+            author, HttpMethod.Delete, $"/api/v1/social/posts/{postId}/like", null);
         var duplicateRemoval = await SendJsonWithCsrfAsync(
-            reader, HttpMethod.Delete, $"/api/v1/social/posts/{postId}/like", null);
+            author, HttpMethod.Delete, $"/api/v1/social/posts/{postId}/like", null);
 
         Assert.Equal(1, (await ReadJsonAsync(first)).GetProperty("likeCount").GetInt32());
         Assert.Equal(1, (await ReadJsonAsync(duplicate)).GetProperty("likeCount").GetInt32());
-        Assert.False(authorFeed.GetProperty("items")[0].GetProperty("isLikedByViewer").GetBoolean());
-        Assert.True(readerFeed.GetProperty("items")[0].GetProperty("isLikedByViewer").GetBoolean());
+        Assert.False(publicFeed.GetProperty("items")[0].GetProperty("isLikedByViewer").GetBoolean());
+        Assert.True(authorFeed.GetProperty("items")[0].GetProperty("isLikedByViewer").GetBoolean());
         Assert.Equal(0, (await ReadJsonAsync(removed)).GetProperty("likeCount").GetInt32());
         Assert.Equal(0, (await ReadJsonAsync(duplicateRemoval)).GetProperty("likeCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task AuthorCanHideRestoreAndDeletePostWithoutExposingHiddenContent()
+    {
+        var author = await CreateAuthenticatedClientAsync("Visibility Author");
+        var other = await CreateAuthenticatedClientAsync("Visibility Reader");
+        using var guest = _factory.CreateClient();
+        using var createdResponse = await SendJsonWithCsrfAsync(
+            author,
+            HttpMethod.Post,
+            "/api/v1/social/posts",
+            new
+            {
+                questId = RelatedQuestId,
+                title = "Stream cleanup gallery",
+                content = "A complete story with related impact.",
+                images = new[]
+                {
+                    new { imageUrl = "https://images.example.test/one.jpg", imageAltText = "First view" },
+                    new { imageUrl = "https://images.example.test/two.jpg", imageAltText = "Second view" },
+                },
+                tags = new[] { "StreamCare", "Auckland" },
+                isHidden = false,
+            });
+        var created = await ReadJsonAsync(createdResponse);
+        var postId = created.GetProperty("id").GetGuid();
+
+        var otherFeedBeforeHide = await ReadJsonAsync(await other.GetAsync(
+            "/api/v1/social/posts",
+            TestContext.Current.CancellationToken));
+        Assert.False(otherFeedBeforeHide.GetProperty("items")[0].GetProperty("canDelete").GetBoolean());
+        using var like = await SendJsonWithCsrfAsync(
+            other, HttpMethod.Put, $"/api/v1/social/posts/{postId}/like", null);
+        using var comment = await SendJsonWithCsrfAsync(
+            other,
+            HttpMethod.Post,
+            $"/api/v1/social/posts/{postId}/comments",
+            new { content = "Great work", parentCommentId = (Guid?)null });
+        Assert.Equal(HttpStatusCode.OK, like.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, comment.StatusCode);
+
+        using var hidden = await SendJsonWithCsrfAsync(
+            author,
+            HttpMethod.Patch,
+            $"/api/v1/social/posts/{postId}/visibility",
+            new { isHidden = true });
+        Assert.Equal(HttpStatusCode.OK, hidden.StatusCode);
+        Assert.True((await ReadJsonAsync(hidden)).GetProperty("isHidden").GetBoolean());
+
+        var guestFeed = await ReadJsonAsync(await guest.GetAsync(
+            "/api/v1/social/posts",
+            TestContext.Current.CancellationToken));
+        var guestSearch = await ReadJsonAsync(await guest.GetAsync(
+            "/api/v1/social/posts?search=StreamCare",
+            TestContext.Current.CancellationToken));
+        var otherFeed = await ReadJsonAsync(await other.GetAsync(
+            "/api/v1/social/posts",
+            TestContext.Current.CancellationToken));
+        var authorFeed = await ReadJsonAsync(await author.GetAsync(
+            "/api/v1/social/posts",
+            TestContext.Current.CancellationToken));
+        Assert.Equal(0, guestFeed.GetProperty("totalCount").GetInt32());
+        Assert.Equal(0, guestSearch.GetProperty("totalCount").GetInt32());
+        Assert.Equal(0, otherFeed.GetProperty("totalCount").GetInt32());
+        Assert.True(authorFeed.GetProperty("items")[0].GetProperty("isHidden").GetBoolean());
+        Assert.True(authorFeed.GetProperty("items")[0].GetProperty("canDelete").GetBoolean());
+
+        using var hiddenComments = await other.GetAsync(
+            $"/api/v1/social/posts/{postId}/comments",
+            TestContext.Current.CancellationToken);
+        using var guestHiddenComments = await guest.GetAsync(
+            $"/api/v1/social/posts/{postId}/comments",
+            TestContext.Current.CancellationToken);
+        using var hiddenLike = await SendJsonWithCsrfAsync(
+            other, HttpMethod.Put, $"/api/v1/social/posts/{postId}/like", null);
+        Assert.Equal(HttpStatusCode.NotFound, hiddenComments.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, guestHiddenComments.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, hiddenLike.StatusCode);
+
+        using var forbiddenVisibility = await SendJsonWithCsrfAsync(
+            other,
+            HttpMethod.Patch,
+            $"/api/v1/social/posts/{postId}/visibility",
+            new { isHidden = false });
+        using var restored = await SendJsonWithCsrfAsync(
+            author,
+            HttpMethod.Patch,
+            $"/api/v1/social/posts/{postId}/visibility",
+            new { isHidden = false });
+        using var missingVisibility = await SendJsonWithCsrfAsync(
+            author,
+            HttpMethod.Patch,
+            $"/api/v1/social/posts/{Guid.NewGuid()}/visibility",
+            new { isHidden = true });
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenVisibility.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, restored.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, missingVisibility.StatusCode);
+
+        using var forbiddenDelete = await SendJsonWithCsrfAsync(
+            other, HttpMethod.Delete, $"/api/v1/social/posts/{postId}", null);
+        using var deleted = await SendJsonWithCsrfAsync(
+            author, HttpMethod.Delete, $"/api/v1/social/posts/{postId}", null);
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenDelete.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var ct = TestContext.Current.CancellationToken;
+        Assert.False(await db.SocialPosts.AnyAsync(post => post.Id == postId, ct));
+        Assert.False(await db.SocialPostImages.AnyAsync(image => image.PostId == postId, ct));
+        Assert.False(await db.SocialPostTags.AnyAsync(tag => tag.PostId == postId, ct));
+        Assert.False(await db.SocialPostLikes.AnyAsync(item => item.PostId == postId, ct));
+        Assert.False(await db.SocialComments.AnyAsync(item => item.PostId == postId, ct));
     }
 
     [Fact]
@@ -261,6 +437,13 @@ public sealed class SocialFeedApiTests
             $"/api/v1/social/posts/{postId}/comments",
             new { content = "Guest comment", parentCommentId = (Guid?)null },
             TestContext.Current.CancellationToken);
+        using var guestDelete = await guest.DeleteAsync(
+            $"/api/v1/social/posts/{postId}",
+            TestContext.Current.CancellationToken);
+        using var guestVisibility = await guest.PatchAsJsonAsync(
+            $"/api/v1/social/posts/{postId}/visibility",
+            new { isHidden = true },
+            TestContext.Current.CancellationToken);
         using var missingLikeCsrf = await author.PutAsync(
             $"/api/v1/social/posts/{postId}/like",
             null,
@@ -272,13 +455,24 @@ public sealed class SocialFeedApiTests
             $"/api/v1/social/posts/{postId}/comments",
             new { content = "Missing token", parentCommentId = (Guid?)null },
             TestContext.Current.CancellationToken);
+        using var missingDeleteCsrf = await author.DeleteAsync(
+            $"/api/v1/social/posts/{postId}",
+            TestContext.Current.CancellationToken);
+        using var missingVisibilityCsrf = await author.PatchAsJsonAsync(
+            $"/api/v1/social/posts/{postId}/visibility",
+            new { isHidden = true },
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Unauthorized, guestLike.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, guestUnlike.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, guestComment.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, guestDelete.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, guestVisibility.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingLikeCsrf.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingUnlikeCsrf.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, missingCommentCsrf.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, missingDeleteCsrf.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, missingVisibilityCsrf.StatusCode);
     }
 
     [Fact]
@@ -295,12 +489,7 @@ public sealed class SocialFeedApiTests
                 first,
                 HttpMethod.Post,
                 "/api/v1/social/posts",
-                new
-                {
-                    content = $"Rate post {index}",
-                    imageUrl = (string?)null,
-                    imageAltText = (string?)null,
-                },
+                PostRequest($"Rate post {index}"),
                 firstToken);
             Assert.Equal(HttpStatusCode.Created, allowed.StatusCode);
         }
@@ -308,23 +497,13 @@ public sealed class SocialFeedApiTests
             first,
             HttpMethod.Post,
             "/api/v1/social/posts",
-            new
-            {
-                content = "One publish too many",
-                imageUrl = (string?)null,
-                imageAltText = (string?)null,
-            },
+            PostRequest("One publish too many"),
             firstToken);
         using var independentPublish = await SendJsonWithTokenAsync(
             second,
             HttpMethod.Post,
             "/api/v1/social/posts",
-            new
-            {
-                content = "Independent publish",
-                imageUrl = (string?)null,
-                imageAltText = (string?)null,
-            },
+            PostRequest("Independent publish"),
             secondToken);
         Assert.Equal(HttpStatusCode.TooManyRequests, limitedPublish.StatusCode);
         Assert.Equal(HttpStatusCode.Created, independentPublish.StatusCode);
@@ -438,10 +617,20 @@ public sealed class SocialFeedApiTests
             client,
             HttpMethod.Post,
             "/api/v1/social/posts",
-            new { content, imageUrl = (string?)null, imageAltText = (string?)null });
+            PostRequest(content));
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return await ReadJsonAsync(response);
     }
+
+    private static object PostRequest(string content, bool isHidden = false) => new
+    {
+        questId = RelatedQuestId,
+        title = content.Length <= 120 ? content : content[..120],
+        content,
+        images = Array.Empty<object>(),
+        tags = Array.Empty<string>(),
+        isHidden,
+    };
 
     private static async Task<HttpResponseMessage> SendJsonWithCsrfAsync(
         HttpClient client,
