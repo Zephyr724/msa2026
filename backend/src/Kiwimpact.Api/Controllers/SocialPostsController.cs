@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Kiwimpact.Api.Contracts;
 using Kiwimpact.Api.Security;
 using Kiwimpact.Core.Authorization;
+using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Queries;
 using Kiwimpact.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -70,11 +71,75 @@ public sealed class SocialPostsController : ControllerBase
         {
             var post = await _service.CreatePostAsync(
                 actorId,
+                request.QuestId,
+                request.Title,
                 request.Content,
-                request.ImageUrl,
-                request.ImageAltText,
+                (request.Images ?? [])
+                    .Select(image => new SocialPostImageDetails(
+                        image.ImageUrl,
+                        image.ImageAltText))
+                    .ToArray(),
+                request.Tags ?? [],
+                request.IsHidden,
                 ct);
             return StatusCode(StatusCodes.Status201Created, ToDto(post));
+        }
+        catch (SocialFeedException exception)
+        {
+            return ToProblem(exception);
+        }
+    }
+
+    /// <summary>Switch an owned published post between public and hidden.</summary>
+    [HttpPatch("{postId:guid}/visibility")]
+    [Authorize(Roles = WriterRoles)]
+    [EnableRateLimiting(SocialRateLimitPolicies.Publish)]
+    [ProducesResponseType(typeof(SocialPostDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> SetVisibility(
+        Guid postId,
+        SetSocialPostVisibilityRequest request,
+        CancellationToken ct)
+    {
+        if (TryGetActorId() is not { } actorId)
+            return Unauthorized();
+
+        try
+        {
+            var post = await _service.SetPostVisibilityAsync(
+                postId,
+                actorId,
+                request.IsHidden,
+                ct);
+            return Ok(ToDto(post));
+        }
+        catch (SocialFeedException exception)
+        {
+            return ToProblem(exception);
+        }
+    }
+
+    /// <summary>Delete a social post owned by the authenticated user.</summary>
+    [HttpDelete("{postId:guid}")]
+    [Authorize(Roles = WriterRoles)]
+    [EnableRateLimiting(SocialRateLimitPolicies.Publish)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> Delete(Guid postId, CancellationToken ct)
+    {
+        if (TryGetActorId() is not { } actorId)
+            return Unauthorized();
+
+        try
+        {
+            await _service.DeletePostAsync(postId, actorId, ct);
+            return NoContent();
         }
         catch (SocialFeedException exception)
         {
@@ -121,7 +186,12 @@ public sealed class SocialPostsController : ControllerBase
     {
         try
         {
-            var result = await _service.ListCommentsAsync(postId, page, pageSize, ct);
+            var result = await _service.ListCommentsAsync(
+                postId,
+                page,
+                pageSize,
+                TryGetActorId(),
+                ct);
             return Ok(ToCommentPage(result));
         }
         catch (SocialFeedException exception)
@@ -195,6 +265,7 @@ public sealed class SocialPostsController : ControllerBase
         var problem = exception.Error switch
         {
             SocialFeedError.NotFound => ProblemDetailsHelper.NotFound(exception.Message),
+            SocialFeedError.Forbidden => ProblemDetailsHelper.Forbidden(exception.Message),
             SocialFeedError.Validation or
             SocialFeedError.InvalidReplyParent or
             SocialFeedError.ReplyDepthExceeded =>
@@ -233,15 +304,29 @@ public sealed class SocialPostsController : ControllerBase
     private static SocialPostDto ToDto(SocialPostItem post) =>
         new(
             post.Id,
+            post.Title,
             post.Content,
-            post.ImageUrl,
-            post.ImageAltText,
+            post.Images.Select(image => new SocialPostImageDto(
+                image.Url,
+                image.AltText,
+                image.SortOrder)).ToArray(),
+            post.Tags,
+            post.Quest is null
+                ? null
+                : new SocialPostQuestDto(
+                    post.Quest.Id,
+                    post.Quest.Title,
+                    post.Quest.CoverImageUrl,
+                    post.Quest.LocationDescription,
+                    post.Quest.StartAtUtc?.ToString("O")),
             post.AuthorDisplayName,
             post.CreatedAt.ToString("O"),
             post.UpdatedAt.ToString("O"),
             post.LikeCount,
             post.CommentCount,
-            post.IsLikedByViewer);
+            post.IsLikedByViewer,
+            post.CanDelete,
+            post.IsHidden);
 
     private static SocialCommentThreadDto ToThreadDto(SocialCommentThread thread) =>
         new(

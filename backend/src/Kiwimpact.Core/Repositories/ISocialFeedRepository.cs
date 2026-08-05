@@ -18,6 +18,18 @@ public interface ISocialFeedRepository
         Guid viewerUserId,
         CancellationToken ct = default);
 
+    Task DeletePostAsync(
+        Guid postId,
+        Guid actorUserId,
+        CancellationToken ct = default);
+
+    Task<SocialPostItem> SetPostVisibilityAsync(
+        Guid postId,
+        Guid actorUserId,
+        bool isHidden,
+        DateTimeOffset now,
+        CancellationToken ct = default);
+
     Task<SocialLikeState> SetLikeAsync(
         Guid postId,
         Guid userId,
@@ -29,6 +41,7 @@ public interface ISocialFeedRepository
         Guid postId,
         int page,
         int pageSize,
+        Guid? viewerUserId,
         CancellationToken ct = default);
 
     Task<SocialCommentItem> AddCommentAsync(

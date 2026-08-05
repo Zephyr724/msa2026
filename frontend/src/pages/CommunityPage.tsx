@@ -1,5 +1,5 @@
-import { MessageCircle, Search, Sparkles, Users } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { MessageCircle, PenLine, Search, Users } from 'lucide-react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import SocialPostCard from '../components/social/SocialPostCard';
 import SocialPostComposer from '../components/social/SocialPostComposer';
@@ -11,7 +11,11 @@ export default function CommunityPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('q')?.trim() ?? '';
   const [searchInput, setSearchInput] = useState(search);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [published, setPublished] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const feed = useSocialFeed(search);
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = feed;
 
   useEffect(() => setSearchInput(search), [search]);
 
@@ -24,6 +28,18 @@ export default function CommunityPage() {
   const posts = feed.data?.pages.flatMap((page) => page.items) ?? [];
   const totalCount = feed.data?.pages[0]?.totalCount ?? 0;
   const canWrite = Boolean(auth.data);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !hasNextPage || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting) && !isFetchingNextPage) {
+        void fetchNextPage();
+      }
+    }, { rootMargin: '320px' });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
     <div className="min-h-[calc(100vh-4rem)]">
@@ -41,6 +57,28 @@ export default function CommunityPage() {
               Share progress, find practical ideas, and encourage people taking
               care of places across Aotearoa.
             </p>
+            <div className="mt-6">
+              {auth.isPending ? (
+                <button className="btn btn-primary rounded-full px-6" disabled type="button">Checking access…</button>
+              ) : canWrite ? (
+                <button
+                  className="btn btn-primary rounded-full px-6 shadow-sm"
+                  onClick={() => {
+                    setPublished(false);
+                    setComposerOpen(true);
+                  }}
+                  type="button"
+                >
+                  <PenLine aria-hidden="true" className="size-4" />
+                  New post
+                </button>
+              ) : (
+                <Link className="btn btn-primary rounded-full px-6" to="/login">
+                  <PenLine aria-hidden="true" className="size-4" />
+                  Sign in to create a post
+                </Link>
+              )}
+            </div>
           </div>
           <div className="kiwi-panel p-5 sm:p-6">
             <form className="flex gap-2" onSubmit={handleSearch} role="search">
@@ -55,7 +93,7 @@ export default function CommunityPage() {
                   id="community-search"
                   maxLength={100}
                   onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Search stories or people…"
+                  placeholder="Search titles, Quests, tags or people…"
                   type="search"
                   value={searchInput}
                 />
@@ -82,35 +120,16 @@ export default function CommunityPage() {
         </div>
       </section>
 
-      <div className="kiwi-page-wide grid gap-8 py-8 lg:grid-cols-[21rem_minmax(0,1fr)] lg:items-start">
-        <aside className="lg:sticky lg:top-24">
-          {auth.isPending ? (
-            <div aria-label="Checking publishing access" className="kiwi-panel space-y-3 p-5">
-              <div className="skeleton h-7 w-40" />
-              <div className="skeleton h-24 w-full" />
-            </div>
-          ) : canWrite ? (
-            <SocialPostComposer />
-          ) : (
-            <section className="kiwi-panel p-6 text-center">
-              <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary/12 text-primary">
-                <Sparkles aria-hidden="true" className="size-6" />
-              </span>
-              <h2 className="mt-4 text-2xl">Add your action</h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-content">
-                Anyone can browse. Sign in to publish, like, comment, and reply.
-              </p>
-              <Link className="btn btn-primary mt-5 w-full rounded-full" to="/login">
-                Sign in to participate
-              </Link>
-            </section>
-          )}
-        </aside>
-
+      <div className="kiwi-page-wide py-8">
+        {published && (
+          <div className="alert alert-success mb-6 rounded-2xl" role="status">
+            Your post is now in the community feed.
+          </div>
+        )}
         <section aria-busy={feed.isPending} aria-label="Community post feed">
           {feed.isPending && (
-            <div aria-label="Loading community posts" className="columns-1 gap-5 md:columns-2 xl:columns-3">
-              {[11, 16, 13, 18, 14, 12].map((height, index) => (
+            <div aria-label="Loading community posts" className="columns-1 gap-5 sm:columns-2 lg:columns-3 xl:columns-4">
+              {[11, 16, 13, 18, 14, 12, 17, 15].map((height, index) => (
                 <div className="kiwi-panel mb-5 inline-block w-full break-inside-avoid p-4" key={index}>
                   <div className="flex gap-3">
                     <div className="skeleton size-10 rounded-full" />
@@ -162,7 +181,7 @@ export default function CommunityPage() {
           )}
 
           {posts.length > 0 && (
-            <div className="columns-1 gap-5 md:columns-2 xl:columns-3">
+            <div className="columns-1 gap-5 sm:columns-2 lg:columns-3 xl:columns-4">
               {posts.map((post) => (
                 <SocialPostCard canWrite={canWrite} key={post.id} post={post} />
               ))}
@@ -170,7 +189,7 @@ export default function CommunityPage() {
           )}
 
           {feed.hasNextPage && (
-            <div className="mt-3 flex justify-center">
+            <div className="mt-3 flex justify-center" ref={loadMoreRef}>
               <button
                 className="btn btn-outline rounded-full px-8"
                 disabled={feed.isFetchingNextPage}
@@ -183,6 +202,12 @@ export default function CommunityPage() {
           )}
         </section>
       </div>
+
+      <SocialPostComposer
+        onClose={() => setComposerOpen(false)}
+        onPublished={() => setPublished(true)}
+        open={composerOpen}
+      />
     </div>
   );
 }

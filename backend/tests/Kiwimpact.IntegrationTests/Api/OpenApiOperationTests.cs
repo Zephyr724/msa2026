@@ -95,6 +95,20 @@ public sealed class OpenApiOperationTests
         foreach (var status in new[] { "201", "400", "401", "403", "429" })
             Assert.True(createResponses.TryGetProperty(status, out _), $"Missing {status}.");
 
+        var deleteResponses = paths
+            .GetProperty("/api/v1/social/posts/{postId}")
+            .GetProperty("delete")
+            .GetProperty("responses");
+        foreach (var status in new[] { "204", "401", "403", "404", "429" })
+            Assert.True(deleteResponses.TryGetProperty(status, out _), $"Missing delete {status}.");
+
+        var visibilityResponses = paths
+            .GetProperty("/api/v1/social/posts/{postId}/visibility")
+            .GetProperty("patch")
+            .GetProperty("responses");
+        foreach (var status in new[] { "200", "401", "403", "404", "429" })
+            Assert.True(visibilityResponses.TryGetProperty(status, out _), $"Missing visibility {status}.");
+
         var likePath = paths.GetProperty("/api/v1/social/posts/{postId}/like");
         foreach (var method in new[] { "put", "delete" })
         {

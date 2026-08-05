@@ -7,9 +7,11 @@ import {
 import {
   createSocialComment,
   createSocialPost,
+  deleteSocialPost,
   fetchSocialComments,
   fetchSocialPosts,
   setSocialPostLike,
+  setSocialPostVisibility,
 } from '../lib/api/social';
 import { ApiError } from '../lib/api/apiFetch';
 import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
@@ -48,6 +50,32 @@ export function useCreateSocialPost() {
   });
 }
 
+export function useDeleteSocialPost() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => executePrivateRequest(
+      client,
+      (signal) => deleteSocialPost(postId, signal),
+    ),
+    onSuccess: async (_result, postId) => {
+      client.removeQueries({ queryKey: socialKeys.comments(postId) });
+      await client.invalidateQueries({ queryKey: socialKeys.feeds });
+    },
+  });
+}
+
+export function useSetSocialPostVisibility() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ postId, isHidden }: { postId: string; isHidden: boolean }) =>
+      executePrivateRequest(
+        client,
+        (signal) => setSocialPostVisibility(postId, isHidden, signal),
+      ),
+    onSuccess: () => client.invalidateQueries({ queryKey: socialKeys.feeds }),
+  });
+}
+
 export function useSetSocialLike() {
   const client = useQueryClient();
   return useMutation({
@@ -82,6 +110,22 @@ export function useSetSocialLike() {
       for (const [key, data] of context?.snapshots ?? []) {
         client.setQueryData(key, data);
       }
+    },
+    onSuccess: (result, { postId }) => {
+      client.setQueriesData<InfiniteData<SocialPostPage>>(
+        { queryKey: socialKeys.feeds },
+        (data) => data && ({
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            items: page.items.map((post) => post.id === postId ? {
+              ...post,
+              likeCount: result.likeCount,
+              isLikedByViewer: result.isLikedByViewer,
+            } : post),
+          })),
+        }),
+      );
     },
     onSettled: () => client.invalidateQueries({ queryKey: socialKeys.feeds }),
   });

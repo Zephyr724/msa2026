@@ -52,8 +52,11 @@ erDiagram
     ApplicationUser ||--o{ SocialPost : "AuthorUserId"
     ApplicationUser ||--o{ SocialPostLike : "UserId"
     ApplicationUser ||--o{ SocialComment : "AuthorUserId"
+    Quest o|--o{ SocialPost : "QuestId (nullable for legacy rows)"
     SocialPost ||--o{ SocialPostLike : "PostId"
     SocialPost ||--o{ SocialComment : "PostId"
+    SocialPost ||--o{ SocialPostImage : "PostId"
+    SocialPost ||--o{ SocialPostTag : "PostId"
     SocialComment o|--o{ SocialComment : "ParentCommentId (nullable)"
 ```
 
@@ -396,13 +399,44 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 |--------|------|-------------|
 | `Id` | `uuid` | PK, not null |
 | `AuthorUserId` | `uuid` | Not null. FK → `AspNetUsers.Id`. Cascade delete. |
+| `QuestId` | `uuid?` | Nullable only for posts created before Slice 29. FK → `Quest.Id`. Restrict delete. Every new post must reference a currently Published Quest. |
+| `Title` | `text` (max 120) | Not null, non-blank after application normalization. Existing rows are backfilled from the first 120 characters of Content. |
 | `Content` | `text` (max 2000) | Not null, non-blank after application normalization. |
-| `ImageUrl` | `text` (max 2048) | Nullable. When supplied, absolute HTTPS URL without credentials. |
-| `ImageAltText` | `text` (max 200) | Nullable. Required exactly when `ImageUrl` is supplied. |
+| `ImageUrl` | `text` (max 2048) | Nullable legacy compatibility column. New writes use `SocialPostImage`. |
+| `ImageAltText` | `text` (max 200) | Nullable legacy compatibility column. New writes use `SocialPostImage`. |
+| `IsHidden` | `bool` | Not null, default `false`. Hidden is a published visibility state, not a draft. |
 | `CreatedAt` | `timestamp with time zone` | Not null, immutable. |
-| `UpdatedAt` | `timestamp with time zone` | Not null. Equal to `CreatedAt` in Slice 25 because editing is deferred. |
+| `UpdatedAt` | `timestamp with time zone` | Not null. Advances when the author changes visibility. |
 
-### 3.15 SocialPostLike
+New posts require a currently Published Quest at the application/repository
+boundary. The nullable database column preserves existing posts without
+inventing a relationship. Later Quest lifecycle changes do not erase the
+historical post relationship. A hidden post is readable only by its author;
+other viewers receive the same not-found boundary for feed, like, and comment
+access. Existing likes/comments remain stored while hidden and reappear if the
+author restores the post.
+
+### 3.15 SocialPostImage
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `PostId` | `uuid` | Composite PK. FK → `SocialPost.Id`. Cascade delete. |
+| `SortOrder` | `int` | Composite PK. Range 0–8, giving at most nine ordered images per post. |
+| `Url` | `text` (max 2048) | Not null. Absolute HTTPS URL without credentials. |
+| `AltText` | `text` (max 200) | Not null and non-blank. |
+
+### 3.16 SocialPostTag
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `PostId` | `uuid` | Composite PK. FK → `SocialPost.Id`. Cascade delete. |
+| `NormalizedName` | `text` (max 30) | Composite PK. Uppercase invariant key for case-insensitive per-post uniqueness. |
+| `Name` | `text` (max 30) | Not null, non-blank, and free of control characters. |
+
+The application boundary accepts at most ten tags per post and ignores
+case-insensitive duplicates.
+
+### 3.17 SocialPostLike
 
 | Column | Type | Constraints |
 |--------|------|-------------|
@@ -413,7 +447,7 @@ See `specs/architecture/01-domain-model-region.md` for full specification.
 The composite primary key makes setting a like idempotent and prevents a user
 from contributing more than one like to the same post.
 
-### 3.16 SocialComment
+### 3.18 SocialComment
 
 | Column | Type | Constraints |
 |--------|------|-------------|
@@ -479,6 +513,9 @@ The code-only achievement evaluator and presentation enums are
 | CommunityChallenge | `(LocalAreaRegionId) WHERE Status = 'Active'` | Partial unique index | At most one Active challenge per LocalArea |
 | CommunityChallenge | `(LocalAreaRegionId, PeriodStart)` | Index | Challenge history lookup |
 | SocialPost | `(CreatedAt, Id)` | Index | Stable newest-first feed paging |
+| SocialPost | `QuestId` | Index | Related-Quest feed projection and search |
+| SocialPostImage | `(PostId, SortOrder)` | Composite primary key | Ordered images and maximum-nine range enforcement |
+| SocialPostTag | `(PostId, NormalizedName)` | Composite primary key | Case-insensitively unique tags per post |
 | SocialPostLike | `(PostId, UserId)` | Composite primary key | One like per user and post |
 | SocialComment | `(PostId, ParentCommentId, CreatedAt, Id)` | Index | Stable root/reply thread reads |
 
@@ -491,6 +528,8 @@ The code-only achievement evaluator and presentation enums are
 | `EvidenceClaimDetail` → `QuestCompletion` | `Cascade` | Detail is 1:1 owned by the completion. |
 | `QuestCompletion` → `QuestParticipation` | `SetNull` | Completion outlives cancelled participation. |
 | `SocialPostLike` / `SocialComment` → `SocialPost` | `Cascade` | Reactions and discussion are owned by the post. |
+| `SocialPostImage` / `SocialPostTag` → `SocialPost` | `Cascade` | Images and tags are owned by the post. |
+| `SocialPost` → `Quest` | `Restrict` | A related Quest cannot be deleted while a post retains its context. Legacy posts may have no Quest. |
 | `SocialPost` / `SocialPostLike` / `SocialComment` → `ApplicationUser` | `Cascade` | Account deletion removes authored social data and reactions. |
 | `SocialComment` → parent `SocialComment` | `SetNull` | A reply remains a valid root if its parent is removed during account cleanup. |
 | All other FKs | `Restrict` | Default safe behavior; specific cases reviewed during implementation. |
@@ -510,7 +549,7 @@ The code-only achievement evaluator and presentation enums are
 | UserAchievement | The Member (self) | Self read; System awards |
 | CommunityChallenge | Admin | Guest and Member: public aggregate read. Admin: create and manage. Organizer: no special management privilege beyond public/member read. Private personal contribution data remains available only to the owning Member through Passport endpoints. |
 | Region | System (seed) | Public read (active only); Admin manages seed |
-| SocialPost | Author for creation; public read | Authenticated Member+ creates. Editing/deletion are outside Slice 25. API never returns the internal author user ID. |
+| SocialPost | Author for creation, visibility, and deletion; public read | Authenticated Member+ creates against a Published Quest. Only the author changes public/hidden visibility or deletes. Hidden posts are author-only. API never returns the internal author user ID. |
 | SocialPostLike | The Member (self) | Authenticated user sets/removes only their own like; public responses expose aggregate count only. |
 | SocialComment | Author for creation; public read | Authenticated Member+ creates roots/direct replies. Editing/deletion are outside Slice 25. API never returns the internal author user ID. |
 
@@ -579,11 +618,16 @@ comments) was explicitly approved on 2026-07-31 and is no longer deferred.
 10. `CommunityRegionIdAtAward` is immutable after creation.
 11. Social API responses expose display names but never author/user IDs,
     emails, Home Community, or other private profile fields.
-12. Social images are linked HTTPS resources; the backend never downloads or
-    proxies them in Slice 25.
+12. Social images are ordered linked HTTPS resources; the backend never
+    downloads or proxies them. Each new post has at most nine and each image
+    has non-blank alternative text.
 13. If exceptional internal data damage leaves a social author without a
     `UserProfile`, public social reads use the neutral `Community member`
     display label instead of exposing an identifier or failing the whole page.
+14. New social posts require a currently Published Quest, a title, and a body.
+    Nullable `QuestId` exists only to preserve legacy rows safely.
+15. Hidden posts are published records visible only to their author. Other
+    viewers cannot discover, like, read comments, or add comments to them.
 
 ## 11. Resolved Completion-Lifecycle Decisions
 

@@ -1,21 +1,46 @@
 namespace Kiwimpact.Api.Contracts;
 
 public sealed record CreateSocialPostRequest(
+    Guid QuestId,
+    string Title,
     string Content,
-    string? ImageUrl,
-    string? ImageAltText);
+    IReadOnlyList<CreateSocialPostImageRequest>? Images,
+    IReadOnlyList<string>? Tags,
+    bool IsHidden = false);
+
+public sealed record SetSocialPostVisibilityRequest(bool IsHidden);
+
+public sealed record CreateSocialPostImageRequest(
+    string ImageUrl,
+    string ImageAltText);
+
+public sealed record SocialPostImageDto(
+    string ImageUrl,
+    string ImageAltText,
+    int SortOrder);
+
+public sealed record SocialPostQuestDto(
+    Guid Id,
+    string Title,
+    string? CoverImageUrl,
+    string? LocationDescription,
+    string? StartAtUtc);
 
 public sealed record SocialPostDto(
     Guid Id,
+    string Title,
     string Content,
-    string? ImageUrl,
-    string? ImageAltText,
+    IReadOnlyList<SocialPostImageDto> Images,
+    IReadOnlyList<string> Tags,
+    SocialPostQuestDto? Quest,
     string AuthorDisplayName,
     string CreatedAtUtc,
     string UpdatedAtUtc,
     int LikeCount,
     int CommentCount,
-    bool IsLikedByViewer);
+    bool IsLikedByViewer,
+    bool CanDelete,
+    bool IsHidden);
 
 public sealed record SetSocialLikeDto(int LikeCount, bool IsLikedByViewer);
 

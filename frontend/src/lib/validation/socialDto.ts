@@ -64,18 +64,45 @@ function validatePageShape<T>(
 }
 
 export function validateSocialPost(value: unknown): SocialPostDto {
-  if (!isRecord(value)) throw new Error('Invalid social post response.');
+  if (!isRecord(value) || !Array.isArray(value.images) || !Array.isArray(value.tags)) {
+    throw new Error('Invalid social post response.');
+  }
+  const quest = value.quest === null ? null : validateQuest(value.quest);
   return {
     id: requiredString(value.id, 'post id'),
+    title: requiredString(value.title, 'post title'),
     content: requiredString(value.content, 'post content'),
-    imageUrl: nullableString(value.imageUrl, 'image URL'),
-    imageAltText: nullableString(value.imageAltText, 'image alternative text'),
+    images: value.images.map(validateImage),
+    tags: value.tags.map((tag) => requiredString(tag, 'post tag')),
+    quest,
     authorDisplayName: requiredString(value.authorDisplayName, 'author display name'),
     createdAtUtc: requiredString(value.createdAtUtc, 'created timestamp'),
     updatedAtUtc: requiredString(value.updatedAtUtc, 'updated timestamp'),
     likeCount: nonNegativeInteger(value.likeCount, 'like count'),
     commentCount: nonNegativeInteger(value.commentCount, 'comment count'),
     isLikedByViewer: booleanValue(value.isLikedByViewer, 'viewer like state'),
+    canDelete: booleanValue(value.canDelete, 'post delete permission'),
+    isHidden: booleanValue(value.isHidden, 'post visibility'),
+  };
+}
+
+function validateImage(value: unknown): SocialPostDto['images'][number] {
+  if (!isRecord(value)) throw new Error('Invalid social post image.');
+  return {
+    imageUrl: requiredString(value.imageUrl, 'post image URL'),
+    imageAltText: requiredString(value.imageAltText, 'post image alternative text'),
+    sortOrder: nonNegativeInteger(value.sortOrder, 'post image sort order'),
+  };
+}
+
+function validateQuest(value: unknown): NonNullable<SocialPostDto['quest']> {
+  if (!isRecord(value)) throw new Error('Invalid related Quest.');
+  return {
+    id: requiredString(value.id, 'Quest id'),
+    title: requiredString(value.title, 'Quest title'),
+    coverImageUrl: nullableString(value.coverImageUrl, 'Quest cover image URL'),
+    locationDescription: nullableString(value.locationDescription, 'Quest location'),
+    startAtUtc: nullableString(value.startAtUtc, 'Quest start timestamp'),
   };
 }
 

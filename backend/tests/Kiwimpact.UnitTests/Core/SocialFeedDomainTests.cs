@@ -8,18 +8,30 @@ public sealed class SocialFeedDomainTests
         new(2026, 7, 31, 20, 0, 0, TimeSpan.FromHours(12));
 
     [Fact]
-    public void PostCreate_NormalizesContentImageAndTimestamp()
+    public void PostCreate_NormalizesQuestStoryImagesTagsAndTimestamp()
     {
+        var questId = Guid.NewGuid();
         var post = SocialPost.Create(
             Guid.NewGuid(),
+            questId,
+            "  Our planting day  ",
             "  Planted native seedlings today.  ",
-            "  https://images.example.test/seedlings.jpg  ",
-            "  Native seedlings beside a walking track  ",
+            [new SocialPostImageDetails(
+                "  https://images.example.test/seedlings.jpg  ",
+                "  Native seedlings beside a walking track  ")],
+            [" #StreamCare ", "streamcare", "Auckland"],
+            true,
             Now);
 
+        Assert.Equal(questId, post.QuestId);
+        Assert.Equal("Our planting day", post.Title);
         Assert.Equal("Planted native seedlings today.", post.Content);
-        Assert.Equal("https://images.example.test/seedlings.jpg", post.ImageUrl);
-        Assert.Equal("Native seedlings beside a walking track", post.ImageAltText);
+        var image = Assert.Single(post.Images);
+        Assert.Equal("https://images.example.test/seedlings.jpg", image.Url);
+        Assert.Equal("Native seedlings beside a walking track", image.AltText);
+        Assert.Equal(0, image.SortOrder);
+        Assert.Equal(["Auckland", "StreamCare"], post.Tags.Select(tag => tag.Name).Order());
+        Assert.True(post.IsHidden);
         Assert.Equal(TimeSpan.Zero, post.CreatedAt.Offset);
         Assert.Equal(post.CreatedAt, post.UpdatedAt);
     }
@@ -32,9 +44,12 @@ public sealed class SocialFeedDomainTests
     {
         Assert.Throws<ArgumentException>(() => SocialPost.Create(
             Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Post title",
             "Post content",
-            imageUrl,
-            "A useful description",
+            [new SocialPostImageDetails(imageUrl, "A useful description")],
+            [],
+            false,
             Now));
     }
 
@@ -43,29 +58,71 @@ public sealed class SocialFeedDomainTests
     {
         Assert.Throws<ArgumentException>(() => SocialPost.Create(
             Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Post title",
             "Post content",
-            "https://images.example.test/photo.jpg",
-            null,
+            [new SocialPostImageDetails("https://images.example.test/photo.jpg", "")],
+            [],
+            false,
             Now));
         Assert.Throws<ArgumentException>(() => SocialPost.Create(
             Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Post title",
             "Post content",
-            null,
-            "Orphaned alternative text",
+            [new SocialPostImageDetails("", "Orphaned alternative text")],
+            [],
+            false,
             Now));
     }
 
     [Fact]
-    public void PostCreate_RejectsBlankOrOversizedContent()
+    public void PostCreate_RejectsMissingQuestBlankFieldsAndOversizedContent()
     {
         Assert.Throws<ArgumentException>(() => SocialPost.Create(
-            Guid.NewGuid(), "  ", null, null, Now));
+            Guid.NewGuid(), Guid.Empty, "Title", "Content", [], [], false, Now));
+        Assert.Throws<ArgumentException>(() => SocialPost.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "  ", "Content", [], [], false, Now));
+        Assert.Throws<ArgumentException>(() => SocialPost.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "Title", "  ", [], [], false, Now));
         Assert.Throws<ArgumentOutOfRangeException>(() => SocialPost.Create(
             Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Post title",
             new string('x', SocialPost.MaxContentLength + 1),
-            null,
-            null,
+            [],
+            [],
+            false,
             Now));
+    }
+
+    [Fact]
+    public void PostCreate_BoundsImagesAndTags()
+    {
+        var tooManyImages = Enumerable.Range(0, SocialPost.MaxImages + 1)
+            .Select(index => new SocialPostImageDetails(
+                $"https://images.example.test/{index}.jpg",
+                $"Image {index}"))
+            .ToArray();
+        Assert.Throws<ArgumentException>(() => SocialPost.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "Title", "Content",
+            tooManyImages, [], false, Now));
+        Assert.Throws<ArgumentException>(() => SocialPost.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "Title", "Content", [],
+            Enumerable.Range(0, SocialPost.MaxTags + 1).Select(index => $"tag{index}").ToArray(),
+            false, Now));
+    }
+
+    [Fact]
+    public void PostVisibility_CanChangeAfterPublishing()
+    {
+        var post = SocialPost.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "Title", "Content", [], [], false, Now);
+
+        post.SetVisibility(true, Now.AddMinutes(5));
+
+        Assert.True(post.IsHidden);
+        Assert.Equal(Now.AddMinutes(5).ToUniversalTime(), post.UpdatedAt);
     }
 
     [Fact]
