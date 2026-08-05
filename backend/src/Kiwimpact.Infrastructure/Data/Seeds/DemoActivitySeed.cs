@@ -224,6 +224,11 @@ public static class DemoActivitySeed
         await EnsureCurrentChallengesAsync(db, seedNow, ct);
 
         await db.SaveChangesAsync(ct);
+        await AssessmentActivitySeed.SeedAutomaticAchievementsAsync(
+            db,
+            profiles.Values,
+            ct);
+        await db.SaveChangesAsync(ct);
     }
 
     private static async Task EnsureDemoRegionsAsync(

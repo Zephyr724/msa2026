@@ -1,4 +1,5 @@
 using Kiwimpact.Core.Enums;
+using Kiwimpact.Core.Authorization;
 using Kiwimpact.Core.Progression;
 using Kiwimpact.Infrastructure.Data;
 using Kiwimpact.Infrastructure.Data.Seeds;
@@ -96,22 +97,49 @@ public sealed class SeedConfigurationTests
             _ = factory.CreateClient();
 
             using var db = CreateInspectionContext(container.GetConnectionString());
-            Assert.Equal(23, await db.Regions.CountAsync(
+            Assert.Equal(27, await db.Regions.CountAsync(
                 TestContext.Current.CancellationToken));
 
             var quests = await db.Quests
                 .Where(quest => AssessmentDataSeed.QuestIds.Contains(quest.Id))
                 .Include(quest => quest.Images)
                 .ToListAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(5, quests.Count);
+            Assert.Equal(10, quests.Count);
             Assert.All(quests, quest =>
             {
                 Assert.Equal(QuestStatus.Published, quest.Status);
+                Assert.Equal(QuestSourceType.AdminCuratedExternal, quest.SourceType);
                 Assert.Equal(AssessmentDataSeed.CuratorUserId, quest.CreatedByUserId);
-                Assert.NotNull(quest.Latitude);
-                Assert.NotNull(quest.Longitude);
+                Assert.StartsWith("https://", quest.ExternalSourceUrl);
+                Assert.Equal(ExternalSourceStatus.Current, quest.ExternalSourceStatus);
+                Assert.NotNull(quest.SourceCheckedAt);
                 Assert.Single(quest.Images, image => image.IsCover);
             });
+            Assert.Contains(quests, quest => quest.Latitude.HasValue);
+            Assert.Contains(quests, quest =>
+                quest.ExternalSourceUrl!.Contains(
+                    "aucklandcouncil.govt.nz",
+                    StringComparison.Ordinal));
+            Assert.Contains(quests, quest =>
+                quest.ExternalSourceUrl!.Contains(
+                    "ecan.govt.nz",
+                    StringComparison.Ordinal));
+            Assert.Contains(quests, quest =>
+                quest.ExternalSourceUrl!.Contains(
+                    "ccc.govt.nz",
+                    StringComparison.Ordinal));
+            Assert.Contains(quests, quest =>
+                quest.ExternalSourceUrl!.Contains(
+                    "wellington.govt.nz",
+                    StringComparison.Ordinal));
+            Assert.Contains(quests, quest =>
+                quest.ExternalSourceUrl!.Contains(
+                    "tauranga.govt.nz",
+                    StringComparison.Ordinal));
+            Assert.Contains(quests, quest =>
+                quest.ExternalSourceUrl!.Contains(
+                    "doc.govt.nz",
+                    StringComparison.Ordinal));
 
             var curator = await db.Set<ApplicationUser>()
                 .SingleAsync(
@@ -181,12 +209,12 @@ public sealed class SeedConfigurationTests
             }
 
             using var db = CreateInspectionContext(container.GetConnectionString());
-            Assert.Equal(23, await db.Regions.CountAsync(
+            Assert.Equal(27, await db.Regions.CountAsync(
                 TestContext.Current.CancellationToken));
-            Assert.Equal(5, await db.Quests.CountAsync(
+            Assert.Equal(10, await db.Quests.CountAsync(
                 quest => AssessmentDataSeed.QuestIds.Contains(quest.Id),
                 TestContext.Current.CancellationToken));
-            Assert.Equal(5, await db.QuestImages.CountAsync(
+            Assert.Equal(10, await db.QuestImages.CountAsync(
                 image => AssessmentDataSeed.QuestIds.Contains(image.QuestId),
                 TestContext.Current.CancellationToken));
             Assert.Equal(
@@ -195,6 +223,201 @@ public sealed class SeedConfigurationTests
                     .Where(quest => quest.Id == AssessmentDataSeed.QuestIds[0])
                     .Select(quest => quest.Title)
                     .SingleAsync(TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            await container.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ProductionAssessmentAccounts_SeedSixSecretDrivenRolesAndRichHistoryIdempotently()
+    {
+        await using var container = new PostgreSqlBuilder()
+            .WithImage("postgres:17-alpine")
+            .Build();
+        await container.StartAsync(TestContext.Current.CancellationToken);
+
+        try
+        {
+            using (var preDb = CreateInspectionContext(container.GetConnectionString()))
+            {
+                await preDb.Database.MigrateAsync(TestContext.Current.CancellationToken);
+            }
+
+            var config = AssessmentAccountConfiguration();
+            using (var firstFactory = new NonDevelopmentWebApplicationFactory(
+                container.GetConnectionString(),
+                config))
+            {
+                _ = firstFactory.CreateClient();
+                using var scope = firstFactory.Services.CreateScope();
+                var userManager = scope.ServiceProvider
+                    .GetRequiredService<UserManager<ApplicationUser>>();
+                foreach (var account in AssessmentTestAccounts)
+                {
+                    var user = await userManager.FindByEmailAsync(account.Email);
+                    Assert.NotNull(user);
+                    Assert.True(await userManager.CheckPasswordAsync(
+                        user,
+                        account.Password));
+                }
+            }
+
+            AssessmentSeedCounts firstCounts;
+            using (var db = CreateInspectionContext(container.GetConnectionString()))
+            {
+                firstCounts = await AssessmentCountsAsync(db);
+                Assert.Equal(10, firstCounts.Quests);
+                Assert.Equal(38, firstCounts.Completions);
+                Assert.Equal(38, firstCounts.XpTransactions);
+                Assert.Equal(38, firstCounts.EvidenceDetails);
+                Assert.True(firstCounts.Achievements >= 20);
+
+                var configuredEmails = AssessmentTestAccounts
+                    .Select(account => account.Email.ToUpperInvariant())
+                    .ToArray();
+                var configuredUsers = await db.Set<ApplicationUser>()
+                    .Where(user =>
+                        user.NormalizedEmail != null &&
+                        configuredEmails.Contains(user.NormalizedEmail))
+                    .ToListAsync(TestContext.Current.CancellationToken);
+                Assert.Equal(6, configuredUsers.Count);
+                Assert.All(configuredUsers, user => Assert.True(user.EmailConfirmed));
+
+                var userIds = configuredUsers.Select(user => user.Id).ToArray();
+                Assert.All(
+                    await db.UserProfiles
+                        .Where(profile => userIds.Contains(profile.Id))
+                        .ToListAsync(TestContext.Current.CancellationToken),
+                    profile =>
+                    {
+                        Assert.Equal(
+                            RegionSeed.HendersonMasseyId,
+                            profile.HomeCommunityRegionId);
+                        Assert.True(profile.TotalXp > 0);
+                    });
+                Assert.All(configuredUsers, user => Assert.Contains(
+                    db.UserAchievements.Where(achievement => achievement.UserId == user.Id),
+                    achievement =>
+                        achievement.AchievementId ==
+                        Kiwimpact.Core.Achievements.AchievementCatalog.FirstSteps.Id));
+
+                var roleRows = await db.Set<IdentityUserRole<Guid>>()
+                    .Where(item => userIds.Contains(item.UserId))
+                    .Join(
+                        db.Roles,
+                        item => item.RoleId,
+                        role => role.Id,
+                        (item, role) => new { item.UserId, role.Name })
+                    .ToListAsync(TestContext.Current.CancellationToken);
+                foreach (var account in AssessmentTestAccounts)
+                {
+                    var userId = configuredUsers.Single(user =>
+                        user.NormalizedEmail == account.Email.ToUpperInvariant()).Id;
+                    var expected = account.Role == AppRoles.Member
+                        ? new[] { AppRoles.Member }
+                        : new[] { AppRoles.Member, account.Role };
+                    Assert.Equal(
+                        expected.Order(),
+                        roleRows
+                            .Where(item => item.UserId == userId)
+                            .Select(item => item.Name!)
+                            .Order());
+                }
+
+                var supporters = await db.Set<ApplicationUser>()
+                    .Where(user => user.UserName!.StartsWith("assessment-supporter-"))
+                    .ToListAsync(TestContext.Current.CancellationToken);
+                Assert.Equal(4, supporters.Count);
+                Assert.All(supporters, supporter =>
+                {
+                    Assert.Null(supporter.PasswordHash);
+                    Assert.False(supporter.EmailConfirmed);
+                });
+                var supporterIds = supporters.Select(user => user.Id).ToArray();
+                Assert.Empty(await db.Set<IdentityUserRole<Guid>>()
+                    .Where(item => supporterIds.Contains(item.UserId))
+                    .ToListAsync(TestContext.Current.CancellationToken));
+            }
+
+            using (var secondFactory = new NonDevelopmentWebApplicationFactory(
+                container.GetConnectionString(),
+                config))
+            {
+                _ = secondFactory.CreateClient();
+            }
+
+            using var finalDb = CreateInspectionContext(container.GetConnectionString());
+            Assert.Equal(firstCounts, await AssessmentCountsAsync(finalDb));
+        }
+        finally
+        {
+            await container.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ProductionAssessmentAccounts_ExistingEmailCollisionCreatesNoReviewerAccounts()
+    {
+        await using var container = new PostgreSqlBuilder()
+            .WithImage("postgres:17-alpine")
+            .Build();
+        await container.StartAsync(TestContext.Current.CancellationToken);
+
+        try
+        {
+            var existingUserId = Guid.NewGuid();
+            using (var preDb = CreateInspectionContext(container.GetConnectionString()))
+            {
+                await preDb.Database.MigrateAsync(TestContext.Current.CancellationToken);
+                // Use slot two so slot one is staged first; the outer account
+                // transaction must roll it back when this collision is found.
+                var email = AssessmentTestAccounts[1].Email;
+                preDb.Set<ApplicationUser>().Add(new ApplicationUser
+                {
+                    Id = existingUserId,
+                    UserName = email,
+                    NormalizedUserName = email.ToUpperInvariant(),
+                    Email = email,
+                    NormalizedEmail = email.ToUpperInvariant(),
+                    EmailConfirmed = true,
+                    PasswordHash = "pre-existing-password-hash",
+                    LockoutEnabled = true,
+                });
+                await preDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            using var factory = new NonDevelopmentWebApplicationFactory(
+                container.GetConnectionString(),
+                AssessmentAccountConfiguration());
+            var exception = Assert.Throws<InvalidOperationException>(
+                () => _ = factory.CreateClient());
+            Assert.Contains("already owned", exception.Message);
+
+            using var db = CreateInspectionContext(container.GetConnectionString());
+            var configuredEmails = AssessmentTestAccounts
+                .Select(account => account.Email.ToUpperInvariant())
+                .ToArray();
+            var configuredUsers = await db.Set<ApplicationUser>()
+                .Where(user =>
+                    user.NormalizedEmail != null &&
+                    configuredEmails.Contains(user.NormalizedEmail))
+                .ToListAsync(TestContext.Current.CancellationToken);
+            Assert.Single(configuredUsers);
+            Assert.Equal(existingUserId, configuredUsers[0].Id);
+            Assert.Equal(
+                "pre-existing-password-hash",
+                configuredUsers[0].PasswordHash);
+            Assert.Equal(0, await db.XpTransactions.CountAsync(
+                TestContext.Current.CancellationToken));
+            Assert.DoesNotContain(
+                await db.Set<ApplicationUser>()
+                    .Where(user => user.Id != existingUserId)
+                    .Select(user => user.UserName)
+                    .ToListAsync(TestContext.Current.CancellationToken),
+                userName => userName is not null &&
+                    userName.StartsWith("assessment-supporter-"));
         }
         finally
         {
@@ -590,6 +813,14 @@ public sealed class SeedConfigurationTests
                 march);
             Assert.Equal(5, marchStreak.CurrentWeeks);
             Assert.True(marchStreak.HasVerifiedImpactThisWeek);
+            Assert.Contains(
+                await db.UserAchievements
+                    .Where(achievement => achievement.UserId == primaryId)
+                    .Select(achievement => achievement.AchievementId)
+                    .ToListAsync(TestContext.Current.CancellationToken),
+                achievementId =>
+                    achievementId ==
+                    Kiwimpact.Core.Achievements.AchievementCatalog.FirstSteps.Id);
 
             await AssertCurrentDemoChallengesAsync(db, march);
             await AssertSupportingNeighboursArePasswordlessAsync(db);
@@ -647,6 +878,8 @@ public sealed class SeedConfigurationTests
             await db.XpTransactions.CountAsync(
                 TestContext.Current.CancellationToken),
             await db.CommunityChallenges.CountAsync(
+                TestContext.Current.CancellationToken),
+            await db.UserAchievements.CountAsync(
                 TestContext.Current.CancellationToken));
 
     private static async Task AssertCurrentDemoChallengesAsync(
@@ -697,11 +930,90 @@ public sealed class SeedConfigurationTests
             .ToListAsync(TestContext.Current.CancellationToken));
     }
 
+    private static readonly IReadOnlyList<AssessmentAccountSeedPersona>
+        AssessmentTestAccounts =
+    [
+        new(
+            "assessment-member-1@example.test",
+            "Assessment Member One",
+            AppRoles.Member,
+            "Assessment01!AaZ"),
+        new(
+            "assessment-member-2@example.test",
+            "Assessment Member Two",
+            AppRoles.Member,
+            "Assessment02!BbY"),
+        new(
+            "assessment-organizer-1@example.test",
+            "Assessment Organizer One",
+            AppRoles.Organizer,
+            "Assessment03!CcX"),
+        new(
+            "assessment-organizer-2@example.test",
+            "Assessment Organizer Two",
+            AppRoles.Organizer,
+            "Assessment04!DdW"),
+        new(
+            "assessment-admin-1@example.test",
+            "Assessment Admin One",
+            AppRoles.Admin,
+            "Assessment05!EeV"),
+        new(
+            "assessment-admin-2@example.test",
+            "Assessment Admin Two",
+            AppRoles.Admin,
+            "Assessment06!FfU"),
+    ];
+
+    private static Dictionary<string, string?> AssessmentAccountConfiguration()
+    {
+        var config = new Dictionary<string, string?>
+        {
+            ["Seed:AssessmentData"] = "true",
+            ["Seed:AssessmentAccounts"] = "true",
+            ["CommunityChallenges:FinalizerEnabled"] = "false",
+        };
+        for (var index = 0; index < AssessmentTestAccounts.Count; index++)
+        {
+            var account = AssessmentTestAccounts[index];
+            config[$"AssessmentAccounts:Accounts:{index}:Email"] = account.Email;
+            config[$"AssessmentAccounts:Accounts:{index}:DisplayName"] =
+                account.DisplayName;
+            config[$"AssessmentAccounts:Accounts:{index}:Role"] = account.Role;
+            config[$"AssessmentAccounts:Accounts:{index}:Password"] =
+                account.Password;
+        }
+        return config;
+    }
+
+    private static async Task<AssessmentSeedCounts> AssessmentCountsAsync(
+        KiwimpactDbContext db) =>
+        new(
+            await db.Quests.CountAsync(
+                quest => AssessmentDataSeed.QuestIds.Contains(quest.Id),
+                TestContext.Current.CancellationToken),
+            await db.QuestCompletions.CountAsync(
+                TestContext.Current.CancellationToken),
+            await db.XpTransactions.CountAsync(
+                TestContext.Current.CancellationToken),
+            await db.EvidenceClaimDetails.CountAsync(
+                TestContext.Current.CancellationToken),
+            await db.UserAchievements.CountAsync(
+                TestContext.Current.CancellationToken));
+
+    private sealed record AssessmentSeedCounts(
+        int Quests,
+        int Completions,
+        int XpTransactions,
+        int EvidenceDetails,
+        int Achievements);
+
     private sealed record DemoActivityCounts(
         int Users,
         int Completions,
         int XpTransactions,
-        int Challenges);
+        int Challenges,
+        int Achievements);
 }
 
 // ── Test Helpers ───────────────────────────────────────────────────────

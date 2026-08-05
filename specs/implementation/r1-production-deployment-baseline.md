@@ -135,6 +135,7 @@ Do not add Nginx, Caddy, Traefik, or another reverse proxy unless the selected p
 | `Seed__Region`, `Seed__DemoQuests` | False in Production; these remain Development-only implementation paths |
 | `Seed__DemoAccounts` | False unless the human approves demo accounts |
 | `Seed__AssessmentData` | Default false; an explicitly approved, bounded, one-shot production assessment bootstrap may temporarily set true, then must return to false after verification |
+| `Seed__AssessmentAccounts` | Default false; the explicitly approved six-account reviewer bootstrap may temporarily set true only with all emails and passwords supplied through private provider secrets |
 | demo emails/passwords | Omit when disabled; otherwise secret storage only |
 | auth rate-limit settings | Non-secret accepted defaults unless measured change is approved |
 | logging levels | Information/Warning baseline; no sensitive payloads or secret values |

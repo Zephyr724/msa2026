@@ -30,8 +30,42 @@ public sealed record DemoAccountSeedOptions(
     ];
 }
 
+public sealed class AssessmentAccountSeedPersona
+{
+    public AssessmentAccountSeedPersona(
+        string email,
+        string displayName,
+        string role,
+        string password)
+    {
+        Email = email;
+        DisplayName = displayName;
+        Role = role;
+        Password = password;
+    }
+
+    public string Email { get; }
+    public string DisplayName { get; }
+    public string Role { get; }
+    public string Password { get; }
+}
+
+public sealed record AssessmentAccountSeedOptions(
+    bool Enabled,
+    IReadOnlyList<AssessmentAccountSeedPersona> Accounts);
+
 public static class IdentitySeed
 {
+    private static readonly Guid[] AssessmentAccountIds =
+    [
+        new("63000000-0000-4000-8000-000000000001"),
+        new("63000000-0000-4000-8000-000000000002"),
+        new("63000000-0000-4000-8000-000000000003"),
+        new("63000000-0000-4000-8000-000000000004"),
+        new("63000000-0000-4000-8000-000000000005"),
+        new("63000000-0000-4000-8000-000000000006"),
+    ];
+
     public static async Task SeedRolesAsync(
         RoleManager<ApplicationRole> roleManager,
         CancellationToken cancellationToken = default)
@@ -74,125 +108,245 @@ public static class IdentitySeed
                 "Development demo-account seeding requires DemoAccounts:Password.");
         }
 
-        foreach (var account in options.Accounts)
-        {
-            await SeedDemoAccountAsync(
-                db,
-                userManager,
-                account,
-                options.Password,
-                cancellationToken);
-        }
+        var accounts = options.Accounts
+            .Select(account => new AssessmentAccountSeedPersona(
+                account.Email,
+                account.DisplayName,
+                account.Role,
+                options.Password))
+            .ToArray();
+        ValidateAccounts(accounts, requireAssessmentRoleDistribution: false);
+        await SeedAccountsAtomicallyAsync(
+            db,
+            userManager,
+            accounts,
+            fixedUserIds: null,
+            cancellationToken);
     }
 
-    private static async Task SeedDemoAccountAsync(
+    public static async Task SeedAssessmentAccountsAsync(
         KiwimpactDbContext db,
         UserManager<ApplicationUser> userManager,
-        DemoAccountSeedPersona account,
-        string password,
+        AssessmentAccountSeedOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        if (!options.Enabled)
+        {
+            return;
+        }
+
+        ValidateAccounts(options.Accounts, requireAssessmentRoleDistribution: true);
+        await SeedAccountsAtomicallyAsync(
+            db,
+            userManager,
+            options.Accounts,
+            AssessmentAccountIds,
+            cancellationToken);
+    }
+
+    private static async Task SeedAccountsAtomicallyAsync(
+        KiwimpactDbContext db,
+        UserManager<ApplicationUser> userManager,
+        IReadOnlyList<AssessmentAccountSeedPersona> accounts,
+        IReadOnlyList<Guid>? fixedUserIds,
         CancellationToken cancellationToken)
     {
-        if (!AppRoles.All.Contains(account.Role, StringComparer.Ordinal))
-            throw new InvalidOperationException("Configured demo account role is invalid.");
-
-        // Seeding reconciles existing demo identities as well as creating new
-        // ones, keeping repeated development starts deterministic.
-        var normalizedEmail = account.Email.Trim();
-        var user = await userManager.FindByEmailAsync(normalizedEmail);
-
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         try
         {
-            if (user is null)
+            for (var index = 0; index < accounts.Count; index++)
             {
-                user = new ApplicationUser
-                {
-                    Id = Guid.NewGuid(),
-                    UserName = normalizedEmail,
-                    Email = normalizedEmail,
-                    EmailConfirmed = true,
-                    LockoutEnabled = true,
-                };
-
-                var createResult = await userManager.CreateAsync(user, password);
-                EnsureSucceeded(createResult, "Unable to create a configured demo account.");
+                await SeedAccountAsync(
+                    db,
+                    userManager,
+                    accounts[index],
+                    fixedUserIds?[index],
+                    cancellationToken);
             }
-            else
-            {
-                if (!user.EmailConfirmed)
-                {
-                    user.EmailConfirmed = true;
-                    EnsureSucceeded(
-                        await userManager.UpdateAsync(user),
-                        "Unable to confirm a configured demo account.");
-                }
-
-                if (!await userManager.CheckPasswordAsync(user, password))
-                {
-                    if (await userManager.HasPasswordAsync(user))
-                    {
-                        EnsureSucceeded(
-                            await userManager.RemovePasswordAsync(user),
-                            "Unable to rotate a configured demo password.");
-                    }
-                    EnsureSucceeded(
-                        await userManager.AddPasswordAsync(user, password),
-                        "Unable to set a configured demo password.");
-                }
-            }
-
-            IReadOnlyList<string> desiredRoles = account.Role == AppRoles.Member
-                ? [AppRoles.Member]
-                // Organizer and Admin personas retain the baseline Member
-                // capabilities in addition to their elevated role.
-                : [AppRoles.Member, account.Role];
-            var currentRoles = await userManager.GetRolesAsync(user);
-            var rolesToRemove = currentRoles
-                .Where(role =>
-                    AppRoles.All.Contains(role, StringComparer.Ordinal)
-                    && !desiredRoles.Contains(role, StringComparer.Ordinal))
-                .ToArray();
-            if (rolesToRemove.Length > 0)
-            {
-                EnsureSucceeded(
-                    await userManager.RemoveFromRolesAsync(user, rolesToRemove),
-                    "Unable to remove an obsolete configured demo role.");
-            }
-
-            foreach (var role in desiredRoles)
-            {
-                if (!await userManager.IsInRoleAsync(user, role))
-                {
-                    var roleResult = await userManager.AddToRoleAsync(user, role);
-                    EnsureSucceeded(roleResult, "Unable to assign a configured demo role.");
-                }
-            }
-
-            var profile = await db.UserProfiles.SingleOrDefaultAsync(
-                item => item.Id == user.Id,
-                cancellationToken);
-            if (profile is null)
-            {
-                db.UserProfiles.Add(UserProfile.Create(
-                    user.Id,
-                    account.DisplayName,
-                    DateTimeOffset.UtcNow));
-            }
-            else if (!string.Equals(
-                profile.DisplayName,
-                account.DisplayName.Trim(),
-                StringComparison.Ordinal))
-            {
-                profile.UpdateDisplayName(account.DisplayName, DateTimeOffset.UtcNow);
-            }
-            await db.SaveChangesAsync(cancellationToken);
-
             await transaction.CommitAsync(cancellationToken);
         }
         catch
         {
             await transaction.RollbackAsync(cancellationToken);
             throw;
+        }
+    }
+
+    private static async Task SeedAccountAsync(
+        KiwimpactDbContext db,
+        UserManager<ApplicationUser> userManager,
+        AssessmentAccountSeedPersona account,
+        Guid? fixedUserId,
+        CancellationToken cancellationToken)
+    {
+        // Seeding reconciles existing configured identities as well as
+        // creating new ones, keeping repeated one-shot starts deterministic.
+        var normalizedEmail = account.Email.Trim();
+        ApplicationUser? user;
+        if (fixedUserId.HasValue)
+        {
+            var identityEmail = userManager.NormalizeEmail(normalizedEmail);
+            var identityUserName = userManager.NormalizeName(normalizedEmail);
+            var reserved = await db.Set<ApplicationUser>()
+                .Where(item =>
+                    item.Id == fixedUserId.Value ||
+                    item.NormalizedEmail == identityEmail ||
+                    item.NormalizedUserName == identityUserName)
+                .ToListAsync(cancellationToken);
+            if (reserved.Any(item => item.Id != fixedUserId.Value))
+            {
+                throw new InvalidOperationException(
+                    "A configured assessment account email is already owned " +
+                    "by another identity.");
+            }
+
+            user = reserved.SingleOrDefault(item => item.Id == fixedUserId.Value);
+            if (user is not null &&
+                (user.NormalizedEmail != identityEmail ||
+                 user.NormalizedUserName != identityUserName))
+            {
+                throw new InvalidOperationException(
+                    "A configured assessment account ID collides with a " +
+                    "different identity.");
+            }
+        }
+        else
+        {
+            user = await userManager.FindByEmailAsync(normalizedEmail);
+        }
+
+        if (user is null)
+        {
+            user = new ApplicationUser
+            {
+                Id = fixedUserId ?? Guid.NewGuid(),
+                UserName = normalizedEmail,
+                Email = normalizedEmail,
+                EmailConfirmed = true,
+                LockoutEnabled = true,
+            };
+
+            EnsureSucceeded(
+                await userManager.CreateAsync(user, account.Password),
+                "Unable to create a configured account.");
+        }
+        else
+        {
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                EnsureSucceeded(
+                    await userManager.UpdateAsync(user),
+                    "Unable to confirm a configured account.");
+            }
+
+            if (!await userManager.CheckPasswordAsync(user, account.Password))
+            {
+                if (await userManager.HasPasswordAsync(user))
+                {
+                    EnsureSucceeded(
+                        await userManager.RemovePasswordAsync(user),
+                        "Unable to rotate a configured password.");
+                }
+                EnsureSucceeded(
+                    await userManager.AddPasswordAsync(user, account.Password),
+                    "Unable to set a configured password.");
+            }
+        }
+
+        IReadOnlyList<string> desiredRoles = account.Role == AppRoles.Member
+            ? [AppRoles.Member]
+            // Organizer and Admin personas retain the baseline Member
+            // capabilities in addition to their elevated role.
+            : [AppRoles.Member, account.Role];
+        var currentRoles = await userManager.GetRolesAsync(user);
+        var rolesToRemove = currentRoles
+            .Where(role =>
+                AppRoles.All.Contains(role, StringComparer.Ordinal)
+                && !desiredRoles.Contains(role, StringComparer.Ordinal))
+            .ToArray();
+        if (rolesToRemove.Length > 0)
+        {
+            EnsureSucceeded(
+                await userManager.RemoveFromRolesAsync(user, rolesToRemove),
+                "Unable to remove an obsolete configured role.");
+        }
+
+        foreach (var role in desiredRoles)
+        {
+            if (!await userManager.IsInRoleAsync(user, role))
+            {
+                EnsureSucceeded(
+                    await userManager.AddToRoleAsync(user, role),
+                    "Unable to assign a configured role.");
+            }
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var profile = await db.UserProfiles.SingleOrDefaultAsync(
+            item => item.Id == user.Id,
+            cancellationToken);
+        if (profile is null)
+        {
+            db.UserProfiles.Add(UserProfile.Create(
+                user.Id,
+                account.DisplayName,
+                now));
+        }
+        else if (!string.Equals(
+            profile.DisplayName,
+            account.DisplayName.Trim(),
+            StringComparison.Ordinal))
+        {
+            profile.UpdateDisplayName(account.DisplayName, now);
+        }
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void ValidateAccounts(
+        IReadOnlyList<AssessmentAccountSeedPersona> accounts,
+        bool requireAssessmentRoleDistribution)
+    {
+        ArgumentNullException.ThrowIfNull(accounts);
+        if (accounts.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "Configured account seeding requires at least one account.");
+        }
+
+        for (var index = 0; index < accounts.Count; index++)
+        {
+            var account = accounts[index];
+            if (string.IsNullOrWhiteSpace(account.Email) ||
+                string.IsNullOrWhiteSpace(account.DisplayName) ||
+                string.IsNullOrWhiteSpace(account.Password) ||
+                !AppRoles.All.Contains(account.Role, StringComparer.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Configured account {index + 1} is incomplete or has an invalid role.");
+            }
+        }
+
+        if (accounts
+            .Select(account => account.Email.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count() != accounts.Count)
+        {
+            throw new InvalidOperationException(
+                "Configured account emails must be unique.");
+        }
+
+        if (!requireAssessmentRoleDistribution)
+        {
+            return;
+        }
+
+        if (accounts.Count != 6 || AppRoles.All.Any(role =>
+                accounts.Count(account => account.Role == role) != 2))
+        {
+            throw new InvalidOperationException(
+                "Assessment account seeding requires exactly six accounts: " +
+                "two Member, two Organizer, and two Admin personas.");
         }
     }
 

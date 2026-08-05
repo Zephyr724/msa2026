@@ -79,6 +79,7 @@ the first deployment until the human chooses one of these two boundaries:
 | `Seed__DemoQuests` | `false` | No | Yes |
 | `Seed__DemoAccounts` | `false` | No | Yes |
 | `Seed__AssessmentData` | `false` normally; set `true` only for the approved one-shot assessment bootstrap described below | No | Yes |
+| `Seed__AssessmentAccounts` | `false` normally; set `true` only for the separately approved reviewer-account bootstrap below | No | Yes |
 | `Authentication__Google__ClientId` | Google OAuth web client ID | No | Before Google sign-in smoke |
 | `Authentication__Google__ClientSecret` | Google OAuth web client secret | Yes | Before Google sign-in smoke |
 | `GOOGLE_MAPS_BROWSER_VALUE` | Browser-visible key restricted by API and production referrer | No; it is embedded in the frontend bundle | Before Maps smoke |
@@ -130,29 +131,76 @@ value requires a new image build and deploy.
 9. Configure a spend alert and hard usage limit appropriate to the approved
    budget. Railway Agent is not required for deployment and should remain off.
 
-## One-shot assessment data bootstrap
+## One-shot assessment experience bootstrap
 
-The approved public assessment environment may initialize a bounded showcase
-without enabling either Development demo flag or creating a test login:
+The approved public assessment environment may initialize a bounded real-source
+showcase without enabling either Development demo flag:
 
 1. Keep `Seed__Region=false`, `Seed__DemoQuests=false`, and
    `Seed__DemoAccounts=false`.
 2. Set `Seed__AssessmentData=true` only after the matching migration pre-deploy
-   has succeeded. The next application start atomically creates the official
-   23-row region hierarchy, five fictional published Quests with coordinates
-   and project-owned covers, and one credentialless disabled ownership identity.
-   That identity has no role, claim, login, token, or confirmed email.
-3. Verify the public Quest list returns five showcase rows and Map view renders
-   their Auckland markers. Confirm that every description says the event is
-   fictional and not scheduled.
+   has succeeded. The next application start atomically creates the 23-row
+   Auckland hierarchy, four additional New Zealand territorial-authority
+   locations, ten real provider-backed published Quests, and one credentialless
+   disabled ownership identity. Every Quest uses a project-owned cover and a
+   separately checked official provider URL; no provider image is copied.
+3. Verify the public Quest list returns ten assessment rows, dated items are
+   still current, the available map markers render, and each Quest Detail
+   `Visit official source` action opens the expected council, DOC, or provider
+   page. Re-check source facts immediately before deployment; do not publish a
+   near-term event after its provider page has changed or the event has passed.
 4. Set `Seed__AssessmentData=false` and let Railway deploy once more. The rows
-   remain in PostgreSQL. Re-enabling the flag is idempotent and does not update
-   existing seed-owned Quests, but leaving a bootstrap switch enabled is not
+   remain in PostgreSQL. Re-enabling the flag is idempotent. The exact five
+   original, unmodified fictional rows are safely upgraded to real-source rows;
+   any operator-edited row is preserved. Leaving the switch enabled is not
    normal steady-state configuration.
 
-This bootstrap does not create an administrator or organizer login and does not
-grant the signed-in reviewer elevated permissions. Any production role grant
-requires a separately approved operator procedure.
+### Six private reviewer accounts
+
+The product owner approved six assessment-only logins: two Member, two
+Organizer, and two Admin personas. This path is separate from
+`Seed__AssessmentData` because it creates confirmed credentials and elevated
+roles.
+
+1. Complete and verify the assessment-data bootstrap first.
+2. Generate six distinct strong passwords. In Railway private variables set,
+   for indexes `0` through `5`:
+
+   ```text
+   AssessmentAccounts__Accounts__0__Email
+   AssessmentAccounts__Accounts__0__DisplayName
+   AssessmentAccounts__Accounts__0__Role
+   AssessmentAccounts__Accounts__0__Password
+   ```
+
+   Repeat the four keys for indexes `1` through `5`. Role values are
+   case-sensitive and the full set must contain exactly two `Member`, two
+   `Organizer`, and two `Admin` entries. Do not use a personal email address.
+3. Keep `Seed__DemoAccounts=false`. Set
+   `Seed__AssessmentAccounts=true` for one deployment. Startup fails closed if
+   the six entries are incomplete, duplicate, have the wrong role distribution,
+   or the real activity catalogue is missing.
+4. Verify all six logins separately. Check that Member cannot open organizer or
+   Admin operations, Organizer can manage owned Quests but cannot review Admin
+   claims, and Admin can access both management and review. Confirm Passport,
+   achievements, My Community leaderboard, and history are populated.
+5. Set `Seed__AssessmentAccounts=false` and deploy again. Remove the six
+   password variables from steady-state service configuration after recording
+   them in the private marking channel or approved password manager. The
+   account rows and password hashes remain in PostgreSQL.
+
+The seed adds fictional, explicitly assessment-scoped completion history to the
+six reviewers and four credentialless supporting contributors. The latter have
+no password, confirmed email, role, claim, login, or token and exist only so the
+shared Home Community reaches the accepted ten-active-member privacy threshold.
+The fictional account history is not evidence that a real reviewer attended an
+official event. Re-enabling the account flag reconciles display names, roles,
+and passwords; treat it as a privileged rotation operation.
+
+Never put reviewer emails or passwords in Git, README examples, logs,
+screenshots, the submission video, or Cypress variables. Supply them only in
+the MSA submission form's private marking field. The Cypress journeys must keep
+using isolated Development accounts.
 
 ## First-release order
 
@@ -160,8 +208,8 @@ requires a separately approved operator procedure.
    approval.
 2. Let GitHub CI finish; Wait for CI should then permit Railway to build.
 3. Observe `/app/migrate` exit successfully before the app rollout begins.
-4. If assessment data is required, perform the one-shot bootstrap above; do not
-   enable the Development demo flags.
+4. If assessment data or reviewer accounts are required, perform the two
+   one-shot phases above in order; do not enable the Development demo flags.
 5. Observe `/health/ready` return healthy before Railway marks the deployment
    active.
 6. Record the exact deployed Git SHA and Railway deployment ID.
@@ -185,8 +233,11 @@ requires a separately approved operator procedure.
 - After Google sign-in, `/api/v1/users/me/streak` and the weekly Auckland people
   leaderboard return non-500 responses, proving the deployed image can resolve
   Auckland calendar boundaries.
-- Public Quest List and Map views expose the five approved assessment rows; map
-  markers use the build-time restricted Google Maps key and Map ID.
+- Public Quest List and Map views expose the ten approved real-source assessment
+  rows; Quest Detail opens each official provider page, and map markers use the
+  build-time restricted Google Maps key and Map ID.
+- All six private reviewer logins enforce their exact Member/Organizer/Admin
+  boundary and expose populated Passport, achievement, and leaderboard states.
 - PostgreSQL data and the key volume survive an application redeploy/restart.
 - A failed migration blocks deployment and leaves the prior release available.
 - One database backup restore drill is recorded with timestamps and observed

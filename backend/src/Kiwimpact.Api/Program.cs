@@ -382,6 +382,20 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 
+// ── Achievement catalog seed and validation (every environment) ─────
+// Install the validated catalog before any optional activity fixtures so
+// their XP history can receive the same rule-driven awards as live activity.
+// In non-Development environments migrations remain a deployment step.
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+    if (app.Environment.IsDevelopment())
+    {
+        await db.Database.MigrateAsync();
+    }
+    await AchievementSeed.SeedAndValidateAsync(db);
+}
+
 // ── Seed Orchestration ──────────────────────────────────────────────
 // Stable roles are safely idempotent in every environment. Automatic
 // migration and all demo data remain Development-only. The separately
@@ -392,8 +406,11 @@ var seedRegion = builder.Configuration.GetValue<bool>("Seed:Region");
 var seedDemoQuests = builder.Configuration.GetValue<bool>("Seed:DemoQuests");
 var seedDemoAccounts = builder.Configuration.GetValue<bool>("Seed:DemoAccounts");
 var seedAssessmentData = builder.Configuration.GetValue<bool>("Seed:AssessmentData");
+var seedAssessmentAccounts =
+    builder.Configuration.GetValue<bool>("Seed:AssessmentAccounts");
 
-if (seedRoles || seedAssessmentData || (app.Environment.IsDevelopment() &&
+if (seedRoles || seedAssessmentData || seedAssessmentAccounts ||
+    (app.Environment.IsDevelopment() &&
     (seedRegion || seedDemoQuests || seedDemoAccounts)))
 {
     using var scope = app.Services.CreateScope();
@@ -406,7 +423,7 @@ if (seedRoles || seedAssessmentData || (app.Environment.IsDevelopment() &&
         db.Database.Migrate();
     }
 
-    if (seedRoles)
+    if (seedRoles || seedAssessmentAccounts)
     {
         await IdentitySeed.SeedRolesAsync(
             services.GetRequiredService<RoleManager<ApplicationRole>>());
@@ -433,6 +450,41 @@ if (seedRoles || seedAssessmentData || (app.Environment.IsDevelopment() &&
         catch
         {
             await assessmentTransaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    if (seedAssessmentAccounts)
+    {
+        var missingAssessmentQuests = AssessmentDataSeed.QuestIds.Count -
+            await db.Quests.CountAsync(
+                quest => AssessmentDataSeed.QuestIds.Contains(quest.Id));
+        if (missingAssessmentQuests > 0)
+        {
+            throw new InvalidOperationException(
+                "Assessment account seeding requires the complete assessment " +
+                "Quest catalogue. Run the assessment-data bootstrap first.");
+        }
+
+        var assessmentPersonas = ReadAssessmentAccountPersonas(
+            builder.Configuration);
+        await IdentitySeed.SeedAssessmentAccountsAsync(
+            db,
+            services.GetRequiredService<UserManager<ApplicationUser>>(),
+            new AssessmentAccountSeedOptions(
+                Enabled: true,
+                Accounts: assessmentPersonas));
+
+        await using var assessmentActivityTransaction =
+            await db.Database.BeginTransactionAsync();
+        try
+        {
+            await AssessmentActivitySeed.SeedAsync(db, assessmentPersonas);
+            await assessmentActivityTransaction.CommitAsync();
+        }
+        catch
+        {
+            await assessmentActivityTransaction.RollbackAsync();
             throw;
         }
     }
@@ -526,27 +578,6 @@ if (seedRoles || seedAssessmentData || (app.Environment.IsDevelopment() &&
     }
 }
 
-// ── Achievement catalog seed and validation (every environment) ─────
-// The approved achievement catalog is a hard precondition of the award
-// core: it is seeded concurrency-safely and validated completely before the
-// host starts, so no hosted reconciliation/backfill pass and no request can
-// run against a missing or malformed catalog. Any catalog defect fails
-// startup; an empty catalog is never treated as ready.
-{
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
-    if (app.Environment.IsDevelopment())
-    {
-        // Same Development-only automatic migration as the seed block above;
-        // idempotent when it already ran. In other environments the
-        // deployment procedure must apply migrations before start — the
-        // fail-closed validation below reports a missing table as a startup
-        // failure rather than silently skipping awards.
-        await db.Database.MigrateAsync();
-    }
-    await AchievementSeed.SeedAndValidateAsync(db);
-}
-
 // OpenAPI JSON endpoint (available in all environments for Slice 0)
 app.MapOpenApi();
 
@@ -596,3 +627,20 @@ static bool IsReservedServerPath(PathString path) =>
 static bool StartsWithSegment(PathString path, string segment) =>
     path.Equals(segment, StringComparison.OrdinalIgnoreCase) ||
     path.StartsWithSegments(segment, StringComparison.OrdinalIgnoreCase);
+
+static IReadOnlyList<AssessmentAccountSeedPersona>
+    ReadAssessmentAccountPersonas(IConfiguration configuration)
+{
+    return configuration
+        .GetSection("AssessmentAccounts:Accounts")
+        .GetChildren()
+        .OrderBy(section =>
+            int.TryParse(section.Key, out var index) ? index : int.MaxValue)
+        .ThenBy(section => section.Key, StringComparer.Ordinal)
+        .Select(section => new AssessmentAccountSeedPersona(
+            section["Email"] ?? string.Empty,
+            section["DisplayName"] ?? string.Empty,
+            section["Role"] ?? string.Empty,
+            section["Password"] ?? string.Empty))
+        .ToArray();
+}
