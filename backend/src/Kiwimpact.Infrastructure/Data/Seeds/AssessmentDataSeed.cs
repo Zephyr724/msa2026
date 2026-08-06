@@ -97,6 +97,19 @@ public static class AssessmentDataSeed
         QuestIds[9],
     ];
 
+    /// <summary>
+    /// The original-ratio Pexels images reused by assessment Community posts.
+    /// Development fixtures consume this same catalogue so both environments
+    /// exercise the same landscape and portrait media without source cropping.
+    /// </summary>
+    public static IReadOnlyList<SocialPostImageDetails> CommunityStoryImages() =>
+        Definitions()
+            .Skip(10)
+            .Select(definition => new SocialPostImageDetails(
+                definition.ImageUrl,
+                $"Illustrative stock photo: {definition.AltText}"))
+            .ToArray();
+
     private static readonly DateTimeOffset SeedTimestamp =
         new(2026, 8, 5, 0, 0, 0, TimeSpan.Zero);
 

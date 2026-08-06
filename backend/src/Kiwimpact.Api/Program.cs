@@ -539,6 +539,7 @@ if (seedRoles || seedAssessmentData || seedAssessmentAccounts ||
         try
         {
             await DemoQuestSeed.SeedAsync(db);
+            await DemoSocialSeed.SeedAsync(db);
             await tx.CommitAsync();
         }
         catch

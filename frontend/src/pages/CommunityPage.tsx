@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import SocialPostCard from '../components/social/SocialPostCard';
 import SocialPostComposer from '../components/social/SocialPostComposer';
+import SocialMasonryGrid from '../components/social/SocialMasonryGrid';
 import { useAuthQuery } from '../hooks/useAuth';
 import { useSocialFeed } from '../hooks/useSocialFeed';
 
@@ -139,7 +140,7 @@ export default function CommunityPage() {
         ) : (
           <section aria-busy={feed.isPending} aria-label={mine ? 'My community posts' : 'Community post feed'}>
             {feed.isPending && (
-              <div aria-label="Loading community posts" className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4 xl:columns-5">
+              <div aria-label="Loading community posts" className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
                 {[16, 12, 18, 14, 17, 13, 19, 15, 12, 17].map((height, index) => (
                   <div className="mb-4 inline-block w-full break-inside-avoid overflow-hidden rounded-2xl bg-base-100 ring-1 ring-base-300" key={index}>
                     <div className="skeleton w-full" style={{ height: `${height}rem` }} />
@@ -172,9 +173,9 @@ export default function CommunityPage() {
             )}
 
             {posts.length > 0 && (
-              <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4 xl:columns-5">
+              <SocialMasonryGrid>
                 {posts.map((post) => <SocialPostCard canLike={canWrite} key={post.id} post={post} />)}
-              </div>
+              </SocialMasonryGrid>
             )}
 
             {feed.hasNextPage && (

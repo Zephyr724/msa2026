@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef, useState, type UIEvent } from 'react';
+import { resolveSocialImageUrl } from '../../lib/socialImages';
 import type { SocialPostImageDto } from '../../types/social';
 
 export default function SocialPostImageCarousel({ images, detail = false }: { images: SocialPostImageDto[]; detail?: boolean }) {
@@ -47,7 +48,7 @@ export default function SocialPostImageCarousel({ images, detail = false }: { im
             key={`${image.sortOrder}-${image.imageUrl}`}
             loading="lazy"
             referrerPolicy="no-referrer"
-            src={image.imageUrl}
+            src={resolveSocialImageUrl(image.imageUrl)}
           />
         ))}
       </div>
