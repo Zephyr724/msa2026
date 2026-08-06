@@ -4,7 +4,6 @@ import {
   Eye,
   EyeOff,
   Heart,
-  ImageIcon,
   Link2,
   MapPin,
   MessageCircle,
@@ -18,6 +17,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import SocialComments from '../components/social/SocialComments';
 import SocialPostDeleteDialog from '../components/social/SocialPostDeleteDialog';
 import SocialPostImageCarousel from '../components/social/SocialPostImageCarousel';
+import SocialPostTextCover from '../components/social/SocialPostTextCover';
 import SocialPostComposer from '../components/social/SocialPostComposer';
 import { useAuthQuery } from '../hooks/useAuth';
 import {
@@ -124,9 +124,7 @@ export default function SocialPostDetailPage() {
             {post.images.length > 0 ? (
               <SocialPostImageCarousel detail images={post.images} />
             ) : (
-              <div className="kiwi-topography grid aspect-[4/3] place-items-center bg-gradient-to-br from-primary/20 via-secondary to-accent/15 text-primary md:h-full md:aspect-auto">
-                <span className="grid size-20 place-items-center rounded-full bg-base-100/80 shadow-lg"><ImageIcon aria-hidden="true" className="size-9" /></span>
-              </div>
+              <SocialPostTextCover content={post.content} detail fallback={post.title} />
             )}
           </div>
 
@@ -184,11 +182,11 @@ export default function SocialPostDetailPage() {
 
             <footer className="fixed inset-x-0 bottom-0 z-20 flex items-center gap-2 border-t border-base-300 bg-base-100/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur md:static md:px-7">
               {auth.data ? (
-                <button aria-label={post.isLikedByViewer ? 'Unlike post' : 'Like post'} aria-pressed={post.isLikedByViewer} className={`btn flex-1 rounded-full ${post.isLikedByViewer ? 'btn-primary' : 'btn-ghost'}`} disabled={setLike.isPending} onClick={() => setLike.mutate({ postId: post.id, isLiked: !post.isLikedByViewer })} type="button">
-                  <Heart aria-hidden="true" className="size-5" fill={post.isLikedByViewer ? 'currentColor' : 'none'} />{post.likeCount}
+                <button aria-label={post.isLikedByViewer ? 'Unlike post' : 'Like post'} aria-pressed={post.isLikedByViewer} className={`btn btn-ghost flex-1 rounded-full ${post.isLikedByViewer ? 'bg-impact/15 hover:bg-impact/25' : ''}`} disabled={setLike.isPending} onClick={() => setLike.mutate({ postId: post.id, isLiked: !post.isLikedByViewer })} type="button">
+                  <Heart aria-hidden="true" className="size-5 text-impact" fill={post.isLikedByViewer ? 'currentColor' : 'none'} />{post.likeCount}
                 </button>
               ) : (
-                <Link className="btn btn-ghost flex-1 rounded-full" to="/login"><Heart aria-hidden="true" className="size-5" />{post.likeCount}</Link>
+                <Link className="btn btn-ghost flex-1 rounded-full" to="/login"><Heart aria-hidden="true" className="size-5 text-impact" />{post.likeCount}</Link>
               )}
               <a className="btn btn-ghost flex-1 rounded-full" href="#post-comments-heading"><MessageCircle aria-hidden="true" className="size-5" />{post.commentCount}</a>
             </footer>
