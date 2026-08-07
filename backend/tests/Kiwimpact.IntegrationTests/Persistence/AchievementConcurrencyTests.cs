@@ -260,6 +260,11 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
             .Where(award => award.UserId == userId)
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(5, awards.Count);
+        Assert.DoesNotContain(
+            awards,
+            award => award.AchievementId ==
+                Kiwimpact.Core.Achievements.AchievementCatalog
+                    .FindByCode("weekly-streak-2")!.Id);
         var snapshot = await OrderedSnapshotAsync(seedDb, userId);
         foreach (var (achievementId, position) in new[]
         {
@@ -311,7 +316,12 @@ public sealed class AchievementConcurrencyTests : IClassFixture<TestDatabaseFixt
         var actor = XpLedgerTestHelpers.NewUser("ach-conc-actor");
         db.Set<ApplicationUser>().AddRange(creator, actor);
         db.UserProfiles.Add(XpLedgerTestHelpers.NewProfile(actor.Id));
-        var baseTime = DateTimeOffset.UtcNow.AddDays(-5);
+        // Keep all five facts inside one Auckland calendar week. Using UtcNow
+        // made this fixture cross Sunday midnight when CI ran late on an
+        // Auckland Friday, legitimately awarding the two-week streak as a
+        // sixth achievement and obscuring the concurrency assertion.
+        var baseTime = new DateTimeOffset(
+            2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
         for (var index = 0; index < 5; index++)
         {
             var quest = XpLedgerTestHelpers.NewQuest(creator.Id, QuestDifficulty.Easy);
