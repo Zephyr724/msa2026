@@ -20,6 +20,7 @@
   --color-secondary-content: #183026;
   --kiwi-color-muted: #eef5ec;
   --kiwi-color-muted-content: #5a7a65;
+  --kiwi-color-impact: #f0642b;
   --color-accent: #f4b740;
   --color-accent-content: #183026;
   --color-neutral: #183026;
@@ -53,6 +54,7 @@
   --color-secondary-content: #f2f7f3;
   --kiwi-color-muted: #22372d;
   --kiwi-color-muted-content: #9db5a4;
+  --kiwi-color-impact: #f0642b;
   --color-accent: #ffd166;
   --color-accent-content: #13211b;
   --color-neutral: #f2f7f3;
@@ -77,6 +79,7 @@
   /* Bridge Kiwimpact-specific muted colors into Tailwind utility names. */
   --color-muted: var(--kiwi-color-muted);
   --color-muted-content: var(--kiwi-color-muted-content);
+  --color-impact: var(--kiwi-color-impact);
 }
 
 @layer base {

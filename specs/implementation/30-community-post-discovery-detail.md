@@ -18,7 +18,15 @@ conflicting Community feed/card and comment-edit deferral in Slice 29.
 
 1. Community is an image-first, responsive masonry discovery feed. A feed card
    contains the cover image, post title, author, like count, and — when present
-   — one visually subordinate Related Quest title.
+   — one visually subordinate Related Quest title. The first image preserves
+   its intrinsic ratio when its width-to-height ratio is between `0.76` and
+   `4:3`, inclusive. This preserves square, near-square, ordinary portrait, and
+   ordinary landscape images. Narrower portraits are centre-cropped to
+   `19:25`; wider landscape images are centre-cropped to `4:3`. A post without
+   images uses the first complete sentence of its body on a pale `secondary`
+   cover with a faint repeated diagonal Kiwimpact leaf watermark and a
+   `19:25` feed ratio. Opened detail reuses the same default-cover treatment in
+   its media region.
 2. Feed cards do not show the post body, tags, author management controls,
    carousel controls, or comments. The compact heart is the sole feed-card
    action and toggles the authenticated viewer's like state.
@@ -77,7 +85,8 @@ conflicting Community feed/card and comment-edit deferral in Slice 29.
   edit ownership, root/reply updates, authentication, antiforgery, and
   unchanged hidden-post boundaries.
 - Frontend integration coverage for compact cards, whole-card navigation with
-  the isolated feed-card like action,
+  the isolated feed-card like action, stable responsive masonry column counts,
+  intrinsic image proportions, and text covers for posts without images,
   detail-only body/comments/Quest navigation, carousel, inline comment edit,
   My posts, floating composer entry, and management controls.
 - Applicable complete frontend/backend gates from `AGENTS.md`.

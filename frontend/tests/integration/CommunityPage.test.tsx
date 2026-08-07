@@ -128,12 +128,37 @@ describe('Community post discovery and detail', () => {
   it('renders a compact image-first card and opens the complete post from anywhere', async () => {
     const user = userEvent.setup();
     const post = socialPost();
+    const squareCoverPost = socialPost({
+      id: '55555555-5555-4555-8555-555555555555',
+      title: 'A square cover',
+      images: [{
+        imageUrl: 'https://images.example.test/square.jpg',
+        imageAltText: 'Square cover example',
+        sortOrder: 0,
+      }],
+    });
+    const tallCoverPost = socialPost({
+      id: '44444444-4444-4444-8444-444444444444',
+      title: 'A bounded tall cover',
+      images: [{
+        imageUrl: 'https://images.example.test/tall.jpg',
+        imageAltText: 'Extra-tall cover example',
+        sortOrder: 0,
+      }],
+    });
+    const textCoverPost = socialPost({
+      id: '33333333-3333-4333-8333-333333333333',
+      title: 'A post without photos',
+      content: 'The first complete sentence becomes the cover. This sentence stays inside detail.',
+      images: [],
+      quest: null,
+    });
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith('/v1/auth/me')) return Promise.resolve(new Response(null, { status: 401 }));
       if (url.includes(`/v1/social/posts/${post.id}/comments`)) return Promise.resolve(jsonResponse(commentPage([])));
       if (url.endsWith(`/v1/social/posts/${post.id}`)) return Promise.resolve(jsonResponse(post));
-      if (url.includes('/v1/social/posts')) return Promise.resolve(jsonResponse(postPage([post])));
+      if (url.includes('/v1/social/posts')) return Promise.resolve(jsonResponse(postPage([post, squareCoverPost, tallCoverPost, textCoverPost])));
       return Promise.resolve(jsonResponse({}, 500));
     }));
 
@@ -143,7 +168,47 @@ describe('Community post discovery and detail', () => {
     expect(card).toHaveTextContent(post.title);
     expect(card).toHaveTextContent(post.authorDisplayName);
     expect(card).toHaveTextContent(`Quest · ${post.quest?.title}`);
-    expect(screen.getByRole('link', { name: 'Sign in to like post' })).toHaveTextContent('7');
+    const wideImage = card.querySelector('img');
+    expect(wideImage).not.toBeNull();
+    Object.defineProperties(wideImage!, {
+      naturalWidth: { configurable: true, value: 1600 },
+      naturalHeight: { configurable: true, value: 900 },
+    });
+    fireEvent.load(wideImage!);
+    expect(wideImage).toHaveClass('aspect-[4/3]', 'object-cover');
+    expect(screen.getAllByRole('link', { name: 'Sign in to like post' })).toHaveLength(4);
+    const squareImage = screen.getByAltText('Square cover example');
+    Object.defineProperties(squareImage, {
+      naturalWidth: { configurable: true, value: 900 },
+      naturalHeight: { configurable: true, value: 900 },
+    });
+    fireEvent.load(squareImage);
+    expect(squareImage).toHaveClass('h-auto');
+    expect(squareImage).not.toHaveClass('object-cover');
+    const tallImage = screen.getByAltText('Extra-tall cover example');
+    Object.defineProperties(tallImage, {
+      naturalWidth: { configurable: true, value: 600 },
+      naturalHeight: { configurable: true, value: 1200 },
+    });
+    fireEvent.load(tallImage);
+    expect(tallImage).toHaveClass('aspect-[19/25]', 'object-cover');
+    const textCoverCard = screen.getByRole('link', { name: `Open post: ${textCoverPost.title}` });
+    expect(textCoverCard.querySelector('[data-testid="social-text-cover"]')).toHaveClass(
+      'aspect-[19/25]',
+      'bg-secondary',
+    );
+    expect(textCoverCard.querySelector('[data-testid="social-text-cover-watermark"]')).toHaveStyle({
+      backgroundImage: "url('/branding/kiwimpact-leaf-watermark.svg')",
+    });
+    expect(textCoverCard.querySelector('[data-testid="social-text-cover-quote"]')).toBeInTheDocument();
+    expect(textCoverCard).toHaveTextContent('The first complete sentence becomes the cover.');
+    expect(textCoverCard).not.toHaveTextContent('This sentence stays inside detail.');
+    expect(screen.getByTestId('community-masonry')).toHaveClass(
+      'grid-cols-2',
+      'sm:grid-cols-3',
+      'lg:grid-cols-4',
+      'xl:grid-cols-5',
+    );
     expect(screen.queryByText(post.content)).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '2 comments' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in to create a post' })).toHaveClass('fixed', 'right-4');
@@ -153,6 +218,30 @@ describe('Community post discovery and detail', () => {
     expect(await screen.findByText(post.content)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Community Stream Cleanup/ })).toHaveAttribute('href', `/quests/${post.quest?.id}`);
     expect(await screen.findByRole('heading', { name: '2 comments' })).toBeInTheDocument();
+  });
+
+  it('reuses the secondary patterned text cover in no-image post detail', async () => {
+    const textCoverPost = socialPost({
+      title: 'A post without photos',
+      content: 'The first complete sentence becomes the cover. The rest remains in detail.',
+      images: [],
+      quest: null,
+      commentCount: 0,
+    });
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) return Promise.resolve(new Response(null, { status: 401 }));
+      if (url.includes(`/v1/social/posts/${textCoverPost.id}/comments`)) return Promise.resolve(jsonResponse(commentPage([])));
+      if (url.endsWith(`/v1/social/posts/${textCoverPost.id}`)) return Promise.resolve(jsonResponse(textCoverPost));
+      return Promise.resolve(jsonResponse({}, 500));
+    }));
+
+    renderPage(`/community/posts/${textCoverPost.id}`);
+
+    const detailCover = await screen.findByTestId('social-text-cover');
+    expect(detailCover).toHaveClass('aspect-[19/25]', 'bg-secondary', 'md:h-full', 'md:aspect-auto');
+    expect(screen.getByTestId('social-text-cover-watermark')).toBeInTheDocument();
+    expect(detailCover).toHaveTextContent('The first complete sentence becomes the cover.');
   });
 
   it('likes from the card without opening it while every other card area opens the post', async () => {

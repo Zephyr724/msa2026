@@ -916,6 +916,114 @@ public sealed class SeedConfigurationTests
 
             using var scope = factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+            var demoPosts = await db.SocialPosts
+                .Where(post => DemoSocialSeed.PostIds.Contains(post.Id))
+                .Include(post => post.Images)
+                .Include(post => post.Tags)
+                .OrderBy(post => post.Id)
+                .ToListAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(44, demoPosts.Count);
+            Assert.Equal(90, demoPosts.Sum(post => post.Images.Count));
+            Assert.Single(demoPosts, post => post.Images.Count == 0);
+            Assert.Contains(demoPosts, post =>
+                post.Tags.Any(tag => tag.NormalizedName == "LANDSCAPE-COVER"));
+            Assert.Contains(demoPosts, post =>
+                post.Tags.Any(tag => tag.NormalizedName == "SQUARE-COVER"));
+            Assert.Contains(demoPosts, post =>
+                post.Tags.Any(tag => tag.NormalizedName == "TALL-COVER"));
+            Assert.Contains(demoPosts, post =>
+                post.Tags.Any(tag => tag.NormalizedName == "TEXT-COVER"));
+            var mirroredPosts = demoPosts
+                .Where(post => post.Tags.Any(tag =>
+                    tag.NormalizedName == "PRODUCTION-IMAGE-MIRROR"))
+                .ToArray();
+            Assert.Equal(20, mirroredPosts.Length);
+            Assert.Equal(26, mirroredPosts.Sum(post => post.Images.Count));
+            Assert.Equal(
+                AssessmentDataSeed.CommunityStoryImages()
+                    .Select(image => image.Url)
+                    .Order(),
+                mirroredPosts
+                    .SelectMany(post => post.Images)
+                    .Select(image => image.Url)
+                    .Distinct()
+                    .Order());
+            Assert.All(
+                mirroredPosts.SelectMany(post => post.Images),
+                image =>
+                {
+                    Assert.DoesNotContain("fit=crop", image.Url);
+                    Assert.DoesNotContain("&h=", image.Url);
+                });
+            var communityStories = demoPosts
+                .Where(post => post.Tags.Any(tag =>
+                    tag.NormalizedName == "COMMUNITY-STORY"))
+                .ToArray();
+            Assert.Equal(20, communityStories.Length);
+            Assert.Equal(61, communityStories.Sum(post => post.Images.Count));
+            Assert.All(communityStories, post =>
+            {
+                Assert.True(post.Content.Length >= 300);
+                Assert.Equal(4, post.Tags.Count);
+            });
+            Assert.Equal(
+                15,
+                communityStories.Select(post => post.QuestId).Distinct().Count());
+            var demoComments = await db.SocialComments
+                .Where(comment => DemoSocialSeed.PostIds.Contains(comment.PostId))
+                .ToListAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(64, demoComments.Count);
+            Assert.Equal(44, demoComments.Count(comment => comment.ParentCommentId is null));
+            Assert.Equal(20, demoComments.Count(comment => comment.ParentCommentId.HasValue));
+            Assert.Equal(44, demoComments.Select(comment => comment.PostId).Distinct().Count());
+            Assert.All(DemoSocialSeed.PostIds, postId =>
+                Assert.Contains(demoComments, comment =>
+                    comment.PostId == postId && comment.ParentCommentId is null));
+            Assert.All(demoComments, comment =>
+            {
+                Assert.Contains(comment.AuthorUserId, DemoSocialSeed.SupportingContributorIds);
+                Assert.True(comment.Content.Length >= 70);
+            });
+            Assert.Equal(64, demoComments.Select(comment => comment.Content).Distinct().Count());
+            var supportingUsers = await db.Set<ApplicationUser>()
+                .Where(user => DemoSocialSeed.SupportingContributorIds.Contains(user.Id))
+                .ToListAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(5, supportingUsers.Count);
+            Assert.All(supportingUsers, user =>
+            {
+                Assert.Null(user.PasswordHash);
+                Assert.False(user.EmailConfirmed);
+            });
+            var squarePost = Assert.Single(demoPosts, post =>
+                post.Tags.Any(tag => tag.NormalizedName == "SQUARE-COVER"));
+            var squareImage = Assert.Single(squarePost.Images);
+            Assert.Equal(
+                "https://local.kiwimpact.invalid/images/demo/community-square-native.png",
+                squareImage.Url);
+            squareImage.Url =
+                "https://images.pexels.com/photos/450516/pexels-photo-450516.jpeg" +
+                "?auto=compress&cs=tinysrgb&fit=crop&w=900&h=900";
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            db.ChangeTracker.Clear();
+            await DemoSocialSeed.SeedAsync(
+                db,
+                TestContext.Current.CancellationToken);
+            Assert.Equal(
+                44,
+                await db.SocialPosts.CountAsync(
+                    post => DemoSocialSeed.PostIds.Contains(post.Id),
+                    TestContext.Current.CancellationToken));
+            Assert.Equal(
+                64,
+                await db.SocialComments.CountAsync(
+                    comment => DemoSocialSeed.PostIds.Contains(comment.PostId),
+                    TestContext.Current.CancellationToken));
+            Assert.Equal(
+                "https://local.kiwimpact.invalid/images/demo/community-square-native.png",
+                await db.SocialPostImages
+                    .Where(image => image.PostId == squarePost.Id)
+                    .Select(image => image.Url)
+                    .SingleAsync(TestContext.Current.CancellationToken));
             var march = new DateTimeOffset(
                 2027, 3, 10, 8, 0, 0, TimeSpan.Zero);
 
