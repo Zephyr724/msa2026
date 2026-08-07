@@ -122,6 +122,49 @@ describe('MyQuestsPage', () => {
       String(url).endsWith('/v1/users/me/participations?status=all'))).toBe(true);
   });
 
+  it('uses a green View Quest action for completed missions', async () => {
+    const completedItem = {
+      completionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      questId: activeQuest.quest.id,
+      questTitle: 'Completed Garden Quest',
+      questCategory: 'GrowCompost',
+      questStatus: 'Published',
+      coverImage: null,
+      status: 'Verified',
+      method: 'CompletionCode',
+      xpAmount: 100,
+      completedAtUtc: '2026-08-07T09:00:00Z',
+      verifiedAtUtc: '2026-08-07T09:00:00Z',
+      achievementNames: [],
+    };
+    const fetchMock = stubApi([]);
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/v1/users/me/passport/completions')) {
+        return Promise.resolve(jsonResponse({
+          items: [completedItem],
+          page: 1,
+          pageSize: 50,
+          totalCount: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }));
+      }
+      if (url.endsWith('/v1/users/me/progression')) {
+        return Promise.resolve(jsonResponse({ totalXp: 120, level: 3, rankTitle: 'Novice' }));
+      }
+      if (url.includes('/v1/users/me/participations')) return Promise.resolve(jsonResponse([]));
+      if (url.endsWith('/v1/users/me/claims')) return Promise.resolve(jsonResponse([]));
+      return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+    });
+
+    renderPage('/my-quests?view=completed');
+
+    expect(await screen.findByRole('link', { name: 'View Quest' }))
+      .toHaveClass('btn-success');
+  });
+
   it('keeps the composed view in the URL without refetching another user scope', async () => {
     const user = userEvent.setup();
     const fetchMock = stubApi([]);

@@ -694,7 +694,7 @@ function CompletedCard({ item }: { item: PassportCompletionItem }) {
             </span>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link className="btn btn-outline btn-sm" to={`/quests/${item.questId}`}>
+            <Link className="btn btn-success btn-sm" to={`/quests/${item.questId}`}>
               View Quest
             </Link>
             {verified && (

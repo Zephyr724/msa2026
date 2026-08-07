@@ -204,6 +204,18 @@ describe('App shell', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
   });
+
+  it('resets the window scroll position after navigating to another page', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+
+    render(<App />);
+    scrollTo.mockClear();
+    await user.click(screen.getAllByRole('link', { name: 'Discover' })[0]!);
+
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 0));
+  });
 });
 
 async function waitForElement<T extends Element>(

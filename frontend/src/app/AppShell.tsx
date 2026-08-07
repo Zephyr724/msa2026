@@ -12,7 +12,14 @@ import {
   UserRoundCog,
   type LucideIcon,
 } from 'lucide-react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Link,
+  NavLink,
+  Outlet,
+  ScrollRestoration,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import BrandMark from '../components/BrandMark.tsx';
 import PlayerStatusCapsule, {
   RewardPreviewStatusCapsule,
@@ -50,6 +57,7 @@ export default function AppShell() {
   const auth = useAuthQuery();
   return (
     <RewardFeedbackProvider key={auth.data?.userId ?? 'guest'}>
+      <ScrollRestoration />
       <RewardInboxDelivery />
       <AppShellContent />
     </RewardFeedbackProvider>
