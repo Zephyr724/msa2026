@@ -10,6 +10,10 @@ vi.mock('../../src/components/community/CommunityProfileCard.tsx', () => ({
   default: () => <div>Community settings</div>,
 }));
 
+vi.mock('../../src/components/passport/PublicPassportSettingsCard.tsx', () => ({
+  default: () => <div>Public Passport settings</div>,
+}));
+
 describe('Google authentication UI', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -41,6 +45,7 @@ describe('Google authentication UI', () => {
       'Google is linked to your account.',
     );
     expect(screen.getByRole('button', { name: 'Google linked' })).toBeDisabled();
+    expect(screen.getByText('Public Passport settings')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Change password' }))
       .not.toBeInTheDocument();
     expect(screen.getByText(/has no local password/i)).toBeInTheDocument();

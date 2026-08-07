@@ -165,19 +165,20 @@ describe('MyQuestsPage', () => {
       .toHaveClass('btn-success');
   });
 
-  it('keeps the composed view in the URL without refetching another user scope', async () => {
+  it('keeps the completed view in the URL without resetting scroll or refetching', async () => {
     const user = userEvent.setup();
     const fetchMock = stubApi([]);
     const { router } = renderPage();
 
-    await user.click(screen.getByRole('button', { name: /Cancelled/ }));
+    await user.click(screen.getByRole('button', { name: /Completed/ }));
 
     await waitFor(() => {
-      expect(router.state.location.search).toBe('?view=cancelled');
+      expect(router.state.location.search).toBe('?view=completed');
+      expect(router.state.preventScrollReset).toBe(true);
       expect(fetchMock.mock.calls.some(([url]) =>
         String(url).endsWith('/v1/users/me/participations?status=all'))).toBe(true);
     });
-    expect(await screen.findByText('No cancelled Quests')).toBeInTheDocument();
+    expect(await screen.findByText('No completed Quests yet')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Discover Quests/ }))
       .toHaveAttribute('href', '/quests');
   });

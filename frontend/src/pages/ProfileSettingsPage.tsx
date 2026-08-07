@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import CommunityProfileCard from '../components/community/CommunityProfileCard.tsx';
+import PublicPassportSettingsCard from '../components/passport/PublicPassportSettingsCard.tsx';
 import { useAuthQuery } from '../hooks/useAuth.ts';
 import { beginGoogleLink } from '../lib/api/auth.ts';
 import { executePrivateRequest } from '../lib/api/privateCache.ts';
@@ -60,6 +61,28 @@ export default function ProfileSettingsPage() {
             </div>
           </div>
           <CommunityProfileCard />
+        </section>
+
+        <section
+          aria-labelledby="public-passport-settings-heading"
+          className="mt-7"
+          id="passport"
+        >
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <ShieldCheck aria-hidden="true" className="size-5" />
+            </span>
+            <div>
+              <p className="kiwi-stat-label">Privacy and sharing</p>
+              <h2 className="mt-1 text-2xl" id="public-passport-settings-heading">
+                Public Passport
+              </h2>
+              <p className="mt-1 text-sm text-muted-content">
+                Manage the optional public link separately from Passport image sharing.
+              </p>
+            </div>
+          </div>
+          <PublicPassportSettingsCard />
         </section>
 
         <section className="kiwi-panel mt-7 p-5" aria-labelledby="account-safety-heading">

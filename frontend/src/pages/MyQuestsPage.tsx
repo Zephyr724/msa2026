@@ -84,7 +84,10 @@ export default function MyQuestsPage() {
   const achievementCatalog = useAchievementCatalog();
 
   function setView(next: MissionView) {
-    setSearchParams(next === 'active' ? {} : { view: next });
+    setSearchParams(
+      next === 'active' ? {} : { view: next },
+      { preventScrollReset: true },
+    );
   }
 
   const completionByQuest = new Map(

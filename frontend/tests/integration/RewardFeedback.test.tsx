@@ -148,6 +148,9 @@ describe('Reward feedback', () => {
     expect(title.querySelector('textPath')).toHaveTextContent('Mission Complete');
     expect(title.compareDocumentPosition(stateHeading) & Node.DOCUMENT_POSITION_FOLLOWING)
       .toBeTruthy();
+    const encouragement = document.querySelector('[data-reward-encouragement]');
+    expect(encouragement).toHaveTextContent(standardReward.celebrationTitle);
+    expect(encouragement).toHaveTextContent(standardReward.celebrationMessage);
     const xpValue = screen.getByText('+50 XP');
     expect(xpValue).toHaveClass('kiwi-reward-xp-value');
     expect(xpValue).toHaveClass('kiwi-reward-gold-text');
