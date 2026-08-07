@@ -244,6 +244,38 @@ describe('Community post discovery and detail', () => {
     expect(detailCover).toHaveTextContent('The first complete sentence becomes the cover.');
   });
 
+  it('falls back to the text cover when the first image cannot load', async () => {
+    const failedCoverPost = socialPost({
+      title: 'A post with an unavailable cover',
+      content: 'A readable fallback keeps this post discoverable. More detail follows here.',
+      images: [{
+        imageUrl: 'https://images.example.test/unavailable.jpg',
+        imageAltText: 'Unavailable cover example',
+        sortOrder: 0,
+      }],
+      quest: null,
+    });
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) return Promise.resolve(new Response(null, { status: 401 }));
+      if (url.includes('/v1/social/posts')) {
+        return Promise.resolve(jsonResponse(postPage([failedCoverPost])));
+      }
+      return Promise.resolve(jsonResponse({}, 500));
+    }));
+
+    renderPage();
+
+    const failedImage = await screen.findByAltText('Unavailable cover example');
+    fireEvent.error(failedImage);
+
+    const card = screen.getByRole('link', { name: `Open post: ${failedCoverPost.title}` });
+    expect(screen.queryByAltText('Unavailable cover example')).not.toBeInTheDocument();
+    expect(card.querySelector('[data-testid="social-text-cover"]')).toBeInTheDocument();
+    expect(card).toHaveTextContent('A readable fallback keeps this post discoverable.');
+    expect(card).not.toHaveTextContent('More detail follows here.');
+  });
+
   it('likes from the card without opening it while every other card area opens the post', async () => {
     const user = userEvent.setup();
     let post = socialPost();

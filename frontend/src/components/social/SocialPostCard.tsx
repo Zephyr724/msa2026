@@ -17,7 +17,9 @@ export default function SocialPostCard({
   const location = useLocation();
   const setLike = useSetSocialLike();
   const [coverCrop, setCoverCrop] = useState<SocialCoverCrop>(null);
+  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
   const cover = post.images[0];
+  const coverFailed = cover?.imageUrl === failedCoverUrl;
   const likeLabel = post.isLikedByViewer ? 'Unlike post' : 'Like post';
 
   return (
@@ -29,11 +31,12 @@ export default function SocialPostCard({
         to={`/community/posts/${post.id}`}
       >
         <div className="relative overflow-hidden bg-base-200">
-          {cover ? (
+          {cover && !coverFailed ? (
             <img
               alt={cover.imageAltText}
               className={`${coverCrop === 'tall' ? 'aspect-[19/25] object-cover' : coverCrop === 'wide' ? 'aspect-[4/3] object-cover' : 'h-auto'} w-full transition duration-300 group-hover:scale-[1.015]`}
               loading="lazy"
+              onError={() => setFailedCoverUrl(cover.imageUrl)}
               onLoad={(event) => {
                 const image = event.currentTarget;
                 setCoverCrop(getSocialCoverCrop(image.naturalWidth, image.naturalHeight));
