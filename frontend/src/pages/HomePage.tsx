@@ -27,11 +27,13 @@ import {
   useMyProfile,
   useWeeklyStreak,
 } from '../hooks/useCommunity.ts';
+import { useAchievementCatalog } from '../hooks/useAchievements.ts';
 import { useMyQuestParticipationsQuery } from '../hooks/useParticipation.ts';
 import LevelProgress from '../components/passport/LevelProgress.tsx';
 import { RankCrest } from '../components/game/GameArtwork.tsx';
 import { questDiscoveryHighlight } from '../lib/questPresentation.ts';
 import type { CommunityChallenge } from '../types/community.ts';
+import type { RegionSummaryDto } from '../types/region.ts';
 
 const loopSteps = [
   {
@@ -77,11 +79,23 @@ export default function HomePage() {
   const featured = useQuestList({ page: 1, pageSize: 3, sortBy: 'startAt' });
   const challenges = useCommunityChallenges();
   const profile = useMyProfile(Boolean(auth.data));
-  // Prefer the signed-in member's community goal; guests and members without
-  // a Home Community receive the first active public challenge.
-  const primaryChallenge = challenges.data?.find(
-    (challenge) => challenge.localArea.id === profile.data?.homeCommunity?.id,
-  ) ?? challenges.data?.[0];
+  const achievementCatalog = useAchievementCatalog();
+  // Feature only the member's own home community's Active challenge. Never
+  // fall back to another community's challenge or to a past result.
+  const memberChallenge = challenges.data?.find(
+    (challenge) => challenge.localArea.id === profile.data?.homeCommunity?.id
+      && challenge.status === 'Active',
+  );
+  // Guests see the first Active public challenge, labeled with its community.
+  const guestChallenge = challenges.data?.find(
+    (challenge) => challenge.status === 'Active',
+  );
+  const primaryChallenge = auth.data ? memberChallenge : guestChallenge;
+  const primaryRewardName = primaryChallenge?.rewardAchievementId
+    ? achievementCatalog.data?.find(
+        (achievement) => achievement.id === primaryChallenge.rewardAchievementId,
+      )?.name ?? null
+    : null;
 
   return (
     <>
@@ -145,7 +159,14 @@ export default function HomePage() {
           <CompactCommunityGoal
             challenge={primaryChallenge}
             error={challenges.isError}
+            homeCommunity={auth.data
+              ? profile.isPending
+                ? undefined
+                : profile.data?.homeCommunity ?? null
+              : null}
             loading={challenges.isPending}
+            rewardName={primaryRewardName}
+            signedIn={Boolean(auth.data)}
           />
         </div>
       </section>
@@ -528,11 +549,17 @@ function PassportShowcase({ signedIn }: { signedIn: boolean }) {
 function CompactCommunityGoal({
   challenge,
   error,
+  homeCommunity = null,
   loading,
+  rewardName = null,
+  signedIn = false,
 }: {
   challenge?: CommunityChallenge;
   error: boolean;
+  homeCommunity?: RegionSummaryDto | null;
   loading: boolean;
+  rewardName?: string | null;
+  signedIn?: boolean;
 }) {
   const percentage = challenge ? Math.min(100, Math.max(0, challenge.progressPercentage)) : 0;
   const remaining = challenge
@@ -580,7 +607,7 @@ function CompactCommunityGoal({
           />
         </div>
         <div className="flex flex-1 flex-col space-y-3 p-5">
-        {loading ? (
+        {loading || (signedIn && homeCommunity === undefined) ? (
           <div className="h-24 animate-pulse rounded-2xl bg-base-200" />
         ) : challenge ? (
           <>
@@ -607,17 +634,35 @@ function CompactCommunityGoal({
                 {remaining} {remaining === 1 ? 'Quest' : 'Quests'} remaining
               </span>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-base-300 bg-secondary p-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent/18 text-warning">
-                <Award aria-hidden="true" className="size-5" />
-              </span>
-              <span>
-                <span className="block text-xs font-extrabold">Reward: community milestone badge</span>
-                <span className="mt-0.5 block text-xs text-muted-content">
-                  For contributors when the community reaches its goal
-                </span>
-              </span>
-            </div>
+            {challenge.rewardAchievementId
+              // Degrade gracefully: an unresolved catalog entry hides the
+              // reward box rather than inventing a reward.
+              ? rewardName && (
+                <div className="flex items-center gap-3 rounded-xl border border-base-300 bg-secondary p-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent/18 text-warning">
+                    <Award aria-hidden="true" className="size-5" />
+                  </span>
+                  <span>
+                    <span className="block text-xs font-extrabold">Reward: {rewardName} achievement</span>
+                    <span className="mt-0.5 block text-xs text-muted-content">
+                      For contributors when the community reaches its goal
+                    </span>
+                  </span>
+                </div>
+              )
+              : (
+                <div className="flex items-center gap-3 rounded-xl border border-base-300 bg-secondary p-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent/18 text-warning">
+                    <Award aria-hidden="true" className="size-5" />
+                  </span>
+                  <span>
+                    <span className="block text-xs font-extrabold">No bonus reward this month</span>
+                    <span className="mt-0.5 block text-xs text-muted-content">
+                      Contributors still build their verified record and XP
+                    </span>
+                  </span>
+                </div>
+              )}
             <p className="text-xs leading-relaxed text-muted-content">
               Any verified Quest attributed to {challenge.localArea.name} during
               the challenge automatically counts. Self-reported completions do not.
@@ -627,15 +672,28 @@ function CompactCommunityGoal({
           <p className="max-w-md text-sm leading-relaxed text-muted-content">
             {error
               ? 'Community progress is temporarily unavailable.'
-              : 'The next community challenge will appear here when it begins.'}
+              : signedIn && !homeCommunity
+                ? 'Choose your home community to see its monthly goal here — your verified quests then count towards it automatically.'
+                : signedIn && homeCommunity
+                  ? `${homeCommunity.name} has no active challenge this month. The next one appears here when it begins.`
+                  : 'The next community challenge will appear here when it begins.'}
           </p>
         )}
-        <Link
-          className="mt-auto inline-flex items-center gap-1 self-start text-sm font-bold text-primary hover:underline"
-          to="/my-quests#community-challenge"
-        >
-          View challenge details <ArrowRight aria-hidden="true" className="size-4" />
-        </Link>
+        {signedIn && !challenge && !error && !homeCommunity ? (
+          <Link
+            className="mt-auto inline-flex items-center gap-1 self-start text-sm font-bold text-primary hover:underline"
+            to="/settings/profile"
+          >
+            Choose your home community <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        ) : (
+          <Link
+            className="mt-auto inline-flex items-center gap-1 self-start text-sm font-bold text-primary hover:underline"
+            to="/my-quests#community-challenge"
+          >
+            View challenge details <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        )}
         </div>
       </article>
     </div>

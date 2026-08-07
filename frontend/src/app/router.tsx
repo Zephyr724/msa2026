@@ -20,6 +20,7 @@ import {
 } from '../pages/AccountLifecyclePages.tsx';
 import AdminReviewPage from '../pages/AdminReviewPage.tsx';
 import ShareCardBuilderPage from '../pages/ShareCardBuilderPage.tsx';
+import PassportSharePage from '../pages/PassportSharePage.tsx';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage.tsx';
 import CommunityPage from '../pages/CommunityPage.tsx';
 import SocialPostDetailPage from '../pages/SocialPostDetailPage.tsx';
@@ -57,7 +58,8 @@ export const router = createBrowserRouter([
         element: <RequireAuth />,
         children: [
           { path: '/passport', element: <PassportPage /> },
-          { path: '/passport/share', element: <ShareCardBuilderPage /> },
+          { path: '/passport/share', element: <PassportSharePage /> },
+          { path: '/passport/share/completion', element: <ShareCardBuilderPage /> },
           { path: '/settings/profile', element: <ProfileSettingsPage /> },
           { path: '/settings/password', element: <ChangePasswordPage /> },
           { path: '/admin/reviews', element: <AdminReviewPage /> },

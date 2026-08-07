@@ -152,7 +152,16 @@ export default function PassportPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] overflow-x-hidden bg-base-200 py-8">
       <main className="kiwi-page-wide max-w-[1200px]">
-        <h1 className="sr-only">{displayName} — Passport</h1>
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="kiwi-stat-label">Personal Impact Passport</p>
+            <h1 className="mt-1 kiwi-page-heading">{displayName} — Passport</h1>
+          </div>
+          <Link className="btn btn-primary rounded-full" to="/passport/share">
+            <Share2 aria-hidden="true" className="size-4" />
+            Share Passport
+          </Link>
+        </div>
         <div>
         <section aria-labelledby="passport-summary-heading">
           <h2 className="sr-only" id="passport-summary-heading">
@@ -246,11 +255,7 @@ export default function PassportPage() {
               </span>
             </Link>
             <div className="mt-6">
-              <ShareCard
-                completion={history.data?.items.find(
-                  (item) => item.status === 'Verified',
-                )}
-              />
+              <ShareCard />
             </div>
           </div>
         </section>
@@ -289,9 +294,9 @@ export default function PassportPage() {
                 Completion history
               </h2>
             </div>
-            <Link className="btn kiwi-share-action btn-sm rounded-full" to="/passport/share">
+            <Link className="btn kiwi-share-action btn-sm rounded-full" to="/passport/share/completion">
               <Share2 aria-hidden="true" className="size-3.5" />
-              Create share card
+              Create Quest card
             </Link>
           </div>
           <p className="mb-4 text-xs text-muted-content">

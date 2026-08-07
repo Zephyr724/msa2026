@@ -11,16 +11,36 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import {
+  AchievementBadgeArt,
+  TrophyArtwork,
+} from '../components/game/GameArtwork.tsx';
 import { useAuthQuery } from '../hooks/useAuth.ts';
+import {
+  useMyAchievementProfile,
+  useMyAchievements,
+} from '../hooks/useAchievements.ts';
 import { useAllPassportCompletions } from '../hooks/usePassportCompletions.ts';
 import { useProgression } from '../hooks/useProgression.ts';
 import {
+  achievementBadgeSvgString,
+  trophySvgString,
+} from '../lib/gameArtworkSvg.ts';
+import {
   drawShareCard,
+  isCurrentArtwork,
+  SHARE_CARD_MAX_BADGES,
   SHARE_CARD_OVERLAYS,
   SHARE_CARD_THEMES,
   type ShareCardOverlay,
   type ShareCardTheme,
 } from '../lib/shareCard.ts';
+import { loadSvgImage } from '../lib/svgImageLoader.ts';
+import type {
+  AchievementRarity,
+  AchievementTrophyTier,
+} from '../types/achievement.ts';
+import type { PassportCompletionItem } from '../types/passport.ts';
 
 const THEME_LABELS: Record<ShareCardTheme, string> = {
   forest: 'Forest',
@@ -28,10 +48,33 @@ const THEME_LABELS: Record<ShareCardTheme, string> = {
   sunrise: 'Sunrise',
 };
 
+const RARITY_LABELS: Record<AchievementRarity, string> = {
+  Unawarded: 'Unawarded',
+  UltraRare: 'Ultra rare',
+  Rare: 'Rare',
+  Uncommon: 'Uncommon',
+  Common: 'Common',
+};
+
+interface BadgeSpec {
+  code: string;
+  label: string;
+}
+
+interface CardArtwork {
+  completionId: string;
+  tier: AchievementTrophyTier | undefined;
+  badgeKeys: string[];
+  trophyImage: HTMLImageElement | null;
+  badgeImages: (HTMLImageElement | null)[];
+}
+
 export default function ShareCardBuilderPage() {
   const auth = useAuthQuery();
   const progression = useProgression();
   const history = useAllPassportCompletions();
+  const achievementProfile = useMyAchievementProfile();
+  const myAchievements = useMyAchievements();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [searchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState(
@@ -42,6 +85,7 @@ export default function ShareCardBuilderPage() {
   // Names are opt-in because the generated PNG may be shared outside the app.
   const [showName, setShowName] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [artwork, setArtwork] = useState<CardArtwork | null>(null);
 
   const verified = useMemo(
     () => history.data?.filter((item) => item.status === 'Verified') ?? [],
@@ -49,6 +93,43 @@ export default function ShareCardBuilderPage() {
   );
   const selected = verified.find((item) => item.completionId === selectedId)
     ?? verified[0];
+
+  // Completion records carry achievement names only; joining them to the
+  // earned-achievement catalog by name yields the codes that key the artwork.
+  const earnedByName = useMemo(
+    () => new Map(
+      (myAchievements.data ?? []).map((earned) => [earned.name, earned]),
+    ),
+    [myAchievements.data],
+  );
+
+  function badgeSpecsFor(item: PassportCompletionItem): BadgeSpec[] {
+    return (item.achievementNames ?? []).map((name) => ({
+      // Unmatched names still render a generic badge keyed off the name.
+      code: earnedByName.get(name)?.code ?? name,
+      label: name,
+    }));
+  }
+
+  const selectedBadges = useMemo(
+    () => (selected
+      ? (selected.achievementNames ?? []).map((name) => ({
+        code: earnedByName.get(name)?.code ?? name,
+        label: name,
+      })).slice(0, SHARE_CARD_MAX_BADGES)
+      : []),
+    [selected, earnedByName],
+  );
+
+  const trophyTier = achievementProfile.data?.trophy.tier;
+
+  // Stable identity of the current badge set. Re-resolution of names to
+  // codes (when the earned-achievement query lands) changes these keys even
+  // when the count is unchanged, which must invalidate earlier artwork.
+  const selectedBadgeKeys = useMemo(
+    () => selectedBadges.map((badge) => `${badge.code}|${badge.label}`),
+    [selectedBadges],
+  );
 
   useEffect(() => {
     // A stale or manually edited completionId falls back to the newest
@@ -62,6 +143,61 @@ export default function ShareCardBuilderPage() {
   }, [selectedId, verified]);
 
   useEffect(() => {
+    if (!selected) return;
+    let cancelled = false;
+    const trophyPromise = trophyTier
+      ? loadSvgImage(trophySvgString(trophyTier, 160))
+      : Promise.resolve(null);
+    const badgePromises = selectedBadges.map((badge) =>
+      loadSvgImage(achievementBadgeSvgString({
+        code: badge.code,
+        label: badge.label,
+        unlocked: true,
+        size: 96,
+      })));
+    void Promise.all([trophyPromise, ...badgePromises]).then(
+      ([trophyImage, ...badgeImages]) => {
+        if (!cancelled) {
+          setArtwork({
+            completionId: selected.completionId,
+            tier: trophyTier,
+            badgeKeys: selectedBadgeKeys,
+            trophyImage,
+            badgeImages,
+          });
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, selectedBadges, selectedBadgeKeys, trophyTier]);
+
+  // Artwork is accepted only when it matches the current selection, tier,
+  // and badge identity, so a stale async load can never draw into — or be
+  // exported as — a newly resolved card.
+  const activeArtwork = artwork
+    && selected
+    && isCurrentArtwork(artwork, selected.completionId, trophyTier, selectedBadgeKeys)
+    ? artwork
+    : null;
+  const artworkPending = Boolean(
+    selected
+    && (trophyTier || selectedBadges.length > 0)
+    && !activeArtwork,
+  );
+
+  // Share/Download stay disabled until the achievement profile, the
+  // earned-achievement resolution, and the current card's artwork have all
+  // settled — an export must never miss the requested trophy or carry stale
+  // badges. Query or decode failures are exportable: they draw truthful
+  // fallbacks instead.
+  const exportReady = Boolean(selected)
+    && !achievementProfile.isPending
+    && !myAchievements.isPending
+    && !artworkPending;
+
+  useEffect(() => {
     if (!canvasRef.current || !selected || !progression.data || !auth.data) return;
     drawShareCard(canvasRef.current, {
       completion: selected,
@@ -70,8 +206,25 @@ export default function ShareCardBuilderPage() {
       progression: progression.data,
       showName,
       theme,
+      trophy: trophyTier
+        ? { tier: trophyTier, image: activeArtwork?.trophyImage ?? null }
+        : undefined,
+      achievementBadges: selectedBadges.map((badge, index) => ({
+        label: badge.label,
+        image: activeArtwork?.badgeImages[index] ?? null,
+      })),
     });
-  }, [auth.data, overlay, progression.data, selected, showName, theme]);
+  }, [
+    activeArtwork,
+    auth.data,
+    overlay,
+    progression.data,
+    selected,
+    selectedBadges,
+    showName,
+    theme,
+    trophyTier,
+  ]);
 
   function createBlob(): Promise<Blob | null> {
     // Canvas encoding is callback-based; wrapping it keeps download and Web
@@ -210,6 +363,19 @@ export default function ShareCardBuilderPage() {
                           {new Date(item.completedAtUtc).toLocaleDateString()} ·{' '}
                           {item.xpAmount === null ? 'XP pending' : `+${item.xpAmount} XP`}
                         </span>
+                        {badgeSpecsFor(item).length > 0 && (
+                          <span className="mt-1.5 flex flex-wrap gap-1">
+                            {badgeSpecsFor(item).slice(0, 6).map((badge) => (
+                              <AchievementBadgeArt
+                                code={badge.code}
+                                key={badge.label}
+                                label={badge.label}
+                                size={22}
+                                unlocked
+                              />
+                            ))}
+                          </span>
+                        )}
                       </span>
                     </label>
                   ))}
@@ -280,12 +446,27 @@ export default function ShareCardBuilderPage() {
               </section>
 
               <div className="grid gap-2">
-                <button className="btn btn-primary" onClick={() => void download()} type="button">
+                <button
+                  className="btn btn-primary"
+                  disabled={!exportReady}
+                  onClick={() => void download()}
+                  type="button"
+                >
                   <Download aria-hidden="true" className="size-4" /> Download PNG
                 </button>
-                <button className="btn kiwi-share-action" onClick={() => void share()} type="button">
+                <button
+                  className="btn kiwi-share-action"
+                  disabled={!exportReady}
+                  onClick={() => void share()}
+                  type="button"
+                >
                   <Share2 aria-hidden="true" className="size-4" /> Share
                 </button>
+                {!exportReady && (
+                  <p className="text-xs text-muted-content" role="status">
+                    Preparing trophy and badge artwork…
+                  </p>
+                )}
               </div>
               {message && <p className="text-sm text-muted-content" role="status">{message}</p>}
 
@@ -317,10 +498,58 @@ export default function ShareCardBuilderPage() {
                   </p>
                   <p className="text-xs text-muted-content">
                     This is exactly what the downloaded card will contain.
+                    {artworkPending && ' Loading artwork…'}
                   </p>
                 </div>
                 <span className="badge badge-outline whitespace-nowrap">1080 × 1080 px</span>
               </div>
+
+              <div
+                aria-labelledby="share-trophy-heading"
+                className="mx-auto mb-4 max-w-[35rem] rounded-3xl border border-base-300 bg-base-100 p-4"
+              >
+                {achievementProfile.isPending && (
+                  <div className="flex items-center gap-3">
+                    <div className="skeleton size-14 shrink-0 rounded-2xl" />
+                    <p className="text-sm text-muted-content">Loading trophy…</p>
+                  </div>
+                )}
+                {achievementProfile.isError && (
+                  <p className="text-sm text-muted-content" role="note">
+                    Trophy unavailable — your card still shows the verified completion.
+                  </p>
+                )}
+                {achievementProfile.data && (
+                  <div className="flex items-center gap-4">
+                    <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-secondary/70">
+                      <TrophyArtwork
+                        size={52}
+                        tier={achievementProfile.data.trophy.tier}
+                      />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="kiwi-stat-label" id="share-trophy-heading">
+                        Your trophy on this card
+                      </p>
+                      <p className="mt-0.5 text-lg font-bold">
+                        {achievementProfile.data.trophy.tier === 'Locked'
+                          ? 'No trophy yet'
+                          : `${achievementProfile.data.trophy.tier} Trophy`}
+                      </p>
+                      <p className="text-xs text-muted-content">
+                        {achievementProfile.data.trophy.tier === 'Locked'
+                          ? `Earn ${
+                            achievementProfile.data.trophy.nextRequiredCount ?? 5
+                          } distinct achievements to light the ${
+                            achievementProfile.data.trophy.nextTier ?? 'Bronze'
+                          } trophy.`
+                          : RARITY_LABELS[achievementProfile.data.trophy.rarity]}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <canvas
                 aria-label={`Share Card preview for ${selected.questTitle}`}
                 className="mx-auto aspect-square w-full max-w-[35rem] rounded-3xl border-2 border-base-300 bg-neutral shadow-2xl"

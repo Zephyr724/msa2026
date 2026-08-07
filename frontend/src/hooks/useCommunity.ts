@@ -7,6 +7,7 @@ import {
   fetchWeeklyStreak,
   updateCommunityChallenge,
   updateMyProfile,
+  type CommunityChallengeFilters,
 } from '../lib/api/community';
 import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
 
@@ -46,11 +47,17 @@ export function useWeeklyStreak() {
   });
 }
 
-export function useCommunityChallenges() {
+export function useCommunityChallenges(
+  filters: CommunityChallengeFilters = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
-    queryKey: communityKeys.challenges,
-    queryFn: fetchCommunityChallenges,
+    // The base key stays first so `communityKeys.challenges` partial matching
+    // still invalidates every filtered variant.
+    queryKey: [...communityKeys.challenges, filters.regionId ?? null, filters.status ?? null],
+    queryFn: () => fetchCommunityChallenges(filters),
     staleTime: 60_000,
+    enabled: options.enabled ?? true,
   });
 }
 

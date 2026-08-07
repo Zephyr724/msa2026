@@ -355,7 +355,7 @@ describe('PassportPage', () => {
     expect(screen.getByRole('link', { name: 'Share' }))
       .toHaveAttribute(
         'href',
-        '/passport/share?completionId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        '/passport/share/completion?completionId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       );
     expect(screen.getByRole('link', { name: 'Share' }))
       .toHaveClass('kiwi-share-action');
@@ -678,6 +678,8 @@ describe('PassportPage', () => {
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent('Aroha — Passport');
+    expect(screen.getByRole('link', { name: 'Share Passport' }))
+      .toHaveAttribute('href', '/passport/share');
     expect(screen.getByRole('heading', { level: 2, name: 'Progress' }))
       .toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Achievements' }))
@@ -756,7 +758,7 @@ describe('PassportPage', () => {
       'Achievements',
       'Community challenge participation',
       'Passport settings',
-      'Share Card',
+      'Share your Passport',
       'Completion history',
     ]);
   });

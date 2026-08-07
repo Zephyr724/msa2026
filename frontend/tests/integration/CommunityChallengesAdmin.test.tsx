@@ -23,6 +23,13 @@ const localArea = {
   parentRegionId: '22222222-2222-4222-8222-222222222222',
 };
 
+const aucklandCity = {
+  id: '22222222-2222-4222-8222-222222222222',
+  name: 'Auckland',
+  type: 'AdministrativeArea',
+  parentRegionId: null,
+};
+
 const communityReward = {
   id: '33333333-3333-4333-8333-333333333333',
   code: 'community-spark',
@@ -90,10 +97,13 @@ function createFetchMock(challenges: unknown[]) {
     init?: RequestInit,
   ): Promise<Response> => {
     const url = String(input);
-    if (url.endsWith('/v1/community-challenges')) {
+    if (url.includes('/v1/community-challenges')) {
       return Promise.resolve(jsonResponse(challenges));
     }
     if (url.includes('/v1/regions')) {
+      if (url.includes('type=AdministrativeArea')) {
+        return Promise.resolve(jsonResponse([aucklandCity]));
+      }
       return Promise.resolve(jsonResponse([localArea]));
     }
     if (url.endsWith('/v1/achievements')) {

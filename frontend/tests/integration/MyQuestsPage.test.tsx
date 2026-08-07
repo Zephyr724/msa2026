@@ -391,4 +391,76 @@ describe('MyQuestsPage', () => {
     expect(await screen.findByText('No upcoming active missions')).toBeInTheDocument();
     expect(attempts).toBe(2);
   });
+
+  it('never presents another community\'s challenge when no home community is set', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/v1/users/me/progression')) {
+        return Promise.resolve(jsonResponse({
+          totalXp: 120,
+          level: 3,
+          rankTitle: 'Novice',
+        }));
+      }
+      if (url.includes('/v1/users/me/participations')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.endsWith('/v1/users/me/claims')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.includes('/v1/users/me/passport/completions')) {
+        return Promise.resolve(jsonResponse({
+          items: [],
+          page: 1,
+          pageSize: 50,
+          totalCount: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }));
+      }
+      if (url.endsWith('/v1/users/me/profile')) {
+        return Promise.resolve(jsonResponse({
+          displayName: 'Aroha',
+          homeCommunity: null,
+          showCommunityOnPassport: false,
+          communityChangeAvailableAtUtc: null,
+        }));
+      }
+      if (url.endsWith('/v1/community-challenges')) {
+        return Promise.resolve(jsonResponse([{
+          id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+          localArea: {
+            id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            name: 'Waitematā',
+            type: 'LocalArea',
+            parentRegionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          },
+          periodStartUtc: '2026-07-01T00:00:00Z',
+          periodEndUtc: '2026-08-01T00:00:00Z',
+          targetType: 'VerifiedCompletionCount',
+          targetValue: 30,
+          rewardAchievementId: null,
+          status: 'Active',
+          currentProgress: 10,
+          progressPercentage: 33,
+          isPrivacyProtected: true,
+          activeContributors: null,
+          version: 1,
+        }]));
+      }
+      return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+    }));
+    renderPage('/my-quests#community-challenge');
+
+    expect(await screen.findByText(
+      'Choose a home community to join its monthly challenge.',
+    )).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your local community goal' }))
+      .toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Waitematā Challenge' }))
+      .not.toBeInTheDocument();
+    // The /my-quests#community-challenge deep link anchor still exists.
+    expect(document.getElementById('community-challenge')).not.toBeNull();
+  });
 });

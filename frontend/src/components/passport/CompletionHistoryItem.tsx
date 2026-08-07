@@ -108,7 +108,7 @@ export default function CompletionHistoryItem({
             <div className="mt-auto flex flex-wrap gap-2 pt-3">
               <Link
                 className="btn kiwi-share-action btn-xs rounded-full"
-                to={`/passport/share?completionId=${encodeURIComponent(item.completionId)}`}
+                to={`/passport/share/completion?completionId=${encodeURIComponent(item.completionId)}`}
               >
                 <Share2 aria-hidden="true" className="size-3" />
                 Share

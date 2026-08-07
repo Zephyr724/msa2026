@@ -25,8 +25,21 @@ export function fetchWeeklyStreak(signal?: AbortSignal): Promise<WeeklyStreak> {
   return apiFetch<WeeklyStreak>('/v1/users/me/streak', { signal });
 }
 
-export function fetchCommunityChallenges(): Promise<CommunityChallenge[]> {
-  return apiFetch<CommunityChallenge[]>('/v1/community-challenges');
+export interface CommunityChallengeFilters {
+  regionId?: string;
+  status?: CommunityChallenge['status'];
+}
+
+export function fetchCommunityChallenges(
+  filters: CommunityChallengeFilters = {},
+): Promise<CommunityChallenge[]> {
+  const params = new URLSearchParams();
+  if (filters.regionId) params.set('regionId', filters.regionId);
+  if (filters.status) params.set('status', filters.status);
+  const qs = params.toString();
+  return apiFetch<CommunityChallenge[]>(
+    `/v1/community-challenges${qs ? `?${qs}` : ''}`,
+  );
 }
 
 export function createCommunityChallenge(

@@ -29,12 +29,34 @@ function payload(
   };
 }
 
+const localArea = {
+  id: '11111111-1111-4111-8111-111111111111',
+  name: 'Henderson-Massey',
+  type: 'LocalArea',
+  parentRegionId: '22222222-2222-4222-8222-222222222222',
+};
+
+const aucklandCity = {
+  id: '22222222-2222-4222-8222-222222222222',
+  name: 'Auckland',
+  type: 'AdministrativeArea',
+  parentRegionId: null,
+};
+
 function stubApi(leaderboard: () => Promise<Response>) {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
     if (url.includes('/v1/leaderboards/people')) return leaderboard();
-    if (url.endsWith('/v1/community-challenges')) {
+    if (url.includes('/v1/community-challenges')) {
       return Promise.resolve(jsonResponse([]));
+    }
+    if (url.includes('/v1/regions')) {
+      // The community section derives the Auckland boundary from the
+      // AdministrativeArea listing before offering LocalAreas.
+      if (url.includes('type=AdministrativeArea')) {
+        return Promise.resolve(jsonResponse([aucklandCity]));
+      }
+      return Promise.resolve(jsonResponse([localArea]));
     }
     if (url.endsWith('/v1/auth/me')) {
       return Promise.resolve(jsonResponse({ title: 'Unauthorized' }, 401));
@@ -210,7 +232,13 @@ describe('LeaderboardPage', () => {
           }],
         }));
       }
-      if (url.endsWith('/v1/community-challenges')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/v1/community-challenges')) return Promise.resolve(jsonResponse([]));
+      if (url.includes('/v1/regions')) {
+        if (url.includes('type=AdministrativeArea')) {
+          return Promise.resolve(jsonResponse([aucklandCity]));
+        }
+        return Promise.resolve(jsonResponse([localArea]));
+      }
       return Promise.resolve(jsonResponse({ title: 'Unauthorized' }, 401));
     });
     vi.stubGlobal('fetch', fetchMock);

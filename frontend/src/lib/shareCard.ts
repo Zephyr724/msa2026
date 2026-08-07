@@ -1,5 +1,6 @@
 import type { PassportCompletionItem } from '../types/passport.ts';
 import type { MyProgression } from '../types/progression.ts';
+import type { AchievementTrophyTier } from '../types/achievement.ts';
 import { CATEGORY_PRESENTATION } from './questPresentation.ts';
 
 export const SHARE_CARD_THEMES = ['forest', 'ocean', 'sunrise'] as const;
@@ -8,6 +9,45 @@ export const SHARE_CARD_OVERLAYS = ['dark', 'light'] as const;
 export type ShareCardTheme = (typeof SHARE_CARD_THEMES)[number];
 export type ShareCardOverlay = (typeof SHARE_CARD_OVERLAYS)[number];
 
+/** The member's current trophy, pre-rasterized by the caller. */
+export interface ShareCardTrophy {
+  tier: AchievementTrophyTier;
+  image: HTMLImageElement | null;
+}
+
+/** An earned achievement badge relevant to the shared completion. */
+export interface ShareCardAchievementBadge {
+  label: string;
+  image: HTMLImageElement | null;
+}
+
+export const SHARE_CARD_MAX_BADGES = 4;
+
+/** Identity of the artwork pre-loaded for one card render. */
+export interface ShareCardArtworkIdentity {
+  completionId: string;
+  tier: string | undefined;
+  badgeKeys: string[];
+}
+
+/**
+ * True only when pre-loaded artwork still belongs to the current selection,
+ * trophy tier, and badge identity. Badge keys — not just the badge count —
+ * must match, so a name-to-code re-resolution with an unchanged count still
+ * rejects stale badge images.
+ */
+export function isCurrentArtwork(
+  artwork: ShareCardArtworkIdentity,
+  completionId: string,
+  tier: string | undefined,
+  badgeKeys: string[],
+): boolean {
+  return artwork.completionId === completionId
+    && artwork.tier === tier
+    && artwork.badgeKeys.length === badgeKeys.length
+    && artwork.badgeKeys.every((key, index) => key === badgeKeys[index]);
+}
+
 export interface ShareCardOptions {
   completion: PassportCompletionItem;
   displayName: string;
@@ -15,6 +55,8 @@ export interface ShareCardOptions {
   progression: MyProgression;
   showName: boolean;
   theme: ShareCardTheme;
+  trophy?: ShareCardTrophy;
+  achievementBadges?: ShareCardAchievementBadge[];
 }
 
 interface Palette {
@@ -113,6 +155,25 @@ export function drawShareCard(
   context.fillText(category.label.toUpperCase(), 814, 107);
   context.textAlign = 'left';
 
+  // Right column: the member's current trophy and the earned achievement
+  // badges relevant to this completion. Images are pre-rasterized from
+  // repository-owned SVG by the caller; a null image draws a truthful
+  // vector fallback so export can never break on a failed decode.
+  const badgeArtwork = (options.achievementBadges ?? [])
+    .slice(0, SHARE_CARD_MAX_BADGES);
+  if (options.trophy) {
+    drawTrophyShowcase(context, options.trophy, {
+      accent: palette.accent,
+      foreground,
+      glass,
+      muted,
+    });
+  }
+  if (badgeArtwork.length > 0) {
+    drawAchievementBadgeRow(context, badgeArtwork, { glass, muted });
+  }
+  const hasArtwork = options.trophy !== undefined || badgeArtwork.length > 0;
+
   context.fillStyle = muted;
   context.font = '700 25px Manrope, system-ui, sans-serif';
   context.fillText(category.label.toUpperCase(), 72, 490);
@@ -124,7 +185,8 @@ export function drawShareCard(
     options.completion.questTitle,
     72,
     560,
-    900,
+    // Keep long titles clear of the trophy and badge column on the right.
+    hasArtwork ? 640 : 900,
     76,
     3,
   );
@@ -155,6 +217,16 @@ export function drawShareCard(
     foreground,
   );
 
+  context.save();
+  context.globalAlpha = 0.35;
+  context.strokeStyle = palette.accent;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(72, 862);
+  context.lineTo(1008, 862);
+  context.stroke();
+  context.restore();
+
   drawRankCrest(context, 72, 887, options.progression.rankTitle, palette.accent);
   context.fillStyle = foreground;
   context.font = '700 34px Fredoka, Manrope, system-ui, sans-serif';
@@ -173,6 +245,129 @@ export function drawShareCard(
   context.fillText('KIWIMPACT PASSPORT', 1008, 988);
   context.textAlign = 'left';
   return true;
+}
+
+function drawTrophyShowcase(
+  context: CanvasRenderingContext2D,
+  trophy: ShareCardTrophy,
+  colors: {
+    accent: string;
+    foreground: string;
+    glass: string;
+    muted: string;
+  },
+) {
+  const centerX = 876;
+  context.save();
+  context.textAlign = 'center';
+
+  context.fillStyle = colors.glass;
+  context.beginPath();
+  context.arc(centerX, 288, 104, 0, Math.PI * 2);
+  context.fill();
+
+  if (trophy.image) {
+    context.drawImage(trophy.image, centerX - 80, 208, 160, 160);
+  } else {
+    drawTrophyFallback(context, centerX, 288, colors.accent, colors.muted);
+  }
+
+  context.fillStyle = colors.muted;
+  context.font = '600 19px Manrope, system-ui, sans-serif';
+  context.fillText('ACHIEVEMENT TROPHY', centerX, 170);
+
+  context.fillStyle = colors.foreground;
+  context.font = '700 30px Fredoka, Manrope, system-ui, sans-serif';
+  context.fillText(
+    trophy.tier === 'Locked'
+      ? 'FIRST TROPHY AWAITS'
+      : `${trophy.tier.toUpperCase()} TROPHY`,
+    centerX,
+    428,
+  );
+  context.restore();
+}
+
+function drawAchievementBadgeRow(
+  context: CanvasRenderingContext2D,
+  badges: ShareCardAchievementBadge[],
+  colors: { glass: string; muted: string },
+) {
+  const badgeSize = 52;
+  const gap = 14;
+  const top = 474;
+  const rowWidth = badges.length * badgeSize + (badges.length - 1) * gap;
+  let x = 876 - rowWidth / 2;
+
+  context.save();
+  context.textAlign = 'center';
+  context.font = '600 16px Manrope, system-ui, sans-serif';
+  context.fillStyle = colors.muted;
+  for (const badge of badges) {
+    if (badge.image) {
+      context.drawImage(badge.image, x, top, badgeSize, badgeSize);
+    } else {
+      drawBadgeArtFallback(context, x + badgeSize / 2, top + badgeSize / 2, badgeSize / 2, colors.glass);
+    }
+    context.fillText(truncateLabel(badge.label, 14), x + badgeSize / 2, top + badgeSize + 24);
+    x += badgeSize + gap;
+  }
+  context.restore();
+}
+
+// Vector stand-ins used whenever a pre-rasterized SVG image is unavailable;
+// they keep the card truthful and exportable instead of dropping the artwork.
+function drawTrophyFallback(
+  context: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  accent: string,
+  muted: string,
+) {
+  context.save();
+  context.fillStyle = accent;
+  context.beginPath();
+  context.moveTo(centerX - 34, centerY - 44);
+  context.lineTo(centerX + 34, centerY - 44);
+  context.quadraticCurveTo(centerX + 34, centerY + 8, centerX, centerY + 12);
+  context.quadraticCurveTo(centerX - 34, centerY + 8, centerX - 34, centerY - 44);
+  context.closePath();
+  context.fill();
+  context.fillRect(centerX - 7, centerY + 12, 14, 18);
+  roundedRect(context, centerX - 26, centerY + 30, 52, 14, 7);
+  context.fill();
+  context.fillStyle = muted;
+  context.beginPath();
+  context.arc(centerX, centerY - 16, 10, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function drawBadgeArtFallback(
+  context: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  radius: number,
+  fill: string,
+) {
+  context.save();
+  context.fillStyle = fill;
+  context.beginPath();
+  context.moveTo(centerX, centerY - radius);
+  context.lineTo(centerX + radius * 0.85, centerY - radius / 2);
+  context.lineTo(centerX + radius * 0.85, centerY + radius / 2);
+  context.lineTo(centerX, centerY + radius);
+  context.lineTo(centerX - radius * 0.85, centerY + radius / 2);
+  context.lineTo(centerX - radius * 0.85, centerY - radius / 2);
+  context.closePath();
+  context.fill();
+  context.restore();
+}
+
+function truncateLabel(label: string, maxLength: number): string {
+  return label.length > maxLength
+    ? `${label.slice(0, maxLength - 1)}…`
+    : label;
 }
 
 function drawThemeScene(

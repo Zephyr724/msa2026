@@ -20,7 +20,7 @@ import PlayerStatusSummary from '../components/PlayerStatusSummary.tsx';
 import { AchievementBadgeArt } from '../components/game/GameArtwork.tsx';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
 import QuestImage from '../components/quest/QuestImage.tsx';
-import { useMyAchievements } from '../hooks/useAchievements.ts';
+import { useAchievementCatalog, useMyAchievements } from '../hooks/useAchievements.ts';
 import { useMyClaims } from '../hooks/useCompletion.ts';
 import {
   useCommunityChallenges,
@@ -81,6 +81,7 @@ export default function MyQuestsPage() {
   const challenges = useCommunityChallenges();
   const profile = useMyProfile();
   const achievements = useMyAchievements();
+  const achievementCatalog = useAchievementCatalog();
 
   function setView(next: MissionView) {
     setSearchParams(next === 'active' ? {} : { view: next });
@@ -136,9 +137,17 @@ export default function MyQuestsPage() {
       new Date(right.awardedAt).getTime() - new Date(left.awardedAt).getTime()
     ))
     .slice(0, 3);
+  // Feature only the member's own home community's Active challenge. Never
+  // fall back to another community's challenge or to a past result.
   const primaryChallenge = challenges.data?.find(
-    (challenge) => challenge.localArea.id === profile.data?.homeCommunity?.id,
-  ) ?? challenges.data?.[0];
+    (challenge) => challenge.localArea.id === profile.data?.homeCommunity?.id
+      && challenge.status === 'Active',
+  );
+  const primaryRewardName = primaryChallenge?.rewardAchievementId
+    ? achievementCatalog.data?.find(
+        (achievement) => achievement.id === primaryChallenge.rewardAchievementId,
+      )?.name ?? null
+    : null;
   const priorityAction = ready[0]
     // Prefer the action closest to verified impact, followed by work already
     // in progress, before suggesting a new Quest.
@@ -239,9 +248,15 @@ export default function MyQuestsPage() {
                 <p className="mt-1 text-sm leading-relaxed text-muted-content">
                   {challenges.isPending
                     ? 'Loading verified community progress…'
-                    : primaryChallenge
-                      ? `${primaryChallenge.currentProgress} of ${primaryChallenge.targetValue} verified actions · ${Math.round(primaryChallenge.progressPercentage)}%`
-                      : challenges.isError ? 'Community progress unavailable.' : 'No active challenge.'}
+                    : challenges.isError
+                      ? 'Community progress unavailable.'
+                      : primaryChallenge
+                        ? `${primaryChallenge.currentProgress} of ${primaryChallenge.targetValue} verified actions · ${Math.round(primaryChallenge.progressPercentage)}%`
+                        : profile.data && !profile.data.homeCommunity
+                          ? 'Choose a home community to join its monthly challenge.'
+                          : profile.data?.homeCommunity
+                            ? `No active challenge for ${profile.data.homeCommunity.name} this month.`
+                            : 'No active challenge.'}
                 </p>
                 {primaryChallenge && (
                   <>
@@ -255,9 +270,19 @@ export default function MyQuestsPage() {
                       Any verified Quest attributed to this community during
                       the challenge counts automatically. Self-reports do not.
                     </p>
-                    <p className="mt-2 text-xs font-bold text-primary">
-                      Reward: community milestone badge for contributors
-                    </p>
+                    {primaryChallenge.rewardAchievementId
+                      // Degrade gracefully: an unresolved catalog entry hides
+                      // the reward line rather than inventing one.
+                      ? primaryRewardName && (
+                          <p className="mt-2 text-xs font-bold text-primary">
+                            Reward: {primaryRewardName} achievement for contributors
+                          </p>
+                        )
+                      : (
+                          <p className="mt-2 text-xs text-muted-content">
+                            No bonus reward this month
+                          </p>
+                        )}
                   </>
                 )}
                 <p className="mt-2 text-xs font-semibold text-muted-content">
@@ -698,8 +723,8 @@ function CompletedCard({ item }: { item: PassportCompletionItem }) {
               View Quest
             </Link>
             {verified && (
-              <Link className="btn kiwi-share-action btn-sm" to="/passport/share">
-                Create Share Card
+              <Link className="btn kiwi-share-action btn-sm" to="/passport/share/completion">
+                Create Quest Card
               </Link>
             )}
           </div>

@@ -22,7 +22,7 @@
 - `backend/src/Kiwimpact.Infrastructure/Data/Seeds/DemoSocialSeed.cs`
 - `backend/tests/Kiwimpact.IntegrationTests/Persistence/SeedConfigurationTests.cs`
 - `specs/ai/prompts/93-development-community-image-parity.md`
-- `specs/implementation/reports/37-development-community-image-parity-completion.md`
+- `specs/implementation/reports/43-development-community-image-parity-completion.md`
 
 ## Verification
 
