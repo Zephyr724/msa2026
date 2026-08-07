@@ -44,6 +44,36 @@ public sealed class QuestCompletionService : IQuestCompletionService
             questId, actorId, submittedCode, DateTimeOffset.UtcNow, ct);
     }
 
+    public Task<IReadOnlyList<MemberRewardEventRecord>> ListUnseenRewardEventsAsync(
+        Guid actorId,
+        int take = 10,
+        CancellationToken ct = default)
+    {
+        EnsureActor(actorId);
+        if (take is < 1 or > 25)
+            throw new ArgumentOutOfRangeException(nameof(take), "Take must be between 1 and 25.");
+        return _repository.ListUnseenRewardEventsAsync(actorId, take, ct);
+    }
+
+    public Task<MemberRewardEventRecord> MarkRewardEventSeenAsync(
+        Guid rewardEventId,
+        Guid actorId,
+        CancellationToken ct = default)
+    {
+        EnsureClaimRequest(rewardEventId, actorId);
+        return _repository.MarkRewardEventSeenAsync(
+            rewardEventId, actorId, DateTimeOffset.UtcNow, ct);
+    }
+
+    public Task<MemberRewardEventRecord?> GetQuestRewardEventAsync(
+        Guid questId,
+        Guid actorId,
+        CancellationToken ct = default)
+    {
+        EnsureRequest(questId, actorId);
+        return _repository.GetQuestRewardEventAsync(questId, actorId, ct);
+    }
+
     public Task<MyQuestCompletionState> GetStateAsync(
         Guid questId,
         Guid actorId,

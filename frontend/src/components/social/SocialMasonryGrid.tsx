@@ -1,4 +1,11 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  Children,
+  isValidElement,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 function MasonryItem({ children }: { children: ReactNode }) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -40,13 +47,17 @@ function MasonryItem({ children }: { children: ReactNode }) {
   );
 }
 
-export default function SocialMasonryGrid({ children }: { children: ReactNode[] }) {
+export default function SocialMasonryGrid({ children }: { children: ReactNode }) {
   return (
     <div
       className="grid auto-rows-[8px] grid-cols-2 grid-flow-row-dense gap-x-3 gap-y-4 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4 xl:grid-cols-5"
       data-testid="community-masonry"
     >
-      {children.map((child, index) => <MasonryItem key={index}>{child}</MasonryItem>)}
+      {Children.map(children, (child, index) => (
+        <MasonryItem key={isValidElement(child) && child.key !== null ? child.key : index}>
+          {child}
+        </MasonryItem>
+      ))}
     </div>
   );
 }

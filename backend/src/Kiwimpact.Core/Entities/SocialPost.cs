@@ -23,6 +23,7 @@ public sealed class SocialPost
     public Guid Id { get; internal set; }
     public Guid AuthorUserId { get; internal set; }
     public Guid? QuestId { get; internal set; }
+    public Guid? SourceCompletionId { get; internal set; }
     public string Title { get; internal set; }
     public string Content { get; internal set; }
     // Retained for a safe additive migration of posts created before multi-image support.
@@ -46,12 +47,17 @@ public sealed class SocialPost
         IReadOnlyList<SocialPostImageDetails> images,
         IReadOnlyList<string> tags,
         bool isHidden,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        Guid? sourceCompletionId = null)
     {
         if (authorUserId == Guid.Empty)
             throw new ArgumentException("An authenticated author is required.");
         if (questId.HasValue && questId.Value == Guid.Empty)
             throw new ArgumentException("The related Quest identifier is invalid.");
+        if (sourceCompletionId.HasValue && sourceCompletionId.Value == Guid.Empty)
+            throw new ArgumentException("The source completion identifier is invalid.");
+        if (sourceCompletionId.HasValue && !questId.HasValue)
+            throw new ArgumentException("A verified Quest story must reference its Quest.");
 
         ArgumentNullException.ThrowIfNull(images);
         ArgumentNullException.ThrowIfNull(tags);
@@ -72,6 +78,7 @@ public sealed class SocialPost
             Id = Guid.NewGuid(),
             AuthorUserId = authorUserId,
             QuestId = questId,
+            SourceCompletionId = sourceCompletionId,
             Title = normalizedTitle,
             Content = normalizedContent,
             IsHidden = isHidden,
@@ -115,6 +122,8 @@ public sealed class SocialPost
     {
         if (questId.HasValue && questId.Value == Guid.Empty)
             throw new ArgumentException("The related Quest identifier is invalid.");
+        if (SourceCompletionId.HasValue && questId != QuestId)
+            throw new ArgumentException("A verified Quest story cannot change its related Quest.");
 
         ArgumentNullException.ThrowIfNull(images);
         ArgumentNullException.ThrowIfNull(tags);

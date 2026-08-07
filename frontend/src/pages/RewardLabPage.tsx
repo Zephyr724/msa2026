@@ -18,7 +18,7 @@ interface RewardScenario {
   Icon: typeof CheckCircle2;
   label: string;
   questTitle: string;
-  reward: Omit<CompletionRewardDto, 'rewardEventId'>;
+  reward: Omit<CompletionRewardDto, 'rewardEventId' | 'questTitle'>;
   reducedMotion?: boolean;
 }
 
@@ -34,7 +34,17 @@ const SCENARIOS: RewardScenario[] = [
     description: 'Standard +50 XP flight with no level change.',
     Icon: CheckCircle2,
     questTitle: 'Waitākere Stream Care',
-    reward: reward(50, 170, 220, 4, 4, 'Novice', 'Novice'),
+    reward: reward(50, 170, 220, 4, 4, 'Novice', 'Novice', [], false),
+  },
+  {
+    label: 'Evidence approval',
+    description: 'Asynchronous verification delivered through the durable reward inbox.',
+    Icon: ShieldCheck,
+    questTitle: 'Neighbourhood Waste Audit',
+    reward: {
+      ...reward(50, 170, 220, 4, 4, 'Novice', 'Novice', [], false),
+      verificationMethod: 'EvidenceClaim',
+    },
   },
   {
     label: 'Level up',
@@ -125,7 +135,7 @@ export default function RewardLabPage() {
         <p className="font-extrabold">How to test the full design</p>
         <ol className="mt-2 list-inside list-decimal space-y-1 text-sm leading-relaxed text-muted-content">
           <li>Run each preview below and watch the preview XP target in the header.</li>
-          <li>Close a toast manually, then let another close automatically after five seconds.</li>
+          <li>Close a toast manually, then let another close automatically after twenty seconds.</li>
           <li>Hover or focus the toast to confirm auto-dismiss pauses.</li>
           <li>Repeat in dark mode, at 320 px width, and with reduced motion.</li>
           <li>Sign in as a seeded demo member and use a real completion code to verify persisted rewards.</li>
@@ -174,8 +184,14 @@ function reward(
   previousRankTitle: string,
   rankTitle: string,
   unlockedAchievements: CompletionRewardAchievementDto[] = [],
-): Omit<CompletionRewardDto, 'rewardEventId'> {
+  streakChanged = true,
+): Omit<CompletionRewardDto, 'rewardEventId' | 'questTitle'> {
   return {
+    questCompletionId: '936b96fb-f895-42fa-8c53-008e37fc38f7',
+    questId: '9ed6a4a5-631d-4b55-8203-72b760039c47',
+    celebrationTitle: 'Well Done!',
+    celebrationMessage: 'Your verified action is now part of the community impact story.',
+    verificationMethod: 'CompletionCode',
     xpAwarded,
     previousTotalXp,
     totalXp,
@@ -183,6 +199,15 @@ function reward(
     level,
     previousRankTitle,
     rankTitle,
+    streak: {
+      previousWeeks: streakChanged ? 2 : 3,
+      previousHasVerifiedImpactThisWeek: !streakChanged,
+      weeks: 3,
+      hasVerifiedImpactThisWeek: true,
+    },
+    communityChallenge: null,
     unlockedAchievements,
+    createdAtUtc: '2026-08-06T12:00:00.0000000Z',
+    seenAtUtc: null,
   };
 }

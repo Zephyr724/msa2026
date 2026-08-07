@@ -5,6 +5,8 @@ import type {
   EvidenceClaimSummary,
   GeneratedCompletionCodeDto,
   MyQuestCompletionDto,
+  CompletionRewardDto,
+  RewardEventInboxDto,
   RedeemCompletionResultDto,
 } from '../../types/completion';
 import {
@@ -12,6 +14,8 @@ import {
   validateGeneratedCompletionCode,
   validateMyQuestCompletion,
   validateRedeemCompletionResult,
+  validateCompletionReward,
+  validateRewardEventInbox,
 } from '../validation/completionDto';
 import { apiFetch } from './apiFetch';
 
@@ -66,6 +70,32 @@ export async function redeemCompletionCode(
     signal,
   });
   return validateRedeemCompletionResult(payload);
+}
+
+export async function fetchQuestRewardResolution(
+  questId: string,
+  signal?: AbortSignal,
+): Promise<CompletionRewardDto> {
+  const payload = await apiFetch<unknown>(`${questPath(questId)}/reward-resolution`, { signal });
+  return validateCompletionReward(payload);
+}
+
+export async function fetchUnseenRewardEvents(
+  signal?: AbortSignal,
+): Promise<RewardEventInboxDto> {
+  const payload = await apiFetch<unknown>('/v1/users/me/reward-events/unseen?take=10', { signal });
+  return validateRewardEventInbox(payload);
+}
+
+export async function markRewardEventSeen(
+  rewardEventId: string,
+  signal?: AbortSignal,
+): Promise<CompletionRewardDto> {
+  const payload = await apiFetch<unknown>(
+    `/v1/users/me/reward-events/${encodeURIComponent(rewardEventId)}/seen`,
+    { method: 'POST', signal },
+  );
+  return validateCompletionReward(payload);
 }
 
 export function submitEvidenceClaim(

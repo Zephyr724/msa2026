@@ -1,12 +1,6 @@
 import { ArrowRight, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { PassportCompletionItem } from '../../types/passport';
-
-interface ShareCardProps {
-  completion?: PassportCompletionItem;
-}
-
-export default function ShareCard({ completion }: ShareCardProps) {
+export default function ShareCard() {
   return (
     <section className="kiwi-panel flex flex-col p-5" aria-labelledby="share-card-heading">
       <div className="flex items-start gap-3">
@@ -15,20 +9,18 @@ export default function ShareCard({ completion }: ShareCardProps) {
         </span>
         <div>
           <p className="kiwi-stat-label">Privacy-safe sharing</p>
-          <h2 className="mt-1 text-2xl" id="share-card-heading">Share Card</h2>
+          <h2 className="mt-1 text-2xl" id="share-card-heading">Share your Passport</h2>
           <p className="mt-1 text-sm text-muted-content">
-            Build a square card from your verified impact, with privacy-safe
-            controls and a live preview.
+            Create a privacy-safe snapshot of your level, impact, trophy, and
+            every achievement you have earned.
           </p>
         </div>
       </div>
       <p className="mt-4 rounded-2xl bg-secondary/65 p-3 text-sm text-muted-content">
-        {completion
-          ? `Ready to feature “${completion.questTitle}”.`
-          : 'Complete a verified Quest to unlock your first card.'}
+        Your community, account details, evidence, and claim text are never included.
       </p>
-      <Link className="btn btn-primary btn-sm mt-auto self-start rounded-full" to="/passport/share">
-        Open builder <ArrowRight aria-hidden="true" className="size-4" />
+      <Link className="btn kiwi-share-action btn-sm mt-auto self-start rounded-full" to="/passport/share">
+        Open Passport share <ArrowRight aria-hidden="true" className="size-4" />
       </Link>
     </section>
   );

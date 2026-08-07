@@ -63,6 +63,7 @@ public sealed class SocialFeedService : ISocialFeedService
         IReadOnlyList<SocialPostImageDetails> images,
         IReadOnlyList<string> tags,
         bool isHidden,
+        Guid? sourceCompletionId,
         CancellationToken ct = default)
     {
         try
@@ -75,7 +76,8 @@ public sealed class SocialFeedService : ISocialFeedService
                 images,
                 tags,
                 isHidden,
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow,
+                sourceCompletionId);
             return _repository.AddPostAsync(post, authorUserId, ct);
         }
         catch (ArgumentException exception)

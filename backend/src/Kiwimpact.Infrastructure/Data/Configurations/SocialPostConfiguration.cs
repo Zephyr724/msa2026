@@ -39,6 +39,10 @@ public sealed class SocialPostConfiguration : IEntityTypeConfiguration<SocialPos
             .WithMany()
             .HasForeignKey(post => post.QuestId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<QuestCompletion>()
+            .WithMany()
+            .HasForeignKey(post => post.SourceCompletionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(post => new { post.CreatedAt, post.Id })
             .HasDatabaseName("IX_SocialPosts_CreatedAt_Id");
@@ -46,5 +50,9 @@ public sealed class SocialPostConfiguration : IEntityTypeConfiguration<SocialPos
             .HasDatabaseName("IX_SocialPosts_AuthorUserId");
         builder.HasIndex(post => post.QuestId)
             .HasDatabaseName("IX_SocialPosts_QuestId");
+        builder.HasIndex(post => post.SourceCompletionId)
+            .IsUnique()
+            .HasFilter("\"SourceCompletionId\" IS NOT NULL")
+            .HasDatabaseName("UX_SocialPosts_SourceCompletionId");
     }
 }

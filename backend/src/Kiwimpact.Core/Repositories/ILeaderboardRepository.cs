@@ -14,6 +14,7 @@ public interface ILeaderboardRepository
         DateTimeOffset? fromUtc,
         int skip,
         int take,
+        Guid? actorId,
         CancellationToken ct = default);
 
     Task<IReadOnlyList<CommunityLeaderboardRepositoryRow>> GetCommunitiesAsync(

@@ -1,4 +1,5 @@
 using Kiwimpact.Infrastructure.Data;
+using Kiwimpact.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -65,6 +66,20 @@ public sealed class MigrationSmokeTests : IAsyncLifetime
         Assert.Contains(tables, t => t == "SocialPostTags");
         Assert.Contains(tables, t => t == "SocialPostLikes");
         Assert.Contains(tables, t => t == "SocialComments");
+        Assert.Contains(tables, t => t == "CompletionCelebrationCopies");
+
+        Assert.Equal(
+            30,
+            await db.CompletionCelebrationCopies.CountAsync(
+                item => item.Kind == CompletionCelebrationCopyKind.Title
+                    && item.IsActive,
+                TestContext.Current.CancellationToken));
+        Assert.Equal(
+            50,
+            await db.CompletionCelebrationCopies.CountAsync(
+                item => item.Kind == CompletionCelebrationCopyKind.Message
+                    && item.IsActive,
+                TestContext.Current.CancellationToken));
     }
 
     [Fact]

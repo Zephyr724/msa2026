@@ -13,6 +13,7 @@ const leaderboard = {
   totalCount: 1,
   isPrivacyProtected: false,
   collectiveProgress: null,
+  currentUser: null,
   rows: [{
     rank: 1,
     displayName: 'Aroha',

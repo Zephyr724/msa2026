@@ -13,6 +13,15 @@ namespace Kiwimpact.Api.Contracts
         long TotalXp,
         long VerifiedCompletionCount);
 
+    public sealed record CurrentUserLeaderboardPositionDto(
+        int Rank,
+        int ActiveMemberCount,
+        long TotalXp,
+        long VerifiedCompletionCount,
+        int SurpassedMemberCount,
+        decimal Percentile,
+        bool HasReachedScopeUpgradeThreshold);
+
     public sealed record PeopleLeaderboardDto(
         string Scope,
         string Period,
@@ -21,6 +30,7 @@ namespace Kiwimpact.Api.Contracts
         int TotalCount,
         bool IsPrivacyProtected,
         CollectiveProgressDto? CollectiveProgress,
+        CurrentUserLeaderboardPositionDto? CurrentUser,
         IReadOnlyList<LeaderboardRowDto> Rows);
 
     public sealed record CommunityLeaderboardRowDto(
@@ -57,6 +67,16 @@ namespace Kiwimpact.Api.Mapping
                     : new CollectiveProgressDto(
                         leaderboard.CollectiveProgress.TotalXp,
                         leaderboard.CollectiveProgress.VerifiedCompletionCount),
+                leaderboard.CurrentUser is null
+                    ? null
+                    : new CurrentUserLeaderboardPositionDto(
+                        leaderboard.CurrentUser.Rank,
+                        leaderboard.CurrentUser.ActiveMemberCount,
+                        leaderboard.CurrentUser.TotalXp,
+                        leaderboard.CurrentUser.VerifiedCompletionCount,
+                        leaderboard.CurrentUser.SurpassedMemberCount,
+                        leaderboard.CurrentUser.Percentile,
+                        leaderboard.CurrentUser.HasReachedScopeUpgradeThreshold),
                 leaderboard.Rows.Select(row => new LeaderboardRowDto(
                     row.Rank,
                     row.DisplayName,

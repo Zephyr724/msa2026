@@ -218,14 +218,24 @@ public sealed class QuestCompletionApiTests
         var rewardJson = redemptionJson.GetProperty("reward");
         AssertExactKeys(
             rewardJson,
+            "communityChallenge",
+            "celebrationMessage",
+            "celebrationTitle",
+            "createdAtUtc",
             "level",
             "previousLevel",
             "previousRankTitle",
             "previousTotalXp",
+            "questCompletionId",
+            "questId",
+            "questTitle",
             "rankTitle",
             "rewardEventId",
+            "seenAtUtc",
+            "streak",
             "totalXp",
             "unlockedAchievements",
+            "verificationMethod",
             "xpAwarded");
         Assert.Equal(150, rewardJson.GetProperty("xpAwarded").GetInt32());
         Assert.Equal(0, rewardJson.GetProperty("previousTotalXp").GetInt64());
@@ -234,6 +244,20 @@ public sealed class QuestCompletionApiTests
         Assert.Equal(3, rewardJson.GetProperty("level").GetInt32());
         Assert.Equal("Novice", rewardJson.GetProperty("previousRankTitle").GetString());
         Assert.Equal("Novice", rewardJson.GetProperty("rankTitle").GetString());
+        Assert.Equal(quest.Id, rewardJson.GetProperty("questId").GetGuid());
+        Assert.Equal(quest.Title, rewardJson.GetProperty("questTitle").GetString());
+        var celebrationTitle = rewardJson.GetProperty("celebrationTitle").GetString();
+        var celebrationMessage = rewardJson.GetProperty("celebrationMessage").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(celebrationTitle));
+        Assert.False(string.IsNullOrWhiteSpace(celebrationMessage));
+        Assert.Equal("CompletionCode", rewardJson.GetProperty("verificationMethod").GetString());
+        Assert.Equal(JsonValueKind.Null, rewardJson.GetProperty("seenAtUtc").ValueKind);
+        AssertExactKeys(
+            rewardJson.GetProperty("streak"),
+            "hasVerifiedImpactThisWeek",
+            "previousHasVerifiedImpactThisWeek",
+            "previousWeeks",
+            "weeks");
         Assert.All(
             rewardJson.GetProperty("unlockedAchievements").EnumerateArray(),
             achievement => AssertExactKeys(
@@ -246,6 +270,54 @@ public sealed class QuestCompletionApiTests
             CompletionPath(quest.Id),
             TestContext.Current.CancellationToken);
         AssertCompletionDto(await ReadJsonAsync(stateResponse), "Verified", "CompletionCode");
+
+        var inboxResponse = await actor.Client.GetAsync(
+            "/api/v1/users/me/reward-events/unseen",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, inboxResponse.StatusCode);
+        var inboxJson = await ReadJsonAsync(inboxResponse);
+        AssertExactKeys(inboxJson, "items");
+        var inboxReward = Assert.Single(inboxJson.GetProperty("items").EnumerateArray());
+        Assert.Equal(
+            rewardJson.GetProperty("rewardEventId").GetGuid(),
+            inboxReward.GetProperty("rewardEventId").GetGuid());
+
+        var resolutionResponse = await actor.Client.GetAsync(
+            $"/api/v1/quests/{quest.Id}/reward-resolution",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, resolutionResponse.StatusCode);
+        var resolutionJson = await ReadJsonAsync(resolutionResponse);
+        Assert.Equal(
+            rewardJson.GetProperty("rewardEventId").GetGuid(),
+            resolutionJson.GetProperty("rewardEventId").GetGuid());
+        Assert.Equal(celebrationTitle, resolutionJson.GetProperty("celebrationTitle").GetString());
+        Assert.Equal(celebrationMessage, resolutionJson.GetProperty("celebrationMessage").GetString());
+
+        var passportResponse = await actor.Client.GetAsync(
+            "/api/v1/users/me/passport",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, passportResponse.StatusCode);
+        var categoryImpact = (await ReadJsonAsync(passportResponse))
+            .GetProperty("categoryImpact")
+            .EnumerateArray()
+            .Single(item => item.GetProperty("category").GetString() == quest.Category.ToString());
+        Assert.Equal(1, categoryImpact.GetProperty("verifiedCompletionCount").GetInt64());
+        Assert.Equal(150, categoryImpact.GetProperty("verifiedXp").GetInt64());
+
+        var seenResponse = await PostJsonWithCsrfAsync(
+            actor.Client,
+            $"/api/v1/users/me/reward-events/{rewardJson.GetProperty("rewardEventId").GetGuid()}/seen",
+            new { });
+        Assert.Equal(HttpStatusCode.OK, seenResponse.StatusCode);
+        Assert.NotEqual(
+            JsonValueKind.Null,
+            (await ReadJsonAsync(seenResponse)).GetProperty("seenAtUtc").ValueKind);
+        var emptyInboxResponse = await actor.Client.GetAsync(
+            "/api/v1/users/me/reward-events/unseen",
+            TestContext.Current.CancellationToken);
+        Assert.Empty((await ReadJsonAsync(emptyInboxResponse))
+            .GetProperty("items")
+            .EnumerateArray());
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
@@ -276,6 +348,129 @@ public sealed class QuestCompletionApiTests
         Assert.Equal(
             32,
             Convert.FromBase64String(storedCode.CodeHash).Length);
+    }
+
+    [Fact]
+    public async Task EvidenceApprovalDeliversEquivalentUnseenRewardToTheMember()
+    {
+        var owner = await CreateAuthenticatedClientAsync(AppRoles.Organizer);
+        var member = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var admin = await CreateAuthenticatedClientAsync(AppRoles.Admin);
+        var quest = await SeedQuestAsync(owner.UserId, difficulty: QuestDifficulty.Medium);
+        await SeedParticipationAsync(member.UserId, quest.Id);
+
+        var submitted = await PostJsonWithCsrfAsync(
+            member.Client,
+            $"/api/v1/quests/{quest.Id}/claims",
+            new
+            {
+                description = "Collected and documented litter from the stream edge.",
+                evidenceUrl = "https://example.test/member-evidence",
+                userDeclaration = true,
+                completedAtUtc = DateTimeOffset.UtcNow,
+            });
+        Assert.Equal(HttpStatusCode.Created, submitted.StatusCode);
+        var claimId = (await ReadJsonAsync(submitted)).GetProperty("claimId").GetGuid();
+
+        var approved = await PostJsonWithCsrfAsync(
+            admin.Client,
+            $"/api/v1/admin/claims/{claimId}/review",
+            new { approve = true, reviewNote = "Evidence verified." });
+        Assert.Equal(HttpStatusCode.OK, approved.StatusCode);
+
+        var inboxResponse = await member.Client.GetAsync(
+            "/api/v1/users/me/reward-events/unseen",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, inboxResponse.StatusCode);
+        var reward = Assert.Single((await ReadJsonAsync(inboxResponse))
+            .GetProperty("items")
+            .EnumerateArray());
+        Assert.Equal(claimId, reward.GetProperty("questCompletionId").GetGuid());
+        Assert.Equal(quest.Id, reward.GetProperty("questId").GetGuid());
+        Assert.Equal("EvidenceClaim", reward.GetProperty("verificationMethod").GetString());
+        Assert.Equal(100, reward.GetProperty("xpAwarded").GetInt32());
+        Assert.False(string.IsNullOrWhiteSpace(
+            reward.GetProperty("celebrationTitle").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(
+            reward.GetProperty("celebrationMessage").GetString()));
+        Assert.Equal(JsonValueKind.Null, reward.GetProperty("seenAtUtc").ValueKind);
+    }
+
+    [Fact]
+    public async Task ConcurrentCommunityAwardsPersistSequentialChallengeTransitions()
+    {
+        var owner = await CreateAuthenticatedClientAsync(AppRoles.Organizer);
+        var firstMember = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var secondMember = await CreateAuthenticatedClientAsync(AppRoles.Member);
+        var firstQuest = await SeedQuestAsync(owner.UserId);
+        var secondQuest = await SeedQuestAsync(owner.UserId);
+        await SeedParticipationAsync(firstMember.UserId, firstQuest.Id);
+        await SeedParticipationAsync(secondMember.UserId, secondQuest.Id);
+        var communityId = await SetHomeCommunityAsync(firstMember.UserId);
+        await SetHomeCommunityAsync(secondMember.UserId, communityId);
+        var challengeId = await SeedCommunityChallengeAsync(communityId);
+        var firstCode = (await ReadJsonAsync(
+            await GenerateAsync(owner.Client, firstQuest.Id)))
+            .GetProperty("code").GetString();
+        var secondCode = (await ReadJsonAsync(
+            await GenerateAsync(owner.Client, secondQuest.Id)))
+            .GetProperty("code").GetString();
+        var firstCsrf = await GetCsrfTokenAsync(firstMember.Client);
+        var secondCsrf = await GetCsrfTokenAsync(secondMember.Client);
+
+        await using var lockConnection = new NpgsqlConnection(_factory.ConnectionString);
+        await lockConnection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var lockTransaction = await lockConnection.BeginTransactionAsync(
+            TestContext.Current.CancellationToken);
+        await using (var lockCommand = new NpgsqlCommand(
+            "SELECT \"Id\" FROM \"CommunityChallenges\" WHERE \"Id\" = @id FOR UPDATE",
+            lockConnection,
+            lockTransaction))
+        {
+            lockCommand.Parameters.AddWithValue("id", challengeId);
+            await lockCommand.ExecuteScalarAsync(TestContext.Current.CancellationToken);
+        }
+
+        var firstAward = PostJsonWithTokenAsync(
+            firstMember.Client,
+            RedeemPath(firstQuest.Id),
+            new { code = firstCode },
+            firstCsrf);
+        var secondAward = PostJsonWithTokenAsync(
+            secondMember.Client,
+            RedeemPath(secondQuest.Id),
+            new { code = secondCode },
+            secondCsrf);
+        await Task.Delay(150, TestContext.Current.CancellationToken);
+        Assert.False(firstAward.IsCompleted && secondAward.IsCompleted);
+
+        await lockTransaction.CommitAsync(TestContext.Current.CancellationToken);
+        var responses = await Task.WhenAll(firstAward, secondAward);
+        Assert.All(responses, response => Assert.Equal(HttpStatusCode.Created, response.StatusCode));
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var snapshots = await db.MemberRewardEvents
+            .Where(item => item.CommunityChallengeId == challengeId)
+            .OrderBy(item => item.CommunityChallengePreviousProgress)
+            .Select(item => new
+            {
+                item.CommunityChallengePreviousProgress,
+                item.CommunityChallengeProgress,
+            })
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Collection(
+            snapshots,
+            item =>
+            {
+                Assert.Equal(0, item.CommunityChallengePreviousProgress);
+                Assert.Equal(1, item.CommunityChallengeProgress);
+            },
+            item =>
+            {
+                Assert.Equal(1, item.CommunityChallengePreviousProgress);
+                Assert.Equal(2, item.CommunityChallengeProgress);
+            });
     }
 
     [Fact]
@@ -898,26 +1093,48 @@ public sealed class QuestCompletionApiTests
         return participation;
     }
 
-    private async Task<Guid> SetHomeCommunityAsync(Guid userId)
+    private async Task<Guid> SetHomeCommunityAsync(
+        Guid userId,
+        Guid? existingRegionId = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
-        var region = new Region
+        var regionId = existingRegionId ?? Guid.NewGuid();
+        if (!existingRegionId.HasValue)
         {
-            Id = Guid.NewGuid(),
-            Name = $"Completion Region {Guid.NewGuid():N}",
-            Type = RegionType.Country,
-            IsActive = true,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow,
-        };
-        db.Regions.Add(region);
+            db.Regions.Add(new Region
+            {
+                Id = regionId,
+                Name = $"Completion Region {Guid.NewGuid():N}",
+                Type = RegionType.LocalArea,
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            });
+        }
         var profile = await db.UserProfiles.SingleAsync(
             item => item.Id == userId,
             TestContext.Current.CancellationToken);
-        profile.HomeCommunityRegionId = region.Id;
+        profile.HomeCommunityRegionId = regionId;
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        return region.Id;
+        return regionId;
+    }
+
+    private async Task<Guid> SeedCommunityChallengeAsync(Guid communityId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var now = DateTimeOffset.UtcNow;
+        var challenge = CommunityChallenge.Create(
+            communityId,
+            now.AddDays(-1),
+            now.AddDays(1),
+            20,
+            null,
+            now);
+        db.CommunityChallenges.Add(challenge);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return challenge.Id;
     }
 
     private async Task SeedCompletionCodeAsync(

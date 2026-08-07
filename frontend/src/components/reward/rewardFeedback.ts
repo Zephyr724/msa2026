@@ -5,7 +5,6 @@ export type RewardMotionPreference = 'system' | 'full' | 'reduced';
 export type RewardPhase = 'flying' | 'arrived' | 'leaving';
 
 export interface RewardFeedbackEvent extends CompletionRewardDto {
-  questTitle: string;
   preview?: boolean;
   motionPreference?: RewardMotionPreference;
 }

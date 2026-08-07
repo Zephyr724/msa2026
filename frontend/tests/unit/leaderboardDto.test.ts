@@ -12,6 +12,7 @@ const people = {
   totalCount: 1,
   isPrivacyProtected: false,
   collectiveProgress: null,
+  currentUser: null,
   rows: [{
     rank: 1,
     displayName: 'Aroha',
@@ -40,12 +41,41 @@ describe('leaderboard DTO validation', () => {
     expect(validateCommunitiesLeaderboard(communities)).toEqual(communities);
   });
 
+  it('accepts an internally consistent current-member position', () => {
+    const currentUser = {
+      rank: 2,
+      activeMemberCount: 6,
+      totalXp: 150,
+      verifiedCompletionCount: 2,
+      surpassedMemberCount: 4,
+      percentile: 80,
+      hasReachedScopeUpgradeThreshold: true,
+    };
+    expect(validatePeopleLeaderboard({ ...people, currentUser }).currentUser)
+      .toEqual(currentUser);
+  });
+
+  it('keeps scope eligibility authoritative when display percentile rounds to 80', () => {
+    const currentUser = {
+      rank: 4002,
+      activeMemberCount: 20001,
+      totalXp: 50,
+      verifiedCompletionCount: 1,
+      surpassedMemberCount: 15999,
+      percentile: 80,
+      hasReachedScopeUpgradeThreshold: false,
+    };
+    expect(validatePeopleLeaderboard({ ...people, currentUser }).currentUser)
+      .toEqual(currentUser);
+  });
+
   it('accepts a privacy-protected response only without counts or progress', () => {
     expect(validatePeopleLeaderboard({
       ...people,
       totalCount: 0,
       isPrivacyProtected: true,
       collectiveProgress: null,
+      currentUser: null,
       rows: [],
     }).isPrivacyProtected).toBe(true);
   });
@@ -60,6 +90,7 @@ describe('leaderboard DTO validation', () => {
       totalCount: 4,
       isPrivacyProtected: true,
       collectiveProgress: null,
+      currentUser: null,
       rows: [],
     },
     {
@@ -71,6 +102,18 @@ describe('leaderboard DTO validation', () => {
     },
     { ...people, rows: [{ ...people.rows[0], totalXp: -1 }] },
     { ...people, rows: [{ ...people.rows[0], isCurrentUser: 'yes' }] },
+    {
+      ...people,
+      currentUser: {
+        rank: 2,
+        activeMemberCount: 6,
+        totalXp: 150,
+        verifiedCompletionCount: 2,
+        surpassedMemberCount: 3,
+        percentile: 80,
+        hasReachedScopeUpgradeThreshold: true,
+      },
+    },
   ])('rejects invalid people payload %#', (value) => {
     expect(() => validatePeopleLeaderboard(value)).toThrow();
   });

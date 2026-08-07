@@ -5,6 +5,8 @@ import {
   type CompletionCodeStatusDto,
   type GeneratedCompletionCodeDto,
   type MyQuestCompletionDto,
+  type CompletionRewardDto,
+  type RewardEventInboxDto,
   type RedeemCompletionResultDto,
 } from '../../types/completion';
 
@@ -101,25 +103,14 @@ export function validateRedeemCompletionResult(
     || !hasExactKeys(payload, ['completion', 'reward'])
     || !isRecord(payload.reward)
     || !hasExactKeys(payload.reward, [
-      'rewardEventId', 'xpAwarded', 'previousTotalXp', 'totalXp',
+      'rewardEventId', 'questCompletionId', 'questId', 'questTitle',
+      'celebrationTitle', 'celebrationMessage',
+      'verificationMethod', 'xpAwarded', 'previousTotalXp', 'totalXp',
       'previousLevel', 'level', 'previousRankTitle', 'rankTitle',
-      'unlockedAchievements',
+      'streak', 'communityChallenge', 'unlockedAchievements',
+      'createdAtUtc', 'seenAtUtc',
     ])
-    || !isUuid(payload.reward.rewardEventId)
-    || !isPositiveSafeInteger(payload.reward.xpAwarded)
-    || !isNonNegativeSafeInteger(payload.reward.previousTotalXp)
-    || !isNonNegativeSafeInteger(payload.reward.totalXp)
-    || payload.reward.totalXp
-      !== payload.reward.previousTotalXp + payload.reward.xpAwarded
-    || !isLevel(payload.reward.previousLevel)
-    || !isLevel(payload.reward.level)
-    || payload.reward.level < payload.reward.previousLevel
-    || typeof payload.reward.previousRankTitle !== 'string'
-    || payload.reward.previousRankTitle.trim().length === 0
-    || typeof payload.reward.rankTitle !== 'string'
-    || payload.reward.rankTitle.trim().length === 0
-    || !Array.isArray(payload.reward.unlockedAchievements)
-    || !payload.reward.unlockedAchievements.every(isRewardAchievement)
+    || !isCompletionReward(payload.reward)
   ) {
     throw new Error('Completion reward response is not valid.');
   }
@@ -129,6 +120,91 @@ export function validateRedeemCompletionResult(
     throw new Error('Completion reward response is not valid.');
   }
   return payload as unknown as RedeemCompletionResultDto;
+}
+
+export function validateCompletionReward(payload: unknown): CompletionRewardDto {
+  if (!isRecord(payload) || !hasExactKeys(payload, [
+    'rewardEventId', 'questCompletionId', 'questId', 'questTitle',
+    'celebrationTitle', 'celebrationMessage',
+    'verificationMethod', 'xpAwarded', 'previousTotalXp', 'totalXp',
+    'previousLevel', 'level', 'previousRankTitle', 'rankTitle', 'streak',
+    'communityChallenge', 'unlockedAchievements', 'createdAtUtc', 'seenAtUtc',
+  ]) || !isCompletionReward(payload)) {
+    throw new Error('Completion reward response is not valid.');
+  }
+  return payload as unknown as CompletionRewardDto;
+}
+
+export function validateRewardEventInbox(payload: unknown): RewardEventInboxDto {
+  if (!isRecord(payload)
+    || !hasExactKeys(payload, ['items'])
+    || !Array.isArray(payload.items)
+    || !payload.items.every((item) => {
+      try { validateCompletionReward(item); return true; } catch { return false; }
+    })) {
+    throw new Error('Reward inbox response is not valid.');
+  }
+  return payload as unknown as RewardEventInboxDto;
+}
+
+function isCompletionReward(payload: Record<string, unknown>): boolean {
+  return isUuid(payload.rewardEventId)
+    && isUuid(payload.questCompletionId)
+    && isUuid(payload.questId)
+    && typeof payload.questTitle === 'string'
+    && payload.questTitle.trim().length > 0
+    && typeof payload.celebrationTitle === 'string'
+    && payload.celebrationTitle.trim().length > 0
+    && payload.celebrationTitle.trim().length <= 80
+    && typeof payload.celebrationMessage === 'string'
+    && payload.celebrationMessage.trim().length > 0
+    && payload.celebrationMessage.trim().length <= 280
+    && (payload.verificationMethod === 'CompletionCode'
+      || payload.verificationMethod === 'EvidenceClaim')
+    && isPositiveSafeInteger(payload.xpAwarded)
+    && isNonNegativeSafeInteger(payload.previousTotalXp)
+    && isNonNegativeSafeInteger(payload.totalXp)
+    && payload.totalXp === payload.previousTotalXp + payload.xpAwarded
+    && isLevel(payload.previousLevel)
+    && isLevel(payload.level)
+    && payload.level >= payload.previousLevel
+    && typeof payload.previousRankTitle === 'string'
+    && payload.previousRankTitle.trim().length > 0
+    && typeof payload.rankTitle === 'string'
+    && payload.rankTitle.trim().length > 0
+    && isRewardStreak(payload.streak)
+    && (payload.communityChallenge === null
+      || isRewardCommunityChallenge(payload.communityChallenge))
+    && Array.isArray(payload.unlockedAchievements)
+    && payload.unlockedAchievements.every(isRewardAchievement)
+    && isUtcTimestamp(payload.createdAtUtc)
+    && isNullableUtcTimestamp(payload.seenAtUtc);
+}
+
+function isRewardStreak(value: unknown): boolean {
+  return isRecord(value)
+    && hasExactKeys(value, [
+      'previousWeeks', 'previousHasVerifiedImpactThisWeek',
+      'weeks', 'hasVerifiedImpactThisWeek',
+    ])
+    && isNonNegativeSafeInteger(value.previousWeeks)
+    && typeof value.previousHasVerifiedImpactThisWeek === 'boolean'
+    && isNonNegativeSafeInteger(value.weeks)
+    && typeof value.hasVerifiedImpactThisWeek === 'boolean';
+}
+
+function isRewardCommunityChallenge(value: unknown): boolean {
+  return isRecord(value)
+    && hasExactKeys(value, [
+      'challengeId', 'communityName', 'previousProgress', 'progress', 'target',
+    ])
+    && isUuid(value.challengeId)
+    && typeof value.communityName === 'string'
+    && value.communityName.trim().length > 0
+    && isNonNegativeSafeInteger(value.previousProgress)
+    && isNonNegativeSafeInteger(value.progress)
+    && value.progress === value.previousProgress + 1
+    && isPositiveSafeInteger(value.target);
 }
 
 function isRewardAchievement(value: unknown): boolean {
@@ -143,7 +219,11 @@ function isRewardAchievement(value: unknown): boolean {
 
 function isUuid(value: unknown): value is string {
   return typeof value === 'string'
-    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    // ASP.NET exposes Guid values, whose canonical text shape does not
+    // guarantee RFC UUID version or variant bits. Reject malformed values,
+    // but do not discard valid persisted Guid identifiers such as seeded
+    // Community Challenge ids.
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
       .test(value);
 }
 

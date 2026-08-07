@@ -204,7 +204,7 @@ function EditForm({ content, error, onCancel, onChange, onSubmit, pending }: { c
       <textarea autoFocus className="textarea textarea-bordered min-h-20 w-full" id="edit-comment" maxLength={1_000} onChange={(event) => onChange(event.target.value)} value={content} />
       <div className="mt-2 flex gap-2">
         <button className="btn btn-primary btn-xs rounded-full" disabled={pending || !content.trim()} type="submit"><Check aria-hidden="true" className="size-3" />Save</button>
-        <button className="btn btn-ghost btn-xs rounded-full" disabled={pending} onClick={onCancel} type="button"><X aria-hidden="true" className="size-3" />Cancel</button>
+        <button className="btn btn-error btn-xs rounded-full" disabled={pending} onClick={onCancel} type="button"><X aria-hidden="true" className="size-3" />Cancel</button>
       </div>
       {error && <p className="mt-2 text-xs text-error" role="alert">{error}</p>}
     </form>

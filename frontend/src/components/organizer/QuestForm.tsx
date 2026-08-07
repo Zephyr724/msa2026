@@ -438,23 +438,7 @@ export default function QuestForm({
               )}
             </FormControl>
             <FormControl
-              label="Location description"
-              error={errors.locationDescription}
-              field="locationDescription"
-            >
-              <input
-                aria-describedby={describedBy('locationDescription')}
-                aria-invalid={!!errors.locationDescription}
-                className="input input-bordered w-full rounded-xl"
-                id="locationDescription"
-                maxLength={500}
-                onChange={(event) => updateField('locationDescription', event.target.value)}
-                type="text"
-                value={fields.locationDescription}
-              />
-            </FormControl>
-            <FormControl
-              label="Map coordinates"
+              label="Search and confirm location"
               error={errors.latitude ?? errors.longitude}
               field="latitude"
             >
@@ -466,7 +450,27 @@ export default function QuestForm({
                   updateField('latitude', latitude);
                   updateField('longitude', longitude);
                 }}
+                onPlaceSelect={(description) => updateField('locationDescription', description)}
               />
+            </FormControl>
+            <FormControl
+              label="Location description"
+              error={errors.locationDescription}
+              field="locationDescription"
+            >
+              <input
+                aria-describedby={describedBy('locationDescription', 'location-description-hint')}
+                aria-invalid={!!errors.locationDescription}
+                className="input input-bordered w-full rounded-xl"
+                id="locationDescription"
+                maxLength={500}
+                onChange={(event) => updateField('locationDescription', event.target.value)}
+                type="text"
+                value={fields.locationDescription}
+              />
+              <p className="text-sm text-muted-content" id="location-description-hint">
+                Filled automatically when you choose a place — you can edit it.
+              </p>
             </FormControl>
             <FormControl
               label="External source URL"

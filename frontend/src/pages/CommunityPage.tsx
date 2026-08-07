@@ -6,6 +6,7 @@ import SocialPostComposer from '../components/social/SocialPostComposer';
 import SocialMasonryGrid from '../components/social/SocialMasonryGrid';
 import { useAuthQuery } from '../hooks/useAuth';
 import { useSocialFeed } from '../hooks/useSocialFeed';
+import type { SocialPostDto } from '../types/social.ts';
 
 export default function CommunityPage() {
   const auth = useAuthQuery();
@@ -17,11 +18,28 @@ export default function CommunityPage() {
   const [searchInput, setSearchInput] = useState(search);
   const [composerOpen, setComposerOpen] = useState(false);
   const [published, setPublished] = useState(false);
+  const [publishedPost, setPublishedPost] = useState<SocialPostDto | null>(null);
+  const verifiedCompletionId = searchParams.get('compose') === 'verified'
+    ? searchParams.get('completionId')
+    : null;
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const feed = useSocialFeed(search, mine);
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = feed;
 
   useEffect(() => setSearchInput(search), [search]);
+
+  useEffect(() => {
+    if (canWrite && verifiedCompletionId) setComposerOpen(true);
+  }, [canWrite, verifiedCompletionId]);
+
+  function closeComposer() {
+    setComposerOpen(false);
+    if (!verifiedCompletionId) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('compose');
+    next.delete('completionId');
+    setSearchParams(next, { replace: true });
+  }
 
   function setView(nextMine: boolean) {
     const next = new URLSearchParams(searchParams);
@@ -127,7 +145,10 @@ export default function CommunityPage() {
 
       <div className="kiwi-page-wide py-7">
         {published && (
-          <div className="alert alert-success mb-6 rounded-2xl" role="status">Your post is now in the community feed.</div>
+          <div className="alert alert-success mb-6 rounded-2xl" role="status">
+            <span>{publishedPost?.isVerifiedQuestStory ? 'Your Verified Quest Story is now part of your public impact record.' : 'Your post is now in the community feed.'}</span>
+            {publishedPost && <Link className="btn btn-ghost btn-sm" to={`/community/posts/${publishedPost.id}`}>View story →</Link>}
+          </div>
         )}
 
         {mineRequested && !auth.isPending && !canWrite ? (
@@ -142,7 +163,7 @@ export default function CommunityPage() {
             {feed.isPending && (
               <div aria-label="Loading community posts" className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
                 {[16, 12, 18, 14, 17, 13, 19, 15, 12, 17].map((height, index) => (
-                  <div className="mb-4 inline-block w-full break-inside-avoid overflow-hidden rounded-2xl bg-base-100 ring-1 ring-base-300" key={index}>
+                  <div className="w-full overflow-hidden rounded-2xl bg-base-100 ring-1 ring-base-300" key={index}>
                     <div className="skeleton w-full" style={{ height: `${height}rem` }} />
                     <div className="space-y-2 p-3"><div className="skeleton h-4 w-5/6" /><div className="skeleton h-3 w-1/2" /></div>
                   </div>
@@ -210,7 +231,12 @@ export default function CommunityPage() {
         </Link>
       ))}
 
-      <SocialPostComposer onClose={() => setComposerOpen(false)} onPublished={() => setPublished(true)} open={composerOpen} />
+      <SocialPostComposer
+        onClose={closeComposer}
+        onPublished={(post) => { setPublished(true); setPublishedPost(post); }}
+        open={composerOpen}
+        verifiedCompletionId={verifiedCompletionId}
+      />
     </div>
   );
 }

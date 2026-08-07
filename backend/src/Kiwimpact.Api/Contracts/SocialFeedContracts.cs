@@ -6,7 +6,8 @@ public sealed record CreateSocialPostRequest(
     string Content,
     IReadOnlyList<CreateSocialPostImageRequest>? Images,
     IReadOnlyList<string>? Tags,
-    bool IsHidden = false);
+    bool IsHidden = false,
+    Guid? SourceCompletionId = null);
 
 public sealed record UpdateSocialPostRequest(
     Guid? QuestId,
@@ -47,7 +48,8 @@ public sealed record SocialPostDto(
     int CommentCount,
     bool IsLikedByViewer,
     bool CanDelete,
-    bool IsHidden);
+    bool IsHidden,
+    bool IsVerifiedQuestStory);
 
 public sealed record SetSocialLikeDto(int LikeCount, bool IsLikedByViewer);
 

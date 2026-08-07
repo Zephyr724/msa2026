@@ -9,6 +9,16 @@ import {
   renderWithRouter,
 } from '../organizerTestUtils';
 
+// The form must remain fully usable without Google Maps; pin the unconfigured
+// fallback path so this test does not depend on local environment variables.
+vi.mock('../../src/lib/googleMapsConfig', () => ({
+  googleMapsConfig: {
+    apiKey: null,
+    mapId: null,
+    isConfigured: false,
+  },
+}));
+
 describe('Organizer Quest create page', () => {
   afterEach(() => {
     resetCsrfToken();
@@ -85,6 +95,35 @@ describe('Organizer Quest create page', () => {
     await fillRequiredFields(user);
     await user.click(screen.getByRole('button', { name: 'Create draft' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('The selected Region is inactive.');
+  });
+
+  it('renders the location section with manual coordinate entry when maps are unconfigured', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse([])));
+    renderCreate();
+
+    // Without Google Maps configuration the place search stays hidden and the
+    // accessible manual coordinate path remains immediately visible.
+    expect(screen.getByText(/Place search and map are unavailable/)).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Search for a place' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Latitude')).toBeInTheDocument();
+    expect(screen.getByLabelText('Longitude')).toBeInTheDocument();
+    expect(screen.getByLabelText('Location description')).toBeInTheDocument();
+  });
+
+  it('labels and orders the location flow search-first, description second', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse([])));
+    renderCreate();
+
+    // The primary control is "Search and confirm location"; the derived,
+    // editable description follows it in document order.
+    const searchControl = screen.getByText('Search and confirm location');
+    const description = screen.getByLabelText('Location description');
+    expect(
+      searchControl.compareDocumentPosition(description)
+        & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByText(/Filled automatically when you choose a place/))
+      .toBeInTheDocument();
   });
 
   it('redirects an expired write session without the dirty-form blocker', async () => {

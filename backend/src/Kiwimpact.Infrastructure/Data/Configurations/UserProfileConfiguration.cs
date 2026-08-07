@@ -33,6 +33,10 @@ public sealed class UserProfileConfiguration : IEntityTypeConfiguration<UserProf
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(profile => profile.IsPublicPassportEnabled)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.Property(profile => profile.TotalXp)
             .IsRequired()
             .HasDefaultValue(0L);
@@ -57,5 +61,9 @@ public sealed class UserProfileConfiguration : IEntityTypeConfiguration<UserProf
 
         builder.HasIndex(profile => profile.HomeCommunityRegionId);
         builder.HasIndex(profile => profile.AchievementEvaluationVersion);
+        builder.HasIndex(profile => profile.PublicPassportShareId)
+            .IsUnique()
+            .HasFilter("\"PublicPassportShareId\" IS NOT NULL")
+            .HasDatabaseName("UX_UserProfiles_PublicPassportShareId");
     }
 }

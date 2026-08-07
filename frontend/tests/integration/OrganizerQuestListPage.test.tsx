@@ -44,9 +44,9 @@ describe('Organizer Quest list', () => {
 
     expect(await screen.findByText('Published quest')).toBeInTheDocument();
     expect(screen.getAllByText(/^(Draft|Published|Cancelled|Archived)$/)).toHaveLength(4);
-    expect(screen.getByRole('button', { name: 'Publish quest' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publish quest' })).toHaveClass('btn-success');
     expect(screen.getByRole('button', { name: 'Delete draft' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel quest' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel quest' })).toHaveClass('btn-error');
     expect(screen.getAllByRole('button', { name: 'Archive quest' })).toHaveLength(2);
     expect(screen.getByRole('link', { name: 'View' })).toHaveAttribute(
       'href',
@@ -71,7 +71,9 @@ describe('Organizer Quest list', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Publish quest' }));
     expect(screen.getByRole('heading', { name: 'Publish this quest?' })).toBeInTheDocument();
-    await user.click(screen.getAllByRole('button', { name: 'Publish quest' }).at(-1)!);
+    const confirmPublish = screen.getAllByRole('button', { name: 'Publish quest' }).at(-1)!;
+    expect(confirmPublish).toHaveClass('btn-success');
+    await user.click(confirmPublish);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
     expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/v1/auth/csrf-token');
@@ -90,7 +92,9 @@ describe('Organizer Quest list', () => {
     renderList();
 
     await user.click(await screen.findByRole('button', { name: 'Cancel quest' }));
-    await user.click(screen.getAllByRole('button', { name: 'Cancel quest' }).at(-1)!);
+    const confirmCancel = screen.getAllByRole('button', { name: 'Cancel quest' }).at(-1)!;
+    expect(confirmCancel).toHaveClass('btn-error');
+    await user.click(confirmCancel);
     expect(await screen.findByText('Active participants must be acknowledged.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Cancel this quest?' })).toBeInTheDocument();
   });

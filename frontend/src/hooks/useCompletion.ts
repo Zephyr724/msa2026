@@ -17,6 +17,9 @@ import {
   fetchPendingClaims,
   fetchAdminClaim,
   reviewEvidenceClaim,
+  fetchQuestRewardResolution,
+  fetchUnseenRewardEvents,
+  markRewardEventSeen,
 } from '../lib/api/completion';
 import { ApiError } from '../lib/api/apiFetch';
 import { executePrivateQuery, executePrivateRequest } from '../lib/api/privateCache.ts';
@@ -36,6 +39,12 @@ export const completionKeys = {
   claims: ['claims', 'me'] as const,
   adminClaims: ['claims', 'admin'] as const,
   adminClaim: (claimId: string) => ['claims', 'admin', claimId] as const,
+};
+
+export const rewardEventKeys = {
+  all: ['reward-events'] as const,
+  unseen: ['reward-events', 'unseen'] as const,
+  quest: (questId: string) => ['reward-events', 'quest', questId] as const,
 };
 
 export function useCompletionCodeStatusQuery(questId: string) {
@@ -61,6 +70,47 @@ export function useMyQuestCompletionQuery(questId: string) {
     enabled: Boolean(questId && auth.data),
     retry: false,
   });
+}
+
+export function useQuestRewardResolution(questId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: rewardEventKeys.quest(questId),
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client,
+      rewardEventKeys.quest(questId),
+      signal,
+      (signal) => fetchQuestRewardResolution(questId, signal),
+    ),
+    enabled: Boolean(questId && enabled),
+    retry: false,
+  });
+}
+
+export function useRewardInbox(enabled: boolean) {
+  return useQuery({
+    queryKey: rewardEventKeys.unseen,
+    queryFn: ({ client, signal }) => executePrivateQuery(
+      client,
+      rewardEventKeys.unseen,
+      signal,
+      fetchUnseenRewardEvents,
+    ),
+    enabled,
+    retry: false,
+    refetchInterval: enabled ? 30_000 : false,
+  });
+}
+
+export function useAcknowledgeRewardEvent() {
+  const queryClient = useQueryClient();
+  return useCallback(async (rewardEventId: string) => {
+    const result = await executePrivateRequest(
+      queryClient,
+      (signal) => markRewardEventSeen(rewardEventId, signal),
+    );
+    void queryClient.invalidateQueries({ queryKey: rewardEventKeys.unseen, exact: true });
+    return result;
+  }, [queryClient]);
 }
 
 export function useSubmitEvidenceClaim(questId: string) {
@@ -196,6 +246,9 @@ export function useRedeemCompletionCode(questId: string) {
       }
       throw error;
     }
+    // Make the persistent Quest-page resolution available in the same render
+    // turn as the Toast. The authoritative request still refetches below.
+    queryClient.setQueryData(rewardEventKeys.quest(questId), result.reward);
     // Start the authoritative refresh without delaying the reward hand-off.
     // The returned transactional before/after values drive the animation;
     // queries still converge in the background for every persistent surface.
@@ -204,7 +257,7 @@ export function useRedeemCompletionCode(questId: string) {
   }, [queryClient, questId]);
 }
 
-function syncAuthoritativeCompletion(
+export function syncMemberRewardSurfaces(
   queryClient: QueryClient,
   questId: string,
 ): Promise<void> {
@@ -243,5 +296,15 @@ function syncAuthoritativeCompletion(
     queryClient.invalidateQueries({
       queryKey: completionKeys.claims,
     }),
+  ]).then(() => undefined);
+}
+
+function syncAuthoritativeCompletion(
+  queryClient: QueryClient,
+  questId: string,
+): Promise<void> {
+  return Promise.all([
+    syncMemberRewardSurfaces(queryClient, questId),
+    queryClient.invalidateQueries({ queryKey: rewardEventKeys.all }),
   ]).then(() => undefined);
 }

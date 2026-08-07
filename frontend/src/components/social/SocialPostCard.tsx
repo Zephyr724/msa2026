@@ -1,4 +1,4 @@
-import { Heart, Images, LockKeyhole } from 'lucide-react';
+import { Heart, Images, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSetSocialLike } from '../../hooks/useSocialFeed';
@@ -17,7 +17,9 @@ export default function SocialPostCard({
   const location = useLocation();
   const setLike = useSetSocialLike();
   const [coverCrop, setCoverCrop] = useState<SocialCoverCrop>(null);
+  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
   const cover = post.images[0];
+  const coverFailed = cover?.imageUrl === failedCoverUrl;
   const likeLabel = post.isLikedByViewer ? 'Unlike post' : 'Like post';
 
   return (
@@ -29,11 +31,12 @@ export default function SocialPostCard({
         to={`/community/posts/${post.id}`}
       >
         <div className="relative overflow-hidden bg-base-200">
-          {cover ? (
+          {cover && !coverFailed ? (
             <img
               alt={cover.imageAltText}
               className={`${coverCrop === 'tall' ? 'aspect-[19/25] object-cover' : coverCrop === 'wide' ? 'aspect-[4/3] object-cover' : 'h-auto'} w-full transition duration-300 group-hover:scale-[1.015]`}
               loading="lazy"
+              onError={() => setFailedCoverUrl(cover.imageUrl)}
               onLoad={(event) => {
                 const image = event.currentTarget;
                 setCoverCrop(getSocialCoverCrop(image.naturalWidth, image.naturalHeight));
@@ -54,6 +57,11 @@ export default function SocialPostCard({
             <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 text-xs font-bold text-white">
               <LockKeyhole aria-hidden="true" className="size-3.5" />
               Only you
+            </span>
+          )}
+          {post.isVerifiedQuestStory && (
+            <span className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-primary/90 px-2 py-1 text-[0.65rem] font-black uppercase tracking-wide text-primary-content shadow-sm">
+              <ShieldCheck aria-hidden="true" className="size-3.5" /> Verified Story
             </span>
           )}
         </div>

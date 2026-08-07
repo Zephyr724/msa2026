@@ -10,16 +10,20 @@ const SEAL_POINTS = Array.from({ length: 48 }, (_, index) => {
 
 export default function MissionCompletedStamp({
   className = '',
+  decorative = false,
 }: {
   className?: string;
+  decorative?: boolean;
 }) {
   const cutoutId = `mission-complete-cutout-${useId().replaceAll(':', '')}`;
 
   return (
     <svg
-      aria-label="Mission complete, verified"
+      aria-hidden={decorative || undefined}
+      aria-label={decorative ? undefined : 'Mission complete, verified'}
       className={className}
-      role="img"
+      focusable="false"
+      role={decorative ? undefined : 'img'}
       viewBox="0 0 140 120"
     >
       <defs>

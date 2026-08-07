@@ -27,8 +27,27 @@ public sealed record CompletionRewardAchievementDto(
     string Code,
     string Name);
 
+public sealed record CompletionRewardStreakDto(
+    int PreviousWeeks,
+    bool PreviousHasVerifiedImpactThisWeek,
+    int Weeks,
+    bool HasVerifiedImpactThisWeek);
+
+public sealed record CompletionRewardCommunityChallengeDto(
+    Guid ChallengeId,
+    string CommunityName,
+    long PreviousProgress,
+    long Progress,
+    int Target);
+
 public sealed record CompletionRewardDto(
     Guid RewardEventId,
+    Guid QuestCompletionId,
+    Guid QuestId,
+    string QuestTitle,
+    string CelebrationTitle,
+    string CelebrationMessage,
+    string VerificationMethod,
     int XpAwarded,
     long PreviousTotalXp,
     long TotalXp,
@@ -36,11 +55,18 @@ public sealed record CompletionRewardDto(
     int Level,
     string PreviousRankTitle,
     string RankTitle,
-    IReadOnlyList<CompletionRewardAchievementDto> UnlockedAchievements);
+    CompletionRewardStreakDto Streak,
+    CompletionRewardCommunityChallengeDto? CommunityChallenge,
+    IReadOnlyList<CompletionRewardAchievementDto> UnlockedAchievements,
+    string CreatedAtUtc,
+    string? SeenAtUtc);
 
 public sealed record RedeemCompletionResultDto(
     MyQuestCompletionDto Completion,
     CompletionRewardDto Reward);
+
+public sealed record RewardEventInboxDto(
+    IReadOnlyList<CompletionRewardDto> Items);
 
 public sealed class EvidenceClaimRequest
 {

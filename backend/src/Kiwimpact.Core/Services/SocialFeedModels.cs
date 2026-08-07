@@ -33,7 +33,8 @@ public sealed record SocialPostItem(
     int CommentCount,
     bool IsLikedByViewer,
     bool CanDelete,
-    bool IsHidden);
+    bool IsHidden,
+    bool IsVerifiedQuestStory);
 
 public sealed record SocialPostImageItem(
     string Url,

@@ -1,8 +1,11 @@
 import {
   Award,
+  ArrowRight,
   CheckCircle2,
   ChevronUp,
+  Flame,
   Sparkles,
+  Users,
   X,
 } from 'lucide-react';
 import {
@@ -17,6 +20,7 @@ import {
   type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import {
   RewardFeedbackContext,
   type RewardFeedbackEvent,
@@ -43,6 +47,7 @@ const REWARD_ACHIEVEMENT_WITH_LEVEL_DELAY_MS = REWARD_LEVEL_ARROW_DELAY_MS
   + REWARD_LEVEL_ARROW_DURATION_MS
   + 1000;
 const REWARD_ACHIEVEMENT_NO_LEVEL_DELAY_MS = REWARD_PARTICLE_END_MS + 180;
+export const REWARD_TOAST_DURATION_MS = 20_000;
 
 export default function RewardFeedbackProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<RewardFeedbackEvent[]>([]);
@@ -112,9 +117,18 @@ function RewardToastHost({
   const sourceRef = useRef<HTMLDivElement>(null);
   const levelUp = reward.level > reward.previousLevel;
   const rankUp = reward.rankTitle !== reward.previousRankTitle;
-  const combinedReward = (levelUp || rankUp) && reward.unlockedAchievements.length > 0;
-  const toastDurationMs = combinedReward ? 10000 : 5000;
-  const timer = usePausableDismiss(onDismiss, toastDurationMs);
+  const streakChanged = reward.streak.weeks !== reward.streak.previousWeeks
+    || reward.streak.hasVerifiedImpactThisWeek
+      !== reward.streak.previousHasVerifiedImpactThisWeek;
+  const milestone = levelUp || rankUp || reward.unlockedAchievements.length > 0
+    || streakChanged;
+  const title = reward.verificationMethod === 'EvidenceClaim'
+    ? 'MISSION VERIFIED'
+    : milestone ? 'CONGRATULATIONS!' : 'MISSION COMPLETE';
+  const visibleTitle = title === 'MISSION VERIFIED'
+    ? 'Mission Verified'
+    : title === 'MISSION COMPLETE' ? 'Mission Complete' : 'Congratulations!';
+  const timer = usePausableDismiss(onDismiss, REWARD_TOAST_DURATION_MS);
   const reduced = prefersReducedMotion(reward);
   const rewardMotionStyle = {
     '--kiwi-reward-xp-delay': `${REWARD_XP_DELAY_MS}ms`,
@@ -129,7 +143,7 @@ function RewardToastHost({
 
   return createPortal(
     <div
-      className="pointer-events-none fixed inset-x-4 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[70] flex justify-end sm:inset-x-auto sm:right-5 sm:w-[24rem]"
+      className="pointer-events-none fixed inset-x-4 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[70] flex justify-end sm:inset-x-auto sm:right-5 sm:w-[27rem]"
       data-reward-host
       style={rewardMotionStyle}
     >
@@ -160,7 +174,7 @@ function RewardToastHost({
               className="kiwi-reward-congratulation-heading flex w-full justify-center"
               data-reward-congratulation
             >
-              <span className="sr-only">Congratulation</span>
+              <span className="sr-only">{title}</span>
               <svg
                 aria-hidden="true"
                 className="h-[4.75rem] w-[86%] overflow-visible"
@@ -190,7 +204,7 @@ function RewardToastHost({
                     startOffset="50%"
                     textAnchor="middle"
                   >
-                    Congratulation
+                    {visibleTitle}
                   </textPath>
                 </text>
               </svg>
@@ -317,12 +331,72 @@ function RewardToastHost({
                 </div>
               </div>
             )}
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <div
+                className={`rounded-2xl border border-warning/25 bg-warning/8 p-3 ${
+                  streakChanged && !reduced ? 'kiwi-reward-streak-pulse' : ''
+                }`}
+                data-reward-streak
+              >
+                <p className="flex items-center gap-1.5 font-extrabold text-warning">
+                  <Flame aria-hidden="true" className="size-4" />
+                  {reward.streak.weeks} week{reward.streak.weeks === 1 ? '' : 's'}
+                </p>
+                <p className="mt-1 text-xs text-muted-content">
+                  {reward.streak.hasVerifiedImpactThisWeek
+                    ? 'Weekly streak secured'
+                    : 'Verified impact recorded'}
+                </p>
+              </div>
+              <Link
+                aria-label="Passport saved. View your Impact Passport"
+                className="group grid grid-cols-[1fr_auto] overflow-hidden rounded-2xl border border-primary/20 bg-primary/8 transition-colors hover:border-primary/45 hover:bg-primary/12 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                data-reward-passport-link
+                to="/passport"
+              >
+                <span className="p-3">
+                  <span className="flex items-center gap-1.5 font-extrabold text-primary">
+                    <Sparkles aria-hidden="true" className="size-4" />
+                    Passport saved
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-content sm:whitespace-nowrap">
+                    Your record is updated
+                  </span>
+                </span>
+                <span className="flex min-w-6 flex-col items-center justify-center gap-1 border-l border-primary/20 bg-primary/8 px-1.5 text-primary group-hover:bg-primary/12">
+                  <ArrowRight aria-hidden="true" className="size-3.5" />
+                </span>
+              </Link>
+            </div>
+
+            {reward.communityChallenge && (
+              <div className="mt-2 rounded-2xl border border-primary/25 bg-secondary/75 p-3" data-reward-community>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="flex min-w-0 items-center gap-2 font-extrabold text-primary">
+                    <Users aria-hidden="true" className="size-4 shrink-0" />
+                    <span className="truncate">{reward.communityChallenge.communityName}</span>
+                  </p>
+                  <span className="kiwi-reward-gold-text shrink-0 font-extrabold">+1</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-content">
+                  Community Challenge {reward.communityChallenge.progress} / {reward.communityChallenge.target}
+                </p>
+              </div>
+            )}
           </div>
 
-          <p className="mt-4 flex items-center gap-2 text-xs font-semibold text-muted-content">
-            <Sparkles aria-hidden="true" className="size-3.5 text-warning" />
-            Saved to your Impact Passport
-          </p>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-muted-content">
+              Full reward details stay on this Quest.
+            </p>
+            <Link
+              className="btn btn-primary btn-sm shrink-0 rounded-full"
+              to={`/quests/${reward.questId}`}
+            >
+              Review Quest
+            </Link>
+          </div>
           <div
             aria-hidden="true"
             className="kiwi-reward-timer absolute bottom-0 left-0 h-0.5 bg-primary"
@@ -330,7 +404,8 @@ function RewardToastHost({
             style={{
               animation: reduced
                 ? 'none'
-                : `kiwi-reward-timer ${toastDurationMs}ms linear forwards`,
+                : `kiwi-reward-timer ${REWARD_TOAST_DURATION_MS}ms linear forwards`,
+              animationPlayState: timer.paused ? 'paused' : 'running',
             }}
           />
         </div>
@@ -435,12 +510,14 @@ function usePausableDismiss(onDismiss: () => void, duration: number) {
   const timeout = useRef<number | null>(null);
   const remaining = useRef(duration);
   const startedAt = useRef(0);
+  const [paused, setPaused] = useState(false);
 
   const pause = useCallback(() => {
     if (timeout.current === null) return;
     window.clearTimeout(timeout.current);
     timeout.current = null;
     remaining.current = Math.max(0, remaining.current - (performance.now() - startedAt.current));
+    setPaused(true);
   }, []);
 
   useEffect(() => {
@@ -450,6 +527,7 @@ function usePausableDismiss(onDismiss: () => void, duration: number) {
   const resume = useCallback(() => {
     if (timeout.current !== null || remaining.current <= 0) return;
     startedAt.current = performance.now();
+    setPaused(false);
     timeout.current = window.setTimeout(
       () => onDismissRef.current(),
       remaining.current,
@@ -458,7 +536,11 @@ function usePausableDismiss(onDismiss: () => void, duration: number) {
 
   useEffect(() => {
     remaining.current = duration;
-    resume();
+    if (document.hidden) {
+      setPaused(true);
+    } else {
+      resume();
+    }
     const onVisibilityChange = () => {
       if (document.hidden) pause();
       else resume();
@@ -473,7 +555,7 @@ function usePausableDismiss(onDismiss: () => void, duration: number) {
     };
   }, [duration, pause, resume]);
 
-  return { pause, resume };
+  return { pause, resume, paused };
 }
 
 function handleBlur(event: FocusEvent<HTMLElement>, resume: () => void) {

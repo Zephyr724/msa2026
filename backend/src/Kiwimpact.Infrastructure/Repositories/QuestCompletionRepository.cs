@@ -7,6 +7,7 @@ using Kiwimpact.Core.Progression;
 using Kiwimpact.Infrastructure.Achievements;
 using Kiwimpact.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 using Npgsql;
 
 namespace Kiwimpact.Infrastructure.Repositories;
@@ -226,24 +227,21 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
                 xp,
                 completion.QuestCategorySnapshot,
                 ct);
+            var rewardEvent = await StageRewardEventAsync(
+                profile,
+                completion,
+                quest,
+                xp,
+                previousProgression,
+                unlockedDefinitions,
+                timestamp,
+                ct);
 
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return new CompletionRedemptionResult(
                 MyQuestCompletionState.FromCompletion(completion),
-                xp.Id,
-                xp.XpAmount,
-                previousProgression,
-                new CompletionRewardProgression(
-                    profile.TotalXp,
-                    profile.Level,
-                    ProgressionRules.RankTitleFor(profile.Level)),
-                unlockedDefinitions
-                    .Select(definition => new CompletionRewardAchievement(
-                        definition.Id,
-                        definition.Code,
-                        definition.Name))
-                    .ToArray());
+                ToRewardRecord(rewardEvent));
         }
         catch (DbUpdateException exception)
             when (exception.InnerException is PostgresException
@@ -269,6 +267,55 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
             await transaction.RollbackAsync(ct);
             throw;
         }
+    }
+
+    public async Task<IReadOnlyList<MemberRewardEventRecord>>
+        ListUnseenRewardEventsAsync(
+            Guid actorId,
+            int take,
+            CancellationToken ct = default)
+    {
+        var events = await _db.MemberRewardEvents
+            .AsNoTracking()
+            .Include(item => item.UnlockedAchievements)
+            .Where(item => item.UserId == actorId && item.SeenAtUtc == null)
+            .OrderBy(item => item.CreatedAt)
+            .ThenBy(item => item.Id)
+            .Take(take)
+            .ToListAsync(ct);
+        return events.Select(ToRewardRecord).ToArray();
+    }
+
+    public async Task<MemberRewardEventRecord> MarkRewardEventSeenAsync(
+        Guid rewardEventId,
+        Guid actorId,
+        DateTimeOffset now,
+        CancellationToken ct = default)
+    {
+        var rewardEvent = await _db.MemberRewardEvents
+            .Include(item => item.UnlockedAchievements)
+            .SingleOrDefaultAsync(
+                item => item.Id == rewardEventId && item.UserId == actorId,
+                ct)
+            ?? throw Error(QuestCompletionError.NotFound, "Reward event not found.");
+        rewardEvent.MarkSeen(now);
+        await _db.SaveChangesAsync(ct);
+        return ToRewardRecord(rewardEvent);
+    }
+
+    public async Task<MemberRewardEventRecord?> GetQuestRewardEventAsync(
+        Guid questId,
+        Guid actorId,
+        CancellationToken ct = default)
+    {
+        var rewardEvent = await _db.MemberRewardEvents
+            .AsNoTracking()
+            .Include(item => item.UnlockedAchievements)
+            .Where(item => item.QuestId == questId && item.UserId == actorId)
+            .OrderByDescending(item => item.CreatedAt)
+            .ThenByDescending(item => item.Id)
+            .FirstOrDefaultAsync(ct);
+        return rewardEvent is null ? null : ToRewardRecord(rewardEvent);
     }
 
     public async Task<MyQuestCompletionState> GetStateAsync(
@@ -547,14 +594,28 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
                         "The member already has a verified completion.");
                 var profile = await LockUserProfileAsync(completion.UserId, ct)
                     ?? throw new InvalidOperationException("Member profile not found.");
+                var previousProgression = new CompletionRewardProgression(
+                    profile.TotalXp,
+                    profile.Level,
+                    ProgressionRules.RankTitleFor(profile.Level));
                 completion.ApproveEvidenceClaim(now);
                 var xp = XpTransaction.CreateFromVerifiedCompletion(completion);
                 profile.ApplyXpAward(xp.XpAmount, now);
                 _db.XpTransactions.Add(xp);
-                await _achievementAwards.StageMissingAutomaticAwardsAsync(
+                var unlockedDefinitions =
+                    await _achievementAwards.StageMissingAutomaticAwardsAsync(
                     profile,
                     xp,
                     completion.QuestCategorySnapshot,
+                    ct);
+                await StageRewardEventAsync(
+                    profile,
+                    completion,
+                    quest,
+                    xp,
+                    previousProgression,
+                    unlockedDefinitions,
+                    now,
                     ct);
             }
             else
@@ -577,6 +638,178 @@ public sealed class QuestCompletionRepository : IQuestCompletionRepository
             await transaction.RollbackAsync(ct);
             throw;
         }
+    }
+
+    private async Task<MemberRewardEvent> StageRewardEventAsync(
+        UserProfile profile,
+        QuestCompletion completion,
+        Quest quest,
+        XpTransaction xp,
+        CompletionRewardProgression previousProgression,
+        IReadOnlyList<Kiwimpact.Core.Achievements.AchievementDefinition> unlockedDefinitions,
+        DateTimeOffset now,
+        CancellationToken ct)
+    {
+        var previousTimestamps = await _db.XpTransactions
+            .AsNoTracking()
+            .Where(item => item.UserId == profile.Id)
+            .Select(item => item.CreatedAt)
+            .ToListAsync(ct);
+        var previousStreak = WeeklyStreakCalculator.Calculate(previousTimestamps, now);
+        var currentStreak = WeeklyStreakCalculator.Calculate(
+            previousTimestamps.Append(xp.CreatedAt),
+            now);
+        var community = await GetCommunityRewardSnapshotAsync(
+            xp.CommunityRegionIdAtAward,
+            xp.CreatedAt,
+            ct);
+        var celebration = await SelectCelebrationCopyAsync(ct);
+        var rewardEvent = MemberRewardEvent.Create(
+            xp,
+            completion,
+            quest.Title,
+            previousProgression.TotalXp,
+            previousProgression.Level,
+            previousProgression.RankTitle,
+            profile.TotalXp,
+            profile.Level,
+            ProgressionRules.RankTitleFor(profile.Level),
+            previousStreak.CurrentWeeks,
+            previousStreak.HasVerifiedImpactThisWeek,
+            currentStreak.CurrentWeeks,
+            currentStreak.HasVerifiedImpactThisWeek,
+            celebration.Title,
+            celebration.Message,
+            community,
+            now);
+        for (var index = 0; index < unlockedDefinitions.Count; index++)
+        {
+            var definition = unlockedDefinitions[index];
+            rewardEvent.UnlockedAchievements.Add(
+                MemberRewardEventAchievement.Create(
+                    rewardEvent.Id,
+                    definition.Id,
+                    definition.Code,
+                    definition.Name,
+                    index));
+        }
+        _db.MemberRewardEvents.Add(rewardEvent);
+        return rewardEvent;
+    }
+
+    private async Task<(string Title, string Message)> SelectCelebrationCopyAsync(
+        CancellationToken ct)
+    {
+        var copies = await _db.CompletionCelebrationCopies
+            .AsNoTracking()
+            .Where(item => item.IsActive)
+            .OrderBy(item => item.SortOrder)
+            .Select(item => new { item.Kind, item.Text })
+            .ToListAsync(ct);
+        var titles = copies
+            .Where(item => item.Kind == CompletionCelebrationCopyKind.Title)
+            .Select(item => item.Text)
+            .ToArray();
+        var messages = copies
+            .Where(item => item.Kind == CompletionCelebrationCopyKind.Message)
+            .Select(item => item.Text)
+            .ToArray();
+        if (titles.Length == 0 || messages.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "Active completion celebration titles and messages are required.");
+        }
+        return (
+            titles[RandomNumberGenerator.GetInt32(titles.Length)],
+            messages[RandomNumberGenerator.GetInt32(messages.Length)]);
+    }
+
+    private async Task<CommunityRewardSnapshot?> GetCommunityRewardSnapshotAsync(
+        Guid? communityRegionId,
+        DateTimeOffset awardedAt,
+        CancellationToken ct)
+    {
+        if (!communityRegionId.HasValue) return null;
+        var timestamp = awardedAt.ToUniversalTime();
+        // Serialize the count-and-snapshot operation for this community. At
+        // read-committed isolation, the next waiter sees the prior award after
+        // its transaction commits instead of persisting the same N -> N+1
+        // transition for two simultaneous members.
+        var challenge = await _db.CommunityChallenges
+            .FromSqlInterpolated($$"""
+                SELECT c.*, c.xmin
+                FROM "CommunityChallenges" AS c
+                WHERE c."LocalAreaRegionId" = {{communityRegionId.Value}}
+                  AND c."Status" = {{ChallengeStatus.Active.ToString()}}
+                  AND c."PeriodStart" <= {{timestamp}}
+                  AND c."PeriodEnd" > {{timestamp}}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync(ct);
+        if (challenge is null) return null;
+        var communityName = await _db.Regions
+            .AsNoTracking()
+            .Where(region => region.Id == challenge.LocalAreaRegionId)
+            .Select(region => region.Name)
+            .SingleAsync(ct);
+        var previousProgress = await _db.XpTransactions
+            .AsNoTracking()
+            .LongCountAsync(item =>
+                item.CommunityRegionIdAtAward == communityRegionId.Value &&
+                item.CreatedAt >= challenge.PeriodStart &&
+                item.CreatedAt < challenge.PeriodEnd,
+                ct);
+        return new CommunityRewardSnapshot(
+            challenge.Id,
+            communityName,
+            previousProgress,
+            previousProgress + 1,
+            challenge.TargetValue);
+    }
+
+    private static MemberRewardEventRecord ToRewardRecord(MemberRewardEvent item)
+    {
+        var community = item.CommunityChallengeId.HasValue
+            ? new CompletionRewardCommunityChallenge(
+                item.CommunityChallengeId.Value,
+                item.CommunityName!,
+                item.CommunityChallengePreviousProgress!.Value,
+                item.CommunityChallengeProgress!.Value,
+                item.CommunityChallengeTarget!.Value)
+            : null;
+        return new MemberRewardEventRecord(
+            item.Id,
+            item.QuestCompletionId,
+            item.QuestId,
+            item.QuestTitle,
+            item.CelebrationTitle,
+            item.CelebrationMessage,
+            item.VerificationMethod,
+            item.XpAwarded,
+            new CompletionRewardProgression(
+                item.PreviousTotalXp,
+                item.PreviousLevel,
+                item.PreviousRankTitle),
+            new CompletionRewardProgression(
+                item.TotalXp,
+                item.Level,
+                item.RankTitle),
+            new CompletionRewardStreak(
+                item.PreviousStreakWeeks,
+                item.PreviousHasVerifiedImpactThisWeek,
+                item.StreakWeeks,
+                item.HasVerifiedImpactThisWeek),
+            community,
+            item.UnlockedAchievements
+                .OrderBy(achievement => achievement.SortOrder)
+                .ThenBy(achievement => achievement.Id)
+                .Select(achievement => new CompletionRewardAchievement(
+                    achievement.AchievementId,
+                    achievement.Code,
+                    achievement.Name))
+                .ToArray(),
+            item.CreatedAt,
+            item.SeenAtUtc);
     }
 
     private Task<Quest?> LockQuestAsync(Guid questId, CancellationToken ct) =>

@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   Building2,
   Globe2,
   Radio,
@@ -135,6 +136,7 @@ export default function LeaderboardPage() {
                 value={peopleScope}
               />
               <SegmentedOptions
+                activeTone="primary"
                 label="Period"
                 onChange={(value) => setPeoplePeriod(value as PeopleLeaderboardPeriod)}
                 options={[
@@ -157,6 +159,7 @@ export default function LeaderboardPage() {
                 value={communityScope}
               />
               <SegmentedOptions
+                activeTone="primary"
                 label="Period"
                 onChange={(value) => setCommunityPeriod(value as CommunitiesLeaderboardPeriod)}
                 options={[
@@ -180,7 +183,12 @@ export default function LeaderboardPage() {
 
         <section className="mt-6" aria-live="polite">
           {mode === 'people' ? (
-            <PeopleStandings query={people} />
+            <PeopleStandings
+              onScopeChange={setPeopleScope}
+              period={peoplePeriod}
+              query={people}
+              scope={peopleScope}
+            />
           ) : (
             <CommunityStandings query={communities} scope={communityScope} />
           )}
@@ -239,9 +247,15 @@ function LiveImpactStatus() {
 }
 
 function PeopleStandings({
+  onScopeChange,
+  period,
   query,
+  scope,
 }: {
+  onScopeChange: (scope: PeopleLeaderboardScope) => void;
+  period: PeopleLeaderboardPeriod;
   query: ReturnType<typeof usePeopleLeaderboard>;
+  scope: PeopleLeaderboardScope;
 }) {
   if (query.isPending) return <LoadingState />;
   if (query.isError) return <ErrorState onRetry={() => void query.refetch()} />;
@@ -257,12 +271,22 @@ function PeopleStandings({
       </div>
     );
   }
-  if (query.data.rows.length === 0) return <EmptyState label="members" />;
+  if (query.data.rows.length === 0 && !query.data.currentUser) {
+    return <EmptyState label="members" />;
+  }
   const tableRows = query.data.rows.length > 3
     ? query.data.rows.slice(3)
     : query.data.rows;
   return (
     <>
+      {query.data.currentUser && (
+        <WeeklyPosition
+          currentUser={query.data.currentUser}
+          onScopeChange={onScopeChange}
+          period={period}
+          scope={scope}
+        />
+      )}
       <Podium rows={query.data.rows.slice(0, 3)} />
       <div className="kiwi-panel mt-6 overflow-x-auto">
         <table className="table">
@@ -292,6 +316,82 @@ function PeopleStandings({
       </div>
     </>
   );
+}
+
+function WeeklyPosition({
+  currentUser,
+  onScopeChange,
+  period,
+  scope,
+}: {
+  currentUser: NonNullable<ReturnType<typeof usePeopleLeaderboard>['data']>['currentUser'];
+  onScopeChange: (scope: PeopleLeaderboardScope) => void;
+  period: PeopleLeaderboardPeriod;
+  scope: PeopleLeaderboardScope;
+}) {
+  if (!currentUser) return null;
+  const widerScope = scope === 'myCommunity'
+    ? { label: 'Auckland', value: 'auckland' as const }
+    : scope === 'auckland'
+      ? { label: 'New Zealand', value: 'nz' as const }
+      : null;
+  const reachedThreshold = currentUser.hasReachedScopeUpgradeThreshold;
+  const periodLabel = period === 'weekly'
+    ? 'weekly'
+    : period === 'monthly' ? 'monthly' : 'all-time';
+  const thresholdGap = Math.max(0, 80 - currentUser.percentile);
+
+  return (
+    <section
+      aria-labelledby="current-position-title"
+      className="kiwi-panel kiwi-topography mb-6 overflow-hidden p-5 sm:p-6"
+    >
+      <div className="relative grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div>
+          <p className="kiwi-stat-label">Your {periodLabel} position</p>
+          <h2 className="mt-1 text-2xl" id="current-position-title">
+            You surpassed{' '}
+            <span className="text-primary">{currentUser.surpassedMemberCount}</span>{' '}
+            active {currentUser.surpassedMemberCount === 1 ? 'member' : 'members'}
+          </h2>
+          <p className="mt-2 text-sm text-muted-content">
+            Ahead of <strong className="text-base-content">{formatPercentile(currentUser.percentile)}%</strong>
+            {' '}· Rank #{currentUser.rank} of {currentUser.activeMemberCount}
+            {' '}· {currentUser.totalXp} XP · {currentUser.verifiedCompletionCount}{' '}
+            verified {currentUser.verifiedCompletionCount === 1 ? 'Quest' : 'Quests'}
+          </p>
+        </div>
+        {widerScope && reachedThreshold && (
+          <button
+            className="btn btn-primary rounded-full"
+            onClick={() => onScopeChange(widerScope.value)}
+            type="button"
+          >
+            Try {widerScope.label}
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </button>
+        )}
+      </div>
+      {widerScope && !reachedThreshold && (
+        <div className="relative mt-4">
+          <progress
+            aria-label="Progress toward wider-scope invitation"
+            className="progress progress-primary h-2.5 w-full"
+            max="80"
+            value={currentUser.percentile}
+          />
+          <p className="mt-2 text-xs text-muted-content">
+            {formatPercentile(thresholdGap)} percentage points to the Top 20% invitation
+            for {widerScope.label}. Your scope will never change automatically.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function formatPercentile(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, '');
 }
 
 function CommunityStandings({
@@ -450,6 +550,7 @@ function RankMarker({ rank }: { rank: number }) {
 }
 
 function SegmentedOptions(props: {
+  activeTone?: 'neutral' | 'primary';
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -458,7 +559,13 @@ function SegmentedOptions(props: {
   return (
     <div>
       <span className="sr-only">{props.label}</span>
-      <div aria-label={props.label} className="kiwi-segmented max-w-full overflow-x-auto" role="group">
+      <div
+        aria-label={props.label}
+        className={`kiwi-segmented max-w-full overflow-x-auto ${
+          props.activeTone === 'primary' ? 'kiwi-segmented-primary' : ''
+        }`}
+        role="group"
+      >
         {props.options.map((option) => (
           <button
             aria-pressed={props.value === option.value}

@@ -62,6 +62,7 @@ public sealed class LeaderboardService : ILeaderboardService
             PeriodStartUtc(resolvedPeriod),
             checked((resolvedPage - 1) * resolvedPageSize),
             resolvedPageSize,
+            actorId,
             ct);
         var privacyProtected =
             resolvedScope == "myCommunity" &&
@@ -79,6 +80,9 @@ public sealed class LeaderboardService : ILeaderboardService
                     row.VerifiedCompletionCount,
                     actorId.HasValue && row.UserId == actorId.Value))
                 .ToList();
+        var currentUser = privacyProtected || result.CurrentUser is null
+            ? null
+            : ToCurrentUserPosition(result.CurrentUser, result.ParticipantCount);
         return new PeopleLeaderboard(
             resolvedScope,
             resolvedPeriod,
@@ -87,6 +91,7 @@ public sealed class LeaderboardService : ILeaderboardService
             privacyProtected ? 0 : result.ParticipantCount,
             privacyProtected,
             null,
+            currentUser,
             rows);
     }
 
@@ -194,4 +199,27 @@ public sealed class LeaderboardService : ILeaderboardService
 
     private static LeaderboardException Invalid(string message) =>
         new(LeaderboardError.InvalidParameters, message);
+
+    private static CurrentUserLeaderboardPosition ToCurrentUserPosition(
+        LeaderboardRepositoryCurrentUser currentUser,
+        int participantCount)
+    {
+        var surpassed = participantCount - currentUser.Rank;
+        var percentile = participantCount == 1
+            ? 100m
+            : decimal.Round(
+                decimal.Divide(surpassed * 100, participantCount - 1),
+                2,
+                MidpointRounding.AwayFromZero);
+        var hasReachedScopeUpgradeThreshold = participantCount == 1
+            || (long)surpassed * 5 >= (long)(participantCount - 1) * 4;
+        return new CurrentUserLeaderboardPosition(
+            currentUser.Rank,
+            participantCount,
+            currentUser.Row.TotalXp,
+            currentUser.Row.VerifiedCompletionCount,
+            surpassed,
+            percentile,
+            hasReachedScopeUpgradeThreshold);
+    }
 }

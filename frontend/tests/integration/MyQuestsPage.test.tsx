@@ -122,6 +122,49 @@ describe('MyQuestsPage', () => {
       String(url).endsWith('/v1/users/me/participations?status=all'))).toBe(true);
   });
 
+  it('uses a green View Quest action for completed missions', async () => {
+    const completedItem = {
+      completionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      questId: activeQuest.quest.id,
+      questTitle: 'Completed Garden Quest',
+      questCategory: 'GrowCompost',
+      questStatus: 'Published',
+      coverImage: null,
+      status: 'Verified',
+      method: 'CompletionCode',
+      xpAmount: 100,
+      completedAtUtc: '2026-08-07T09:00:00Z',
+      verifiedAtUtc: '2026-08-07T09:00:00Z',
+      achievementNames: [],
+    };
+    const fetchMock = stubApi([]);
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/v1/users/me/passport/completions')) {
+        return Promise.resolve(jsonResponse({
+          items: [completedItem],
+          page: 1,
+          pageSize: 50,
+          totalCount: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }));
+      }
+      if (url.endsWith('/v1/users/me/progression')) {
+        return Promise.resolve(jsonResponse({ totalXp: 120, level: 3, rankTitle: 'Novice' }));
+      }
+      if (url.includes('/v1/users/me/participations')) return Promise.resolve(jsonResponse([]));
+      if (url.endsWith('/v1/users/me/claims')) return Promise.resolve(jsonResponse([]));
+      return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+    });
+
+    renderPage('/my-quests?view=completed');
+
+    expect(await screen.findByRole('link', { name: 'View Quest' }))
+      .toHaveClass('btn-success');
+  });
+
   it('keeps the composed view in the URL without refetching another user scope', async () => {
     const user = userEvent.setup();
     const fetchMock = stubApi([]);
@@ -220,6 +263,8 @@ describe('MyQuestsPage', () => {
     expect(missions.queryByText('Past Quest')).not.toBeInTheDocument();
     expect(screen.getByText('Active · schedule to be confirmed')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Active.*2/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Active.*2/ }))
+      .toHaveClass('min-h-14', 'text-base', 'font-extrabold');
 
     await user.click(screen.getByRole('button', { name: /Ready to Complete.*1/ }));
     expect(await missions.findByText('Past Quest')).toBeInTheDocument();
@@ -345,5 +390,77 @@ describe('MyQuestsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('No upcoming active missions')).toBeInTheDocument();
     expect(attempts).toBe(2);
+  });
+
+  it('never presents another community\'s challenge when no home community is set', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/v1/users/me/progression')) {
+        return Promise.resolve(jsonResponse({
+          totalXp: 120,
+          level: 3,
+          rankTitle: 'Novice',
+        }));
+      }
+      if (url.includes('/v1/users/me/participations')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.endsWith('/v1/users/me/claims')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      if (url.includes('/v1/users/me/passport/completions')) {
+        return Promise.resolve(jsonResponse({
+          items: [],
+          page: 1,
+          pageSize: 50,
+          totalCount: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }));
+      }
+      if (url.endsWith('/v1/users/me/profile')) {
+        return Promise.resolve(jsonResponse({
+          displayName: 'Aroha',
+          homeCommunity: null,
+          showCommunityOnPassport: false,
+          communityChangeAvailableAtUtc: null,
+        }));
+      }
+      if (url.endsWith('/v1/community-challenges')) {
+        return Promise.resolve(jsonResponse([{
+          id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+          localArea: {
+            id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            name: 'Waitematā',
+            type: 'LocalArea',
+            parentRegionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          },
+          periodStartUtc: '2026-07-01T00:00:00Z',
+          periodEndUtc: '2026-08-01T00:00:00Z',
+          targetType: 'VerifiedCompletionCount',
+          targetValue: 30,
+          rewardAchievementId: null,
+          status: 'Active',
+          currentProgress: 10,
+          progressPercentage: 33,
+          isPrivacyProtected: true,
+          activeContributors: null,
+          version: 1,
+        }]));
+      }
+      return Promise.resolve(jsonResponse({ detail: 'Unexpected request.' }, 500));
+    }));
+    renderPage('/my-quests#community-challenge');
+
+    expect(await screen.findByText(
+      'Choose a home community to join its monthly challenge.',
+    )).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your local community goal' }))
+      .toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Waitematā Challenge' }))
+      .not.toBeInTheDocument();
+    // The /my-quests#community-challenge deep link anchor still exists.
+    expect(document.getElementById('community-challenge')).not.toBeNull();
   });
 });

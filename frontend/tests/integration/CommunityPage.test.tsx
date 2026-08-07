@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -42,6 +42,7 @@ function socialPost(overrides: Partial<SocialPostDto> = {}): SocialPostDto {
     isLikedByViewer: false,
     canDelete: false,
     isHidden: false,
+    isVerifiedQuestStory: false,
     ...overrides,
   };
 }
@@ -242,6 +243,38 @@ describe('Community post discovery and detail', () => {
     expect(detailCover).toHaveClass('aspect-[19/25]', 'bg-secondary', 'md:h-full', 'md:aspect-auto');
     expect(screen.getByTestId('social-text-cover-watermark')).toBeInTheDocument();
     expect(detailCover).toHaveTextContent('The first complete sentence becomes the cover.');
+  });
+
+  it('falls back to the text cover when the first image cannot load', async () => {
+    const failedCoverPost = socialPost({
+      title: 'A post with an unavailable cover',
+      content: 'A readable fallback keeps this post discoverable. More detail follows here.',
+      images: [{
+        imageUrl: 'https://images.example.test/unavailable.jpg',
+        imageAltText: 'Unavailable cover example',
+        sortOrder: 0,
+      }],
+      quest: null,
+    });
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) return Promise.resolve(new Response(null, { status: 401 }));
+      if (url.includes('/v1/social/posts')) {
+        return Promise.resolve(jsonResponse(postPage([failedCoverPost])));
+      }
+      return Promise.resolve(jsonResponse({}, 500));
+    }));
+
+    renderPage();
+
+    const failedImage = await screen.findByAltText('Unavailable cover example');
+    fireEvent.error(failedImage);
+
+    const card = screen.getByRole('link', { name: `Open post: ${failedCoverPost.title}` });
+    expect(screen.queryByAltText('Unavailable cover example')).not.toBeInTheDocument();
+    expect(card.querySelector('[data-testid="social-text-cover"]')).toBeInTheDocument();
+    expect(card).toHaveTextContent('A readable fallback keeps this post discoverable.');
+    expect(card).not.toHaveTextContent('More detail follows here.');
   });
 
   it('likes from the card without opening it while every other card area opens the post', async () => {
@@ -546,5 +579,56 @@ describe('Community post discovery and detail', () => {
     expect(await screen.findByRole('heading', { name: 'No posts match this search.' })).toBeInTheDocument();
     const socialCall = fetchMock.mock.calls.find(([input]) => String(input).includes('/v1/social/posts'));
     expect(new URL(String(socialCall?.[0]), 'https://example.test').searchParams.get('search')).toBe('native trees');
+  });
+
+  it('locks a Verified Quest Story to the owned completion and publishes provenance', async () => {
+    const user = userEvent.setup();
+    const completionId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const verifiedPost = socialPost({
+      authorDisplayName: 'Aroha',
+      canDelete: true,
+      isVerifiedQuestStory: true,
+      title: 'My verified impact: Community Stream Cleanup',
+      content: 'I completed Community Stream Cleanup. Here is what I did and the impact it made:',
+    });
+    let submitted: Record<string, unknown> | null = null;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/v1/auth/me')) return Promise.resolve(jsonResponse(session));
+      if (url.endsWith('/v1/auth/csrf-token')) return Promise.resolve(jsonResponse({ token: 'verified-story-token' }));
+      if (url.endsWith(`/v1/users/me/verified-completions/${completionId}/story-context`)) {
+        return Promise.resolve(jsonResponse({
+          completionId,
+          questId: questPage.items[0].id,
+          questTitle: questPage.items[0].title,
+        }));
+      }
+      if (url.endsWith('/v1/social/posts') && init?.method === 'POST') {
+        submitted = JSON.parse(String(init.body));
+        return Promise.resolve(jsonResponse(verifiedPost, 201));
+      }
+      if (url.includes('/v1/social/posts')) return Promise.resolve(jsonResponse(postPage([])));
+      return Promise.resolve(jsonResponse({}, 500));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPage(`/community?compose=verified&completionId=${completionId}`);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Create a new post' });
+    expect(await within(dialog).findByText('Verified Quest Story')).toBeInTheDocument();
+    expect(within(dialog).getByText('The Quest is locked to the verified completion. You can edit the story itself.')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Search published Quests')).toBeDisabled();
+    await waitFor(() => expect(within(dialog).getByLabelText(/^Title/)).toHaveValue(
+      'My verified impact: Community Stream Cleanup',
+    ));
+
+    await user.click(within(dialog).getByRole('button', { name: 'Publish post' }));
+
+    await waitFor(() => expect(submitted).toMatchObject({
+      questId: questPage.items[0].id,
+      sourceCompletionId: completionId,
+      isHidden: false,
+    }));
+    expect(await screen.findByText('Your Verified Quest Story is now part of your public impact record.')).toBeInTheDocument();
   });
 });

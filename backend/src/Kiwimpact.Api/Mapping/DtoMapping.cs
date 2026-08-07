@@ -256,22 +256,46 @@ internal static class DtoMapping
     {
         return new RedeemCompletionResultDto(
             result.Completion.ToDto(),
-            new CompletionRewardDto(
-                result.RewardEventId,
-                result.XpAwarded,
-                result.PreviousProgression.TotalXp,
-                result.CurrentProgression.TotalXp,
-                result.PreviousProgression.Level,
-                result.CurrentProgression.Level,
-                result.PreviousProgression.RankTitle,
-                result.CurrentProgression.RankTitle,
-                result.UnlockedAchievements
-                    .Select(achievement => new CompletionRewardAchievementDto(
-                        achievement.AchievementId,
-                        achievement.Code,
-                        achievement.Name))
-                    .ToArray()));
+            result.Reward.ToDto());
     }
+
+    public static CompletionRewardDto ToDto(this MemberRewardEventRecord reward) =>
+        new(
+            reward.RewardEventId,
+            reward.QuestCompletionId,
+            reward.QuestId,
+            reward.QuestTitle,
+            reward.CelebrationTitle,
+            reward.CelebrationMessage,
+            reward.VerificationMethod.ToString(),
+            reward.XpAwarded,
+            reward.PreviousProgression.TotalXp,
+            reward.CurrentProgression.TotalXp,
+            reward.PreviousProgression.Level,
+            reward.CurrentProgression.Level,
+            reward.PreviousProgression.RankTitle,
+            reward.CurrentProgression.RankTitle,
+            new CompletionRewardStreakDto(
+                reward.Streak.PreviousWeeks,
+                reward.Streak.PreviousHasVerifiedImpactThisWeek,
+                reward.Streak.Weeks,
+                reward.Streak.HasVerifiedImpactThisWeek),
+            reward.CommunityChallenge is null
+                ? null
+                : new CompletionRewardCommunityChallengeDto(
+                    reward.CommunityChallenge.ChallengeId,
+                    reward.CommunityChallenge.CommunityName,
+                    reward.CommunityChallenge.PreviousProgress,
+                    reward.CommunityChallenge.Progress,
+                    reward.CommunityChallenge.Target),
+            reward.UnlockedAchievements
+                .Select(achievement => new CompletionRewardAchievementDto(
+                    achievement.AchievementId,
+                    achievement.Code,
+                    achievement.Name))
+                .ToArray(),
+            reward.CreatedAtUtc.ToUniversalTime().ToString("O"),
+            reward.SeenAtUtc?.ToUniversalTime().ToString("O"));
 
     public static MyProgressionDto ToDto(this MyProgressionState state)
     {

@@ -88,6 +88,31 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         Guid viewerUserId,
         CancellationToken ct = default)
     {
+        if (post.SourceCompletionId.HasValue)
+        {
+            var completion = await _db.QuestCompletions
+                .AsNoTracking()
+                .Where(item =>
+                    item.Id == post.SourceCompletionId.Value &&
+                    item.UserId == post.AuthorUserId &&
+                    item.Status == QuestCompletionStatus.Verified)
+                .Select(item => new { item.QuestId })
+                .SingleOrDefaultAsync(ct);
+            if (completion is null || post.QuestId != completion.QuestId)
+            {
+                throw Error(
+                    SocialFeedError.Validation,
+                    "A verified Quest story must use your verified completion and its Quest.");
+            }
+            if (await _db.SocialPosts.AsNoTracking().AnyAsync(
+                    item => item.SourceCompletionId == post.SourceCompletionId,
+                    ct))
+            {
+                throw Error(
+                    SocialFeedError.Validation,
+                    "This verified completion already has a Quest story.");
+            }
+        }
         if (post.QuestId.HasValue && !await _db.Quests
             .AsNoTracking()
             .AnyAsync(
@@ -128,6 +153,12 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
             throw Error(SocialFeedError.NotFound, "Post not found.");
         if (post.AuthorUserId != actorUserId)
             throw Error(SocialFeedError.Forbidden, "Only the post author can edit this post.");
+        if (post.SourceCompletionId.HasValue && questId != post.QuestId)
+        {
+            throw Error(
+                SocialFeedError.Validation,
+                "A verified Quest story cannot change its related Quest.");
+        }
         if (questId != post.QuestId && questId.HasValue && !await _db.Quests
             .AsNoTracking()
             .AnyAsync(
@@ -470,6 +501,7 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
                 like.PostId == post.Id && like.UserId == viewerUserId.Value),
             CanDelete = viewerUserId.HasValue && post.AuthorUserId == viewerUserId.Value,
             IsHidden = post.IsHidden,
+            IsVerifiedQuestStory = post.SourceCompletionId.HasValue,
         });
     }
 
@@ -569,7 +601,8 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
             post.CommentCount,
             post.IsLikedByViewer,
             post.CanDelete,
-            post.IsHidden);
+            post.IsHidden,
+            post.IsVerifiedQuestStory);
 
     private static SocialCommentItem ToCommentItem(SocialCommentProjection comment) =>
         new(
@@ -609,6 +642,7 @@ public sealed class SocialFeedRepository : ISocialFeedRepository
         public bool IsLikedByViewer { get; init; }
         public bool CanDelete { get; init; }
         public bool IsHidden { get; init; }
+        public bool IsVerifiedQuestStory { get; init; }
     }
 
     private sealed class SocialCommentProjection

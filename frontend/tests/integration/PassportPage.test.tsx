@@ -185,6 +185,13 @@ function stubPassportApi({
       return profile?.()
         ?? Promise.resolve(jsonResponse(achievementProfile()));
     }
+    if (url.endsWith('/v1/users/me/public-passport')) {
+      return Promise.resolve(jsonResponse({
+        isEnabled: false,
+        shareId: null,
+        featuredAchievementIds: [],
+      }));
+    }
     if (url.endsWith('/v1/users/me/profile')) {
       return Promise.resolve(jsonResponse({
         displayName: 'Aroha',
@@ -348,8 +355,12 @@ describe('PassportPage', () => {
     expect(screen.getByRole('link', { name: 'Share' }))
       .toHaveAttribute(
         'href',
-        '/passport/share?completionId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        '/passport/share/completion?completionId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       );
+    expect(screen.getByRole('link', { name: 'Share' }))
+      .toHaveClass('kiwi-share-action');
+    expect(screen.getByRole('link', { name: 'View Quest' }))
+      .toHaveAttribute('href', '/quests/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
     expect(historyRegion().querySelector('ul')?.className)
       .toContain('sm:grid-cols-2');
     const time = container.querySelector('time');
@@ -667,6 +678,8 @@ describe('PassportPage', () => {
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent('Aroha — Passport');
+    expect(screen.getByRole('link', { name: 'Share Passport' }))
+      .toHaveAttribute('href', '/passport/share');
     expect(screen.getByRole('heading', { level: 2, name: 'Progress' }))
       .toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Achievements' }))
@@ -745,7 +758,7 @@ describe('PassportPage', () => {
       'Achievements',
       'Community challenge participation',
       'Passport settings',
-      'Share Card',
+      'Share your Passport',
       'Completion history',
     ]);
   });

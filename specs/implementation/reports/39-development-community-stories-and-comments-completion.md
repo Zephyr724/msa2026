@@ -21,8 +21,8 @@
 
 - `backend/src/Kiwimpact.Infrastructure/Data/Seeds/DemoSocialSeed.cs`
 - `backend/tests/Kiwimpact.IntegrationTests/Persistence/SeedConfigurationTests.cs`
-- `specs/ai/prompts/94-development-community-stories-and-comments.md`
-- `specs/implementation/reports/38-development-community-stories-and-comments-completion.md`
+- `specs/ai/prompts/95-development-community-stories-and-comments.md`
+- `specs/implementation/reports/39-development-community-stories-and-comments-completion.md`
 
 ## Verification
 

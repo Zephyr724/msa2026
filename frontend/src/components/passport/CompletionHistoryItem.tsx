@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   Award,
   Info,
   Share2,
@@ -104,13 +105,22 @@ export default function CompletionHistoryItem({
           </div>
 
           {item.status === 'Verified' && (
-            <Link
-              className="btn btn-outline btn-xs mt-auto w-fit rounded-full"
-              to={`/passport/share?completionId=${encodeURIComponent(item.completionId)}`}
-            >
-              <Share2 aria-hidden="true" className="size-3" />
-              Share
-            </Link>
+            <div className="mt-auto flex flex-wrap gap-2 pt-3">
+              <Link
+                className="btn kiwi-share-action btn-xs rounded-full"
+                to={`/passport/share/completion?completionId=${encodeURIComponent(item.completionId)}`}
+              >
+                <Share2 aria-hidden="true" className="size-3" />
+                Share
+              </Link>
+              <Link
+                className="btn btn-outline btn-xs rounded-full"
+                to={`/quests/${item.questId}`}
+              >
+                View Quest
+                <ArrowRight aria-hidden="true" className="size-3" />
+              </Link>
+            </div>
           )}
         </div>
       </article>

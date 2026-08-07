@@ -11,6 +11,16 @@ export interface LeaderboardRow {
   isCurrentUser: boolean;
 }
 
+export interface CurrentUserLeaderboardPosition {
+  rank: number;
+  activeMemberCount: number;
+  totalXp: number;
+  verifiedCompletionCount: number;
+  surpassedMemberCount: number;
+  percentile: number;
+  hasReachedScopeUpgradeThreshold: boolean;
+}
+
 export interface PeopleLeaderboard {
   scope: PeopleLeaderboardScope;
   period: PeopleLeaderboardPeriod;
@@ -22,6 +32,7 @@ export interface PeopleLeaderboard {
     totalXp: number;
     verifiedCompletionCount: number;
   } | null;
+  currentUser: CurrentUserLeaderboardPosition | null;
   rows: LeaderboardRow[];
 }
 

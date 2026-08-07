@@ -28,7 +28,12 @@ public sealed record PeopleLeaderboardRepositoryResult(
     IReadOnlyList<LeaderboardRepositoryRow> Rows,
     int ParticipantCount,
     long TotalXp,
-    long VerifiedCompletionCount);
+    long VerifiedCompletionCount,
+    LeaderboardRepositoryCurrentUser? CurrentUser);
+
+public sealed record LeaderboardRepositoryCurrentUser(
+    int Rank,
+    LeaderboardRepositoryRow Row);
 
 public sealed record RankedLeaderboardRow(
     int Rank,
@@ -41,6 +46,15 @@ public sealed record CollectiveProgress(
     long TotalXp,
     long VerifiedCompletionCount);
 
+public sealed record CurrentUserLeaderboardPosition(
+    int Rank,
+    int ActiveMemberCount,
+    long TotalXp,
+    long VerifiedCompletionCount,
+    int SurpassedMemberCount,
+    decimal Percentile,
+    bool HasReachedScopeUpgradeThreshold);
+
 public sealed record PeopleLeaderboard(
     string Scope,
     string Period,
@@ -49,6 +63,7 @@ public sealed record PeopleLeaderboard(
     int TotalCount,
     bool IsPrivacyProtected,
     CollectiveProgress? CollectiveProgress,
+    CurrentUserLeaderboardPosition? CurrentUser,
     IReadOnlyList<RankedLeaderboardRow> Rows);
 
 public sealed record CommunityLeaderboardRepositoryRow(
