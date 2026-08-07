@@ -231,6 +231,16 @@ function RewardToastHost({
             </div>
 
             <div
+              className="mt-3 rounded-2xl border border-primary/20 bg-primary/8 p-3"
+              data-reward-encouragement
+            >
+              <p className="font-extrabold text-base-content">{reward.celebrationTitle}</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-content">
+                {reward.celebrationMessage}
+              </p>
+            </div>
+
+            <div
               className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3"
               data-reward-source
               ref={sourceRef}

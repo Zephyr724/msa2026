@@ -361,6 +361,8 @@ describe('PassportPage', () => {
       .toHaveClass('kiwi-share-action');
     expect(screen.getByRole('link', { name: 'View Quest' }))
       .toHaveAttribute('href', '/quests/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    expect(screen.getByRole('link', { name: 'View Quest' }))
+      .toHaveClass('btn-success');
     expect(historyRegion().querySelector('ul')?.className)
       .toContain('sm:grid-cols-2');
     const time = container.querySelector('time');
@@ -680,6 +682,8 @@ describe('PassportPage', () => {
     expect(h1s[0]).toHaveTextContent('Aroha — Passport');
     expect(screen.getByRole('link', { name: 'Share Passport' }))
       .toHaveAttribute('href', '/passport/share');
+    expect(screen.queryByText('Public Impact Passport')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy link' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Progress' }))
       .toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Achievements' }))
@@ -757,7 +761,7 @@ describe('PassportPage', () => {
       'Quest category progress',
       'Achievements',
       'Community challenge participation',
-      'Passport settings',
+      'Passport actions',
       'Share your Passport',
       'Completion history',
     ]);

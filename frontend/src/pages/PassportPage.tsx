@@ -26,7 +26,6 @@ import { CATEGORY_PRESENTATION } from '../lib/questPresentation.ts';
 import { QUEST_CATEGORIES, type QuestCategory } from '../types/quest.ts';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
 import { useMyAchievementProfile } from '../hooks/useAchievements.ts';
-import PublicPassportSettingsCard from '../components/passport/PublicPassportSettingsCard.tsx';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
@@ -230,11 +229,10 @@ export default function PassportPage() {
           <CommunityParticipationSection items={communityParticipation.data} />
         )}
         <section className="mt-10" aria-labelledby="passport-preferences-heading">
-          <p className="kiwi-stat-label">Privacy and sharing</p>
+          <p className="kiwi-stat-label">Sharing and profile</p>
           <h2 className="mt-1 text-2xl" id="passport-preferences-heading">
-            Passport settings
+            Passport actions
           </h2>
-          <PublicPassportSettingsCard />
           <div className="grid gap-6 md:grid-cols-2">
             <Link
               className="kiwi-panel mt-6 flex items-start gap-4 p-5 transition-colors hover:border-primary/35"

@@ -114,7 +114,7 @@ export default function CompletionHistoryItem({
                 Share
               </Link>
               <Link
-                className="btn btn-outline btn-xs rounded-full"
+                className="btn btn-success btn-xs rounded-full"
                 to={`/quests/${item.questId}`}
               >
                 View Quest
