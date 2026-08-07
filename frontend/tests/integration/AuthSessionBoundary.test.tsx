@@ -339,7 +339,8 @@ describe('authenticated-cache lifecycle at principal boundaries', () => {
 
     // B renders only B's fetched data; nothing of A remains.
     expect(await screen.findByText('Kauri planting morning')).toBeInTheDocument();
-    expect(await screen.findByText('15 / 55 XP toward Level 3')).toBeInTheDocument();
+    expect(await screen.findByRole('progressbar', { name: 'Progress toward Level 3' }))
+      .toHaveAttribute('aria-valuetext', '15 of 55 XP toward Level 3');
     expect(screen.queryByText('Aroha river clean-up')).not.toBeInTheDocument();
     expect(screen.queryByText(/Kiwimpact Legend/)).not.toBeInTheDocument();
     expect(screen.queryByText(/51,940|51940/)).not.toBeInTheDocument();
