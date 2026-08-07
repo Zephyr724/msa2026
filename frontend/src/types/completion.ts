@@ -50,6 +50,12 @@ export interface CompletionRewardAchievementDto {
 
 export interface CompletionRewardDto {
   rewardEventId: string;
+  questCompletionId: string;
+  questId: string;
+  questTitle: string;
+  celebrationTitle: string;
+  celebrationMessage: string;
+  verificationMethod: 'CompletionCode' | 'EvidenceClaim';
   xpAwarded: number;
   previousTotalXp: number;
   totalXp: number;
@@ -57,7 +63,30 @@ export interface CompletionRewardDto {
   level: number;
   previousRankTitle: string;
   rankTitle: string;
+  streak: CompletionRewardStreakDto;
+  communityChallenge: CompletionRewardCommunityChallengeDto | null;
   unlockedAchievements: CompletionRewardAchievementDto[];
+  createdAtUtc: string;
+  seenAtUtc: string | null;
+}
+
+export interface CompletionRewardStreakDto {
+  previousWeeks: number;
+  previousHasVerifiedImpactThisWeek: boolean;
+  weeks: number;
+  hasVerifiedImpactThisWeek: boolean;
+}
+
+export interface CompletionRewardCommunityChallengeDto {
+  challengeId: string;
+  communityName: string;
+  previousProgress: number;
+  progress: number;
+  target: number;
+}
+
+export interface RewardEventInboxDto {
+  items: CompletionRewardDto[];
 }
 
 export interface RedeemCompletionResultDto {

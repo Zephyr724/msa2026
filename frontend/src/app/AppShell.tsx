@@ -23,6 +23,7 @@ import { useThemeSync } from '../hooks/useThemeSync.ts';
 import { useMyAchievementProfile } from '../hooks/useAchievements.ts';
 import { TrophyArtwork } from '../components/game/GameArtwork.tsx';
 import RewardFeedbackProvider from '../components/reward/RewardFeedbackProvider.tsx';
+import RewardInboxDelivery from '../components/reward/RewardInboxDelivery.tsx';
 
 interface NavigationItem {
   label: string;
@@ -46,8 +47,10 @@ const memberNavigation: NavigationItem[] = [
 
 export default function AppShell() {
   useThemeSync();
+  const auth = useAuthQuery();
   return (
-    <RewardFeedbackProvider>
+    <RewardFeedbackProvider key={auth.data?.userId ?? 'guest'}>
+      <RewardInboxDelivery />
       <AppShellContent />
     </RewardFeedbackProvider>
   );

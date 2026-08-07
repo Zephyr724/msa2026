@@ -185,6 +185,13 @@ function stubPassportApi({
       return profile?.()
         ?? Promise.resolve(jsonResponse(achievementProfile()));
     }
+    if (url.endsWith('/v1/users/me/public-passport')) {
+      return Promise.resolve(jsonResponse({
+        isEnabled: false,
+        shareId: null,
+        featuredAchievementIds: [],
+      }));
+    }
     if (url.endsWith('/v1/users/me/profile')) {
       return Promise.resolve(jsonResponse({
         displayName: 'Aroha',
@@ -350,6 +357,10 @@ describe('PassportPage', () => {
         'href',
         '/passport/share?completionId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       );
+    expect(screen.getByRole('link', { name: 'Share' }))
+      .toHaveClass('kiwi-share-action');
+    expect(screen.getByRole('link', { name: 'View Quest' }))
+      .toHaveAttribute('href', '/quests/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
     expect(historyRegion().querySelector('ul')?.className)
       .toContain('sm:grid-cols-2');
     const time = container.querySelector('time');

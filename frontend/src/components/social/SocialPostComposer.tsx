@@ -6,6 +6,7 @@ import {
   Plus,
   Search,
   Send,
+  ShieldCheck,
   Tag,
   Trash2,
   X,
@@ -23,6 +24,7 @@ import { useQuestList } from '../../hooks/useQuests';
 import { useCreateSocialPost, useUpdateSocialPost } from '../../hooks/useSocialFeed';
 import { ApiError } from '../../lib/api/apiFetch';
 import type { SocialPostDto } from '../../types/social';
+import { useVerifiedStoryContext } from '../../hooks/usePublicPassport.ts';
 
 const MAX_IMAGES = 9;
 const MAX_TAGS = 10;
@@ -35,8 +37,9 @@ interface ImageField {
 interface SocialPostComposerProps {
   open: boolean;
   onClose: () => void;
-  onPublished: () => void;
+  onPublished: (publishedPost: SocialPostDto) => void;
   post?: SocialPostDto;
+  verifiedCompletionId?: string | null;
 }
 
 export default function SocialPostComposer({
@@ -44,10 +47,15 @@ export default function SocialPostComposer({
   onClose,
   onPublished,
   post,
+  verifiedCompletionId = null,
 }: SocialPostComposerProps) {
   const createPost = useCreateSocialPost();
   const updatePost = useUpdateSocialPost();
   const isEditing = Boolean(post);
+  const isVerifiedStory = Boolean(verifiedCompletionId && !post);
+  const storyContext = useVerifiedStoryContext(
+    open && isVerifiedStory ? verifiedCompletionId : null,
+  );
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -66,7 +74,7 @@ export default function SocialPostComposer({
     pageSize: 20,
     search: questSearch.trim() || undefined,
     sortBy: 'startAt',
-  }, open);
+  }, open && !isVerifiedStory);
 
   const dismissError = useCallback(() => {
     if (errorTimerRef.current !== null) {
@@ -100,6 +108,13 @@ export default function SocialPostComposer({
     setIsHidden(post?.isHidden ?? false);
     dismissError();
   }, [dismissError, open, post]);
+
+  useEffect(() => {
+    if (!open || !isVerifiedStory || !storyContext.data) return;
+    setSelectedQuestId(storyContext.data.questId);
+    setTitle((current) => current || `My verified impact: ${storyContext.data.questTitle}`);
+    setContent((current) => current || `I completed ${storyContext.data.questTitle}. Here is what I did and the impact it made:`);
+  }, [isVerifiedStory, open, storyContext.data]);
 
   useEffect(() => () => {
     if (errorTimerRef.current !== null) window.clearTimeout(errorTimerRef.current);
@@ -169,6 +184,12 @@ export default function SocialPostComposer({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     dismissError();
+    if (isVerifiedStory && !storyContext.data) {
+      showError(storyContext.isError
+        ? 'This verified completion is unavailable.'
+        : 'Verifying your completed Quest…');
+      return;
+    }
     const normalizedTitle = title.trim();
     const normalizedContent = content.trim();
     if (!normalizedTitle) {
@@ -212,7 +233,7 @@ export default function SocialPostComposer({
 
     try {
       if (post) {
-        await updatePost.mutateAsync({
+        const publishedPost = await updatePost.mutateAsync({
           postId: post.id,
           questId: selectedQuestId || null,
           title: normalizedTitle,
@@ -220,18 +241,21 @@ export default function SocialPostComposer({
           images: normalizedImages,
           tags,
         });
+        resetForm();
+        onPublished(publishedPost);
       } else {
-        await createPost.mutateAsync({
+        const publishedPost = await createPost.mutateAsync({
           questId: selectedQuestId || null,
           title: normalizedTitle,
           content: normalizedContent,
           images: normalizedImages,
           tags,
           isHidden,
+          sourceCompletionId: isVerifiedStory ? verifiedCompletionId : null,
         });
+        resetForm();
+        onPublished(publishedPost);
       }
-      resetForm();
-      onPublished();
       onClose();
     } catch {
       // The bounded error below keeps the user's input available for retry.
@@ -292,6 +316,21 @@ export default function SocialPostComposer({
               <p className="mt-1 text-xs text-muted-content">
                 Strongly recommended: connect this story to the action that made it possible. You can publish without one.
               </p>
+              {isVerifiedStory && (
+                <div className="mt-3 rounded-2xl border border-primary/30 bg-primary/8 p-4">
+                  <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-primary">
+                    <ShieldCheck aria-hidden="true" className="size-4" /> Verified Quest Story
+                  </p>
+                  {storyContext.isPending && <p className="mt-2 text-sm text-muted-content">Verifying completed Quest…</p>}
+                  {storyContext.isError && <p className="mt-2 text-sm font-semibold text-error">This completion could not be verified.</p>}
+                  {storyContext.data && (
+                    <>
+                      <strong className="mt-2 block">{storyContext.data.questTitle}</strong>
+                      <p className="mt-1 text-xs text-muted-content">The Quest is locked to the verified completion. You can edit the story itself.</p>
+                    </>
+                  )}
+                </div>
+              )}
               {isEditing && post?.quest && selectedQuestId === post.quest.id && (
                 <div className="mt-3 rounded-xl border border-primary/25 bg-primary/8 p-3">
                   <span className="text-[0.65rem] font-bold uppercase tracking-wide text-muted-content">
@@ -300,18 +339,19 @@ export default function SocialPostComposer({
                   <strong className="mt-0.5 block text-sm text-primary">{post.quest.title}</strong>
                 </div>
               )}
-              <label className="relative mt-3 block">
+              <label className={`relative mt-3 block ${isVerifiedStory ? 'hidden' : ''}`}>
                 <span className="sr-only">Search published Quests</span>
                 <Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-content" />
                 <input
                   className="input input-bordered w-full rounded-xl pl-9"
+                  disabled={isVerifiedStory}
                   onChange={(event) => setQuestSearch(event.target.value)}
                   placeholder="Search published Quests…"
                   type="search"
                   value={questSearch}
                 />
               </label>
-              <div className="mt-3 max-h-52 space-y-2 overflow-y-auto rounded-2xl border border-base-300 bg-base-200/45 p-2">
+              <div className={`mt-3 max-h-52 space-y-2 overflow-y-auto rounded-2xl border border-base-300 bg-base-200/45 p-2 ${isVerifiedStory ? 'hidden' : ''}`}>
                 {quests.isPending && <p className="p-3 text-sm text-muted-content">Loading Quests…</p>}
                 {quests.isError && (
                   <div className="flex items-center justify-between gap-3 p-3 text-sm text-error">
@@ -339,6 +379,7 @@ export default function SocialPostComposer({
                           : 'border-transparent bg-base-100 hover:border-primary/35'
                       }`}
                       key={quest.id}
+                      disabled={isVerifiedStory}
                       onClick={() => {
                         setSelectedQuestId(quest.id);
                         dismissError();
@@ -380,7 +421,7 @@ export default function SocialPostComposer({
                   );
                 })}
               </div>
-              {selectedQuestId && (
+              {selectedQuestId && !isVerifiedStory && (
                 <button
                   className="btn btn-ghost btn-xs mt-2"
                   onClick={() => setSelectedQuestId('')}

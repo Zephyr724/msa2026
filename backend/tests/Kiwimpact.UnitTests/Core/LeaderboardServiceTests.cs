@@ -57,6 +57,75 @@ public sealed class LeaderboardServiceTests
         Assert.True(result.Rows[1].IsCurrentUser);
     }
 
+    [Theory]
+    [InlineData(2, 6, 4, 80)]
+    [InlineData(22, 101, 79, 79)]
+    public async Task CurrentMemberPercentileUsesOtherActiveMembers(
+        int rank,
+        int participantCount,
+        int surpassed,
+        decimal percentile)
+    {
+        var actor = new LeaderboardRepositoryRow(
+            Guid.NewGuid(), "Actor", 150, 2);
+        var repository = new FakeLeaderboardRepository([], participantCount)
+        {
+            CurrentUser = new LeaderboardRepositoryCurrentUser(rank, actor),
+        };
+        var service = new LeaderboardService(repository, new FakeXpLedgerRepository());
+
+        var result = await service.GetPeopleLeaderboardAsync(
+            actor.UserId, "nz", "weekly", null, null,
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result.CurrentUser);
+        Assert.Equal(rank, result.CurrentUser.Rank);
+        Assert.Equal(participantCount, result.CurrentUser.ActiveMemberCount);
+        Assert.Equal(surpassed, result.CurrentUser.SurpassedMemberCount);
+        Assert.Equal(percentile, result.CurrentUser.Percentile);
+        Assert.Equal(
+            (long)surpassed * 5 >= (long)(participantCount - 1) * 4,
+            result.CurrentUser.HasReachedScopeUpgradeThreshold);
+    }
+
+    [Fact]
+    public async Task RoundedDisplayPercentileCannotUnlockScopeBelowTrueThreshold()
+    {
+        var actor = new LeaderboardRepositoryRow(Guid.NewGuid(), "Actor", 50, 1);
+        var repository = new FakeLeaderboardRepository([], 20_001)
+        {
+            CurrentUser = new LeaderboardRepositoryCurrentUser(4_002, actor),
+        };
+        var service = new LeaderboardService(repository, new FakeXpLedgerRepository());
+
+        var result = await service.GetPeopleLeaderboardAsync(
+            actor.UserId, "nz", "weekly", null, null,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(80m, result.CurrentUser!.Percentile);
+        Assert.False(result.CurrentUser.HasReachedScopeUpgradeThreshold);
+    }
+
+    [Fact]
+    public async Task SoleParticipantReceivesOneHundredthPercentile()
+    {
+        var actor = new LeaderboardRepositoryRow(
+            Guid.NewGuid(), "Only member", 50, 1);
+        var repository = new FakeLeaderboardRepository([actor], 1)
+        {
+            CurrentUser = new LeaderboardRepositoryCurrentUser(1, actor),
+        };
+        var service = new LeaderboardService(repository, new FakeXpLedgerRepository());
+
+        var result = await service.GetPeopleLeaderboardAsync(
+            actor.UserId, "nz", "weekly", null, null,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(100m, result.CurrentUser!.Percentile);
+        Assert.Equal(0, result.CurrentUser.SurpassedMemberCount);
+        Assert.True(result.CurrentUser.HasReachedScopeUpgradeThreshold);
+    }
+
     [Fact]
     public async Task SmallMyCommunitySuppressesCountsProgressAndRows()
     {
@@ -81,6 +150,7 @@ public sealed class LeaderboardServiceTests
         Assert.Empty(result.Rows);
         Assert.Equal(0, result.TotalCount);
         Assert.Null(result.CollectiveProgress);
+        Assert.Null(result.CurrentUser);
         Assert.Equal(communityId, repository.ObservedCommunityId);
     }
 
@@ -177,6 +247,7 @@ public sealed class LeaderboardServiceTests
         public bool ObservedAucklandOnly { get; private set; }
         public Guid? ObservedCommunityId { get; private set; }
         public DateTimeOffset? ObservedFromUtc { get; private set; }
+        public LeaderboardRepositoryCurrentUser? CurrentUser { get; init; }
 
         public Task<Guid?> GetHomeCommunityIdAsync(
             Guid userId,
@@ -189,6 +260,7 @@ public sealed class LeaderboardServiceTests
             DateTimeOffset? fromUtc,
             int skip,
             int take,
+            Guid? actorId,
             CancellationToken ct = default)
         {
             Calls++;
@@ -200,7 +272,8 @@ public sealed class LeaderboardServiceTests
                 rows,
                 participantCount,
                 rows.Sum(row => row.TotalXp),
-                rows.Sum(row => row.VerifiedCompletionCount)));
+                rows.Sum(row => row.VerifiedCompletionCount),
+                CurrentUser));
         }
 
         public Task<IReadOnlyList<CommunityLeaderboardRepositoryRow>>

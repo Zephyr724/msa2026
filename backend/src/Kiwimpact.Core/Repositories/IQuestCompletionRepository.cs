@@ -25,6 +25,22 @@ public interface IQuestCompletionRepository
         DateTimeOffset now,
         CancellationToken ct = default);
 
+    Task<IReadOnlyList<MemberRewardEventRecord>> ListUnseenRewardEventsAsync(
+        Guid actorId,
+        int take,
+        CancellationToken ct = default);
+
+    Task<MemberRewardEventRecord> MarkRewardEventSeenAsync(
+        Guid rewardEventId,
+        Guid actorId,
+        DateTimeOffset now,
+        CancellationToken ct = default);
+
+    Task<MemberRewardEventRecord?> GetQuestRewardEventAsync(
+        Guid questId,
+        Guid actorId,
+        CancellationToken ct = default);
+
     Task<MyQuestCompletionState> GetStateAsync(
         Guid questId,
         Guid actorId,

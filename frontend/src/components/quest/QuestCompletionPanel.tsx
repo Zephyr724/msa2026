@@ -1,6 +1,13 @@
 import {
   CheckCircle2,
+  Award,
+  ArrowRight,
+  Flame,
+  IdCard,
   KeyRound,
+  Share2,
+  Sparkles,
+  Users,
   X,
 } from 'lucide-react';
 import {
@@ -15,11 +22,15 @@ import { useAuthQuery } from '../../hooks/useAuth.ts';
 import {
   useMyQuestCompletionQuery,
   useRedeemCompletionCode,
+  useAcknowledgeRewardEvent,
+  useQuestRewardResolution,
 } from '../../hooks/useCompletion.ts';
 import { useMyQuestParticipationQuery } from '../../hooks/useParticipation.ts';
+import { useQuestList } from '../../hooks/useQuests.ts';
 import { ApiError } from '../../lib/api/apiFetch.ts';
 import { NORMALIZED_COMPLETION_CODE_PATTERN } from '../../types/completion.ts';
-import type { QuestRegistrationMode } from '../../types/quest.ts';
+import type { QuestCategory, QuestRegistrationMode } from '../../types/quest.ts';
+import type { CompletionRewardDto } from '../../types/completion.ts';
 import { useRewardFeedback } from '../reward/rewardFeedback.ts';
 
 const INVALID_COMPLETION_CODE_TYPE =
@@ -28,6 +39,7 @@ const INVALID_COMPLETION_CODE_TYPE =
 interface QuestCompletionPanelProps {
   questId: string;
   questTitle?: string;
+  questCategory: QuestCategory;
   registrationMode: QuestRegistrationMode | null;
 }
 
@@ -39,12 +51,14 @@ interface QuestCompletionPanelProps {
 export default function QuestCompletionPanel({
   questId,
   questTitle = 'this quest',
+  questCategory,
   registrationMode,
 }: QuestCompletionPanelProps) {
   const auth = useAuthQuery();
   const participation = useMyQuestParticipationQuery(questId);
   const completion = useMyQuestCompletionQuery(questId);
   const redeem = useRedeemCompletionCode(questId);
+  const acknowledgeReward = useAcknowledgeRewardEvent();
   const { showReward } = useRewardFeedback();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +67,13 @@ export default function QuestCompletionPanel({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const verified = completion.data?.status === 'Verified';
+  const resolution = useQuestRewardResolution(questId, verified);
+  const recommendations = useQuestList({
+    category: questCategory,
+    page: 1,
+    pageSize: 4,
+  }, verified);
 
   useEffect(() => {
     if (dialogOpen) inputRef.current?.focus();
@@ -86,7 +107,8 @@ export default function QuestCompletionPanel({
       const result = await redeem(normalized);
       setCodeInput('');
       setDialogOpen(false);
-      showReward({ ...result.reward, questTitle });
+      showReward(result.reward);
+      void acknowledgeReward(result.reward.rewardEventId).catch(() => undefined);
     } catch (error) {
       setSubmitError(redeemErrorMessage(error));
     } finally {
@@ -152,16 +174,42 @@ export default function QuestCompletionPanel({
   }
 
   if (completion.data.status === 'Verified') {
+    const nextQuest = recommendations.data?.items.find((item) => item.id !== questId);
     return (
       <CompletionShell>
         <p className="flex items-center gap-2 font-bold text-success" role="status">
           <CheckCircle2 aria-hidden="true" className="size-5" />
-          Quest completed. Nice work!
+          Quest verified. Your Impact Passport is updated.
         </p>
-        <dl className="mt-4 grid gap-3 text-sm">
-          <Timestamp label="Completed" value={completion.data.completedAtUtc} />
-          <Timestamp label="Verified" value={completion.data.verifiedAtUtc} />
-        </dl>
+        <p className="mt-1 text-sm text-muted-content">{questTitle}</p>
+        {resolution.data ? (
+          <PersistentCompletionResolution
+            nextQuest={nextQuest ? { id: nextQuest.id, title: nextQuest.title } : null}
+            reward={resolution.data}
+          />
+        ) : (
+          <>
+            <dl className="mt-4 grid gap-3 text-sm">
+              <Timestamp label="Completed" value={completion.data.completedAtUtc} />
+              <Timestamp label="Verified" value={completion.data.verifiedAtUtc} />
+            </dl>
+            {resolution.isPending && (
+              <p aria-live="polite" className="mt-4 text-sm text-muted-content">
+                Loading the full reward details…
+              </p>
+            )}
+            {resolution.isError && (
+              <p className="mt-4 text-xs text-muted-content">
+                Detailed reward snapshots are available for newly verified Quests.
+              </p>
+            )}
+            <CompletionActions
+              nextQuest={nextQuest ? { id: nextQuest.id, title: nextQuest.title } : null}
+              questCompletionId={null}
+              questId={questId}
+            />
+          </>
+        )}
       </CompletionShell>
     );
   }
@@ -304,14 +352,150 @@ export default function QuestCompletionPanel({
   );
 }
 
+function PersistentCompletionResolution({
+  nextQuest,
+  reward,
+}: {
+  nextQuest: { id: string; title: string } | null;
+  reward: CompletionRewardDto;
+}) {
+  const levelChanged = reward.level !== reward.previousLevel
+    || reward.rankTitle !== reward.previousRankTitle;
+  return (
+    <div className="mt-5 space-y-4" data-testid="persistent-completion-resolution">
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <RewardDetail Icon={Sparkles} label="XP earned" value={`+${reward.xpAwarded} XP`} />
+        <RewardDetail
+          Icon={Flame}
+          label="Weekly streak"
+          value={`${reward.streak.weeks} week${reward.streak.weeks === 1 ? '' : 's'}`}
+        />
+      </div>
+      {levelChanged && (
+        <div className="rounded-2xl border border-primary/20 bg-primary/8 p-4 text-sm">
+          <p className="kiwi-stat-label text-primary">Progression updated</p>
+          <p className="mt-1 font-extrabold">
+            Level {reward.previousLevel} → Level {reward.level} · {reward.rankTitle}
+          </p>
+        </div>
+      )}
+      {reward.unlockedAchievements.length > 0 && (
+        <div className="rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm">
+          <p className="flex items-center gap-2 font-extrabold text-warning">
+            <Award aria-hidden="true" className="size-4" />
+            Achievement{reward.unlockedAchievements.length === 1 ? '' : 's'} unlocked
+          </p>
+          <p className="mt-1 text-muted-content">
+            {reward.unlockedAchievements.map((item) => item.name).join(' · ')}
+          </p>
+        </div>
+      )}
+      {reward.communityChallenge && (
+        <div className="rounded-2xl border border-primary/20 bg-secondary p-4 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex items-center gap-2 font-extrabold text-primary">
+              <Users aria-hidden="true" className="size-4" />
+              {reward.communityChallenge.communityName} Community Challenge
+            </p>
+            <span className="kiwi-reward-gold-text font-extrabold">+1</span>
+          </div>
+          <progress
+            aria-label="Community Challenge progress after this Quest"
+            className="progress progress-primary mt-3 h-2.5"
+            max={reward.communityChallenge.target}
+            value={reward.communityChallenge.progress}
+          />
+          <p className="mt-2 text-xs text-muted-content">
+            {reward.communityChallenge.previousProgress} → {reward.communityChallenge.progress}
+            {' '}of {reward.communityChallenge.target} verified Quests
+          </p>
+        </div>
+      )}
+      <p className="flex items-center gap-2 text-sm font-semibold text-primary">
+        <IdCard aria-hidden="true" className="size-4" />
+        Saved to your Impact Passport
+      </p>
+      <CompletionActions
+        nextQuest={nextQuest}
+        questCompletionId={reward.questCompletionId}
+        questId={reward.questId}
+      />
+    </div>
+  );
+}
+
+function RewardDetail({
+  Icon,
+  label,
+  value,
+}: {
+  Icon: typeof Sparkles;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-base-300 bg-base-100 p-3">
+      <Icon aria-hidden="true" className="size-4 text-warning" />
+      <p className="mt-2 text-xs font-bold text-muted-content">{label}</p>
+      <p className="mt-0.5 font-extrabold">{value}</p>
+    </div>
+  );
+}
+
+function CompletionActions({
+  nextQuest,
+  questCompletionId,
+  questId,
+}: {
+  nextQuest: { id: string; title: string } | null;
+  questCompletionId: string | null;
+  questId: string;
+}) {
+  const storyTarget = questCompletionId
+    ? `/community?compose=verified&completionId=${encodeURIComponent(questCompletionId)}`
+    : `/community?compose=verified&questId=${encodeURIComponent(questId)}`;
+  return (
+    <div className="grid gap-2">
+      <Link
+        className="btn btn-primary min-h-12 justify-between rounded-2xl px-4"
+        data-testid="next-quest-action"
+        to={nextQuest ? `/quests/${nextQuest.id}` : '/quests'}
+      >
+        <span className="min-w-0 text-left">
+          <span className="block text-[0.65rem] font-extrabold uppercase tracking-[0.14em] opacity-80">
+            Next Quest
+          </span>
+          <span className="block truncate">
+            {nextQuest ? nextQuest.title : 'Discover your next Quest'}
+          </span>
+        </span>
+        <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+      </Link>
+      <Link
+        className="btn kiwi-share-action min-h-11 rounded-2xl"
+        data-testid="share-community-action"
+        to={storyTarget}
+      >
+        <Share2 aria-hidden="true" className="size-4" />
+        <span>Share your story in <strong className="font-black">Community</strong></span>
+      </Link>
+      <Link className="btn btn-outline min-h-11 rounded-2xl" to="/passport">
+        <IdCard aria-hidden="true" className="size-4" /> View Passport
+      </Link>
+    </div>
+  );
+}
+
 function CompletionShell({ children }: { children: React.ReactNode }) {
   return (
     <section
       aria-labelledby="completion-heading"
       className="kiwi-panel p-5"
     >
-      <h2 className="mb-3 text-xl" id="completion-heading">Quest completion</h2>
-      {children}
+      <div>
+        <h2 className="mb-3 text-xl" id="completion-heading">Quest completion</h2>
+        {children}
+      </div>
     </section>
   );
 }

@@ -71,12 +71,42 @@ describe('Quest participation panel', () => {
     renderPanel();
 
     expect(screen.getByText('You have joined this Quest.')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel participation' }));
+    const cancelTrigger = screen.getByRole('button', { name: 'Cancel participation' });
+    expect(cancelTrigger).toHaveClass('btn-error');
+    await userEvent.click(cancelTrigger);
     expect(cancel).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm cancellation' }));
+    const confirmCancellation = screen.getByRole('button', { name: 'Confirm cancellation' });
+    expect(confirmCancellation).toHaveClass('btn-error');
+    expect(confirmCancellation).toHaveClass('w-full');
+    const keepParticipation = screen.getByRole('button', { name: 'Keep participation' });
+    expect(keepParticipation).toHaveClass('btn-success', 'w-full');
+    await userEvent.click(confirmCancellation);
     expect(cancel).toHaveBeenCalledOnce();
   });
+
+  it.each(['Verified', 'SelfReported'] as const)(
+    'removes the cancellation entry for a %s Quest',
+    (completionStatus) => {
+      mockParticipation.mockReturnValue(participationResult({
+        status: 'Active',
+        canJoin: false,
+        ineligibilityReason: 'AlreadyParticipating',
+        capacityFull: false,
+      }) as never);
+
+      renderPanel('Native', completionStatus);
+
+      expect(screen.getByText('You have joined this Quest.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Cancel participation' }))
+        .not.toBeInTheDocument();
+      expect(screen.queryByText(/Cancel your participation/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Confirm cancellation' }))
+        .not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Keep participation' }))
+        .not.toBeInTheDocument();
+    },
+  );
 
   it('shows OwnQuest explanation and never sends a Join mutation', async () => {
     mockParticipation.mockReturnValue(participationResult({
@@ -167,10 +197,14 @@ describe('Quest participation panel', () => {
   });
 });
 
-function renderPanel(registrationMode: 'Native' | 'External' | 'NoneRequired' = 'Native') {
+function renderPanel(
+  registrationMode: 'Native' | 'External' | 'NoneRequired' = 'Native',
+  completionStatus: 'None' | 'Pending' | 'Verified' | 'Rejected' | 'SelfReported' | null = 'None',
+) {
   return render(
     <MemoryRouter>
       <QuestParticipationPanel
+        completionStatus={completionStatus}
         questId="a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
         registrationMode={registrationMode}
       />

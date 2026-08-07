@@ -44,6 +44,12 @@ const redemptionResult = {
   completion: verifiedCompletion,
   reward: {
     rewardEventId: '8f43bb27-89c7-4b12-8234-12c70f5d6395',
+    questCompletionId: '936b96fb-f895-42fa-8c53-008e37fc38f7',
+    questId: '9ed6a4a5-631d-4b55-8203-72b760039c47',
+    questTitle: 'Waitākere Stream Care',
+    celebrationTitle: 'Well Done!',
+    celebrationMessage: 'Your verified action is now part of the community impact story.',
+    verificationMethod: 'CompletionCode',
     xpAwarded: 50,
     previousTotalXp: 220,
     totalXp: 270,
@@ -51,11 +57,26 @@ const redemptionResult = {
     level: 5,
     previousRankTitle: 'Novice',
     rankTitle: 'Novice',
+    streak: {
+      previousWeeks: 2,
+      previousHasVerifiedImpactThisWeek: false,
+      weeks: 3,
+      hasVerifiedImpactThisWeek: true,
+    },
+    communityChallenge: {
+      challengeId: '2f937cf8-a3ee-45b4-9f3a-a1d641893f25',
+      communityName: 'Henderson-Massey',
+      previousProgress: 11,
+      progress: 12,
+      target: 40,
+    },
     unlockedAchievements: [{
       achievementId: 'ed2faa73-1947-4b4b-826a-af7384d4ed10',
       code: 'verified-completions-3',
       name: 'Building Momentum',
     }],
+    createdAtUtc: '2026-08-06T12:00:00.0000000Z',
+    seenAtUtc: null,
   },
 };
 
@@ -205,6 +226,22 @@ describe('completion reward DTO validation', () => {
       .toEqual(redemptionResult);
   });
 
+  it('accepts canonical ASP.NET Guid values without RFC version bits', () => {
+    const persistedGuidReward = {
+      ...redemptionResult,
+      reward: {
+        ...redemptionResult.reward,
+        communityChallenge: {
+          ...redemptionResult.reward.communityChallenge,
+          challengeId: 'caa2449f-10e1-f33f-f25d-e3cbea3c5af6',
+        },
+      },
+    };
+
+    expect(validateRedeemCompletionResult(persistedGuidReward))
+      .toEqual(persistedGuidReward);
+  });
+
   it('rejects inconsistent XP, invalid transitions and extra fields', () => {
     expect(() => validateRedeemCompletionResult({
       ...redemptionResult,
@@ -221,6 +258,16 @@ describe('completion reward DTO validation', () => {
     expect(() => validateRedeemCompletionResult({
       ...redemptionResult,
       reward: { ...redemptionResult.reward, serverSecret: 'nope' },
+    })).toThrow();
+    expect(() => validateRedeemCompletionResult({
+      ...redemptionResult,
+      reward: { ...redemptionResult.reward, celebrationTitle: '   ' },
+    })).toThrow();
+    const { celebrationMessage: _removed, ...rewardWithoutCelebration } =
+      redemptionResult.reward;
+    expect(() => validateRedeemCompletionResult({
+      ...redemptionResult,
+      reward: rewardWithoutCelebration,
     })).toThrow();
   });
 

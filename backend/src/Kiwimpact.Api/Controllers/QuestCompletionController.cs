@@ -83,6 +83,25 @@ public sealed class QuestCompletionController : ControllerBase
         }
     }
 
+    [HttpGet("{questId:guid}/reward-resolution")]
+    [ProducesResponseType(typeof(CompletionRewardDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRewardResolution(
+        Guid questId,
+        CancellationToken ct)
+    {
+        if (!TryGetActor(out var actorId)) return Unauthorized();
+        try
+        {
+            var reward = await _service.GetQuestRewardEventAsync(questId, actorId, ct);
+            return reward is null ? NotFound() : Ok(reward.ToDto());
+        }
+        catch (QuestCompletionException exception)
+        {
+            return QuestCompletionProblemMapper.ToProblem(this, exception);
+        }
+    }
+
     /// <summary>Submit private evidence for Admin review.</summary>
     [HttpPost("{questId:guid}/claims")]
     [ProducesResponseType(typeof(EvidenceClaimDto), StatusCodes.Status201Created)]

@@ -373,6 +373,9 @@ public sealed class AchievementPersistenceTests : IClassFixture<TestDatabaseFixt
         // known empty state.
         await db.Database.ExecuteSqlRawAsync(
             """
+            DELETE FROM "FeaturedPassportAchievements";
+            DELETE FROM "MemberRewardEventAchievements";
+            DELETE FROM "MemberRewardEvents";
             DELETE FROM "UserAchievements";
             DELETE FROM "Achievements";
             """,
@@ -386,6 +389,9 @@ public sealed class AchievementPersistenceTests : IClassFixture<TestDatabaseFixt
         // and restore the canonical validated catalog for later tests.
         await db.Database.ExecuteSqlRawAsync(
             """
+            DELETE FROM "FeaturedPassportAchievements";
+            DELETE FROM "MemberRewardEventAchievements";
+            DELETE FROM "MemberRewardEvents";
             DELETE FROM "UserAchievements";
             DELETE FROM "Achievements";
             """,

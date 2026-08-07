@@ -96,13 +96,39 @@ public sealed record CompletionRewardAchievement(
     string Code,
     string Name);
 
-public sealed record CompletionRedemptionResult(
-    MyQuestCompletionState Completion,
+public sealed record CompletionRewardStreak(
+    int PreviousWeeks,
+    bool PreviousHasVerifiedImpactThisWeek,
+    int Weeks,
+    bool HasVerifiedImpactThisWeek);
+
+public sealed record CompletionRewardCommunityChallenge(
+    Guid ChallengeId,
+    string CommunityName,
+    long PreviousProgress,
+    long Progress,
+    int Target);
+
+public sealed record MemberRewardEventRecord(
     Guid RewardEventId,
+    Guid QuestCompletionId,
+    Guid QuestId,
+    string QuestTitle,
+    string CelebrationTitle,
+    string CelebrationMessage,
+    CompletionMethod VerificationMethod,
     int XpAwarded,
     CompletionRewardProgression PreviousProgression,
     CompletionRewardProgression CurrentProgression,
-    IReadOnlyList<CompletionRewardAchievement> UnlockedAchievements);
+    CompletionRewardStreak Streak,
+    CompletionRewardCommunityChallenge? CommunityChallenge,
+    IReadOnlyList<CompletionRewardAchievement> UnlockedAchievements,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? SeenAtUtc);
+
+public sealed record CompletionRedemptionResult(
+    MyQuestCompletionState Completion,
+    MemberRewardEventRecord Reward);
 
 public sealed record EvidenceClaimInput(
     string? Description,

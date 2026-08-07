@@ -31,6 +31,7 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
         DateTimeOffset? fromUtc,
         int skip,
         int take,
+        Guid? actorId,
         CancellationToken ct = default)
     {
         var transactions = _db.XpTransactions.AsNoTracking();
@@ -60,11 +61,7 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
                 TotalXp = group.Sum(item => (long)item.XpAmount),
                 CompletionCount = group.LongCount(),
             });
-        var participantCount = await aggregates.CountAsync(ct);
-        var totalXp = await aggregates.SumAsync(item => (long?)item.TotalXp, ct) ?? 0;
-        var completionCount =
-            await aggregates.SumAsync(item => (long?)item.CompletionCount, ct) ?? 0;
-        var rows = await aggregates
+        var rankedProjection = aggregates
             .Join(
                 _db.UserProfiles.AsNoTracking(),
                 aggregate => aggregate.UserId,
@@ -75,12 +72,19 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
                     profile.DisplayName,
                     aggregate.TotalXp,
                     aggregate.CompletionCount,
-                })
+                });
+        var ordered = rankedProjection
             .OrderByDescending(row => row.TotalXp)
             .ThenByDescending(row => row.CompletionCount)
             // Stable tie-breakers keep pagination deterministic across reads.
             .ThenBy(row => row.DisplayName.ToLower())
-            .ThenBy(row => row.UserId)
+            .ThenBy(row => row.UserId);
+        var participantCount = await rankedProjection.CountAsync(ct);
+        var totalXp = await rankedProjection.SumAsync(
+            item => (long?)item.TotalXp, ct) ?? 0;
+        var completionCount = await rankedProjection.SumAsync(
+            item => (long?)item.CompletionCount, ct) ?? 0;
+        var rows = await ordered
             .Skip(skip)
             .Take(take)
             .Select(row => new LeaderboardRepositoryRow(
@@ -89,11 +93,37 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
                 row.TotalXp,
                 row.CompletionCount))
             .ToListAsync(ct);
+        LeaderboardRepositoryCurrentUser? currentUser = null;
+        if (actorId.HasValue)
+        {
+            // This ID-only projection deliberately reuses the visible-row
+            // ordering. The member's rank therefore remains authoritative
+            // outside the requested page and at every deterministic tie.
+            var orderedIds = await ordered
+                .Select(row => row.UserId)
+                .ToListAsync(ct);
+            var actorIndex = orderedIds.IndexOf(actorId.Value);
+            if (actorIndex >= 0)
+            {
+                var actorRow = await rankedProjection
+                    .Where(row => row.UserId == actorId.Value)
+                    .Select(row => new LeaderboardRepositoryRow(
+                        row.UserId,
+                        row.DisplayName,
+                        row.TotalXp,
+                        row.CompletionCount))
+                    .SingleAsync(ct);
+                currentUser = new LeaderboardRepositoryCurrentUser(
+                    actorIndex + 1,
+                    actorRow);
+            }
+        }
         return new PeopleLeaderboardRepositoryResult(
             rows,
             participantCount,
             totalXp,
-            completionCount);
+            completionCount,
+            currentUser);
     }
 
     public async Task<IReadOnlyList<CommunityLeaderboardRepositoryRow>>

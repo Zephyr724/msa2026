@@ -319,7 +319,7 @@ export default function MyQuestsPage() {
               {primaryTabs.map((tab) => (
                 <button
                   aria-pressed={view === tab.value}
-                  className={`min-h-11 border-b-2 px-3 py-2 text-sm font-bold transition-colors ${
+                  className={`min-h-14 border-b-[3px] px-3 py-3 text-base font-extrabold leading-tight transition-colors sm:text-lg ${
                     view === tab.value
                       ? 'border-primary text-primary'
                       : 'border-transparent text-muted-content hover:border-primary/30 hover:text-primary'
@@ -698,7 +698,7 @@ function CompletedCard({ item }: { item: PassportCompletionItem }) {
               View Quest
             </Link>
             {verified && (
-              <Link className="btn btn-primary btn-sm" to="/passport/share">
+              <Link className="btn kiwi-share-action btn-sm" to="/passport/share">
                 Create Share Card
               </Link>
             )}

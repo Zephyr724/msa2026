@@ -14,7 +14,7 @@ export default function BrandMark() {
       <img
         alt=""
         aria-hidden="true"
-        className="h-8 w-auto transition-transform duration-200 group-hover:scale-[1.02] sm:h-9"
+        className="h-8 w-auto transition-transform duration-200 group-hover:scale-[1.02] max-[359px]:hidden sm:h-9"
         src="/branding/kiwimpact-logo.svg"
       />
     </Link>

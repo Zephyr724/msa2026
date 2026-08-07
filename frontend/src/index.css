@@ -189,6 +189,15 @@
     box-shadow: 0 5px 12px color-mix(in oklab, #183026 12%, transparent);
   }
 
+  /* The accepted Leaderboard design uses brand green for time selection,
+     while view and geographic selections keep the dark neutral treatment. */
+  .kiwi-segmented.kiwi-segmented-primary > [aria-pressed="true"],
+  .kiwi-segmented.kiwi-segmented-primary > [aria-selected="true"] {
+    background: var(--color-primary);
+    color: var(--color-primary-content);
+    box-shadow: 0 5px 12px color-mix(in oklab, var(--color-primary) 18%, transparent);
+  }
+
   .kiwi-primary-nav-item {
     font-size: 0.75rem;
   }
@@ -427,6 +436,12 @@
   }
 }
 
+@keyframes kiwi-reward-streak-pulse {
+  0% { transform: scale(.96); box-shadow: 0 0 0 0 rgb(244 183 64 / .35); }
+  55% { transform: scale(1.02); box-shadow: 0 0 0 8px rgb(244 183 64 / 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgb(244 183 64 / 0); }
+}
+
 @keyframes kiwi-reward-timer {
   from { width: 100%; }
   to { width: 0%; }
@@ -654,6 +669,18 @@
   stroke-width: 0.58px;
 }
 
+.kiwi-celebration-title {
+  color: var(--color-primary);
+  paint-order: stroke fill;
+  -webkit-text-stroke: 0.65px #183026;
+  text-shadow: 0 2px 1px rgb(24 48 38 / 36%);
+}
+
+[data-theme='dark'] .kiwi-celebration-title {
+  -webkit-text-stroke-color: #13211b;
+  text-shadow: 0 2px 1px rgb(0 0 0 / 42%);
+}
+
 .kiwi-reward-xp-value {
   animation: kiwi-reward-xp-value-enter 260ms cubic-bezier(.18, .82, .25, 1.18)
     var(--kiwi-reward-xp-delay) both;
@@ -706,6 +733,10 @@
   animation: kiwi-reward-toast-leave 160ms ease-in both;
 }
 
+.kiwi-reward-streak-pulse {
+  animation: kiwi-reward-streak-pulse 620ms cubic-bezier(.22, .74, .28, 1) both;
+}
+
 .kiwi-xp-receive {
   animation: kiwi-xp-receive 350ms ease-out both;
 }
@@ -730,4 +761,17 @@
 .kiwi-reward-toast:hover .kiwi-reward-timer,
 .kiwi-reward-toast:focus-within .kiwi-reward-timer {
   animation-play-state: paused !important;
+}
+
+.kiwi-share-action {
+  border-color: #3c72c9;
+  background: #3c72c9;
+  color: #fff;
+}
+
+.kiwi-share-action:hover,
+.kiwi-share-action:focus-visible {
+  border-color: #315fa8;
+  background: #315fa8;
+  color: #fff;
 }

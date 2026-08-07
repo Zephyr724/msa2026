@@ -552,7 +552,7 @@ function CompactCommunityGoal({
     <div className="flex h-full flex-col">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
-          <p className="kiwi-stat-label">Community Goal</p>
+          <p className="kiwi-stat-label">OUR PROGRESS</p>
           <h2 className="mt-1 text-xl">
             {challenge
               ? `${challenge.localArea.name} Challenge`
@@ -657,7 +657,7 @@ function MemberProgress({ displayName }: { displayName: string }) {
           <RankCrest rankTitle="Novice" size={64} />
         )}
         <div>
-          <p className="kiwi-stat-label">Welcome back</p>
+          <p className="kiwi-stat-label">MY PROGRESS</p>
           <h2 className="mt-1 text-3xl">{displayName}</h2>
           {progression.isPending && (
             <p aria-live="polite" className="mt-2 text-sm text-muted-content">

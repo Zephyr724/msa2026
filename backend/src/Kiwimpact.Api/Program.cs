@@ -340,6 +340,7 @@ builder.Services.AddScoped<IPassportService, PassportService>();
 builder.Services.AddScoped<IAchievementService, AchievementService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<ISocialFeedService, SocialFeedService>();
+builder.Services.AddScoped<IPublicPassportService, PublicPassportService>();
 
 var app = builder.Build();
 

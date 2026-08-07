@@ -220,6 +220,8 @@ describe('MyQuestsPage', () => {
     expect(missions.queryByText('Past Quest')).not.toBeInTheDocument();
     expect(screen.getByText('Active · schedule to be confirmed')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Active.*2/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Active.*2/ }))
+      .toHaveClass('min-h-14', 'text-base', 'font-extrabold');
 
     await user.click(screen.getByRole('button', { name: /Ready to Complete.*1/ }));
     expect(await missions.findByText('Past Quest')).toBeInTheDocument();

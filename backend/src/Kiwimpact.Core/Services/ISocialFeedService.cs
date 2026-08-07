@@ -26,6 +26,7 @@ public interface ISocialFeedService
         IReadOnlyList<SocialPostImageDetails> images,
         IReadOnlyList<string> tags,
         bool isHidden,
+        Guid? sourceCompletionId,
         CancellationToken ct = default);
 
     Task<SocialPostItem> UpdatePostAsync(

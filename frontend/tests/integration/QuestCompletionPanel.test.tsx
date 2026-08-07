@@ -10,6 +10,7 @@ import { useUiStore } from '../../src/stores/useUiStore';
 import { createTestQueryClient, jsonResponse } from '../organizerTestUtils';
 
 const QUEST_ID = 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+const NEXT_QUEST_ID = 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e';
 const ENTERED_TYPED = 'abcde-23456';
 const ENTERED_NORMALIZED = 'ABCDE23456';
 
@@ -45,6 +46,12 @@ const redemptionResult = {
   completion: verifiedCompletion,
   reward: {
     rewardEventId: '8f43bb27-89c7-4b12-8234-12c70f5d6395',
+    questCompletionId: '936b96fb-f895-42fa-8c53-008e37fc38f7',
+    questId: QUEST_ID,
+    questTitle: 'Dated Stream Cleanup',
+    celebrationTitle: 'Well Done!',
+    celebrationMessage: 'Your verified action is now part of the community impact story.',
+    verificationMethod: 'CompletionCode',
     xpAwarded: 50,
     previousTotalXp: 170,
     totalXp: 220,
@@ -52,8 +59,47 @@ const redemptionResult = {
     level: 4,
     previousRankTitle: 'Novice',
     rankTitle: 'Novice',
+    streak: {
+      previousWeeks: 2,
+      previousHasVerifiedImpactThisWeek: true,
+      weeks: 2,
+      hasVerifiedImpactThisWeek: true,
+    },
+    communityChallenge: null,
     unlockedAchievements: [],
+    createdAtUtc: '2026-08-06T12:00:00.0000000Z',
+    seenAtUtc: null,
   },
+};
+
+const recommendedQuest = {
+  id: NEXT_QUEST_ID,
+  title: 'Restore the Harbour Wetland',
+  description: 'Help restore native wetland habitat.',
+  category: 'CleanReduceWaste',
+  sourceType: 'OrganizerOwned',
+  registrationMode: 'Native',
+  difficulty: 'Easy',
+  xpAward: 50,
+  capacity: 20,
+  availableSpots: 12,
+  startAtUtc: '2026-08-10T09:00:00.0000000Z',
+  endAtUtc: '2026-08-10T11:00:00.0000000Z',
+  locationRegion: null,
+  locationDescription: 'Harbour edge',
+  coverImage: null,
+  latitude: null,
+  longitude: null,
+};
+
+const recommendationPage = {
+  items: [recommendedQuest],
+  page: 1,
+  pageSize: 4,
+  totalCount: 1,
+  totalPages: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
 };
 
 interface FakeApiOptions {
@@ -62,6 +108,8 @@ interface FakeApiOptions {
   completionQueue?: unknown[];
   redeemResponses?: Response[];
   redeemHang?: boolean;
+  rewardResolution?: unknown;
+  recommendations?: unknown;
 }
 
 function stubParticipantApi({
@@ -70,6 +118,8 @@ function stubParticipantApi({
   completionQueue = [noCompletion],
   redeemResponses = [],
   redeemHang = false,
+  rewardResolution,
+  recommendations = recommendationPage,
 }: FakeApiOptions = {}) {
   const completions = [...completionQueue];
   const redeems = [...redeemResponses];
@@ -91,6 +141,16 @@ function stubParticipantApi({
     if (url.endsWith(`/v1/quests/${QUEST_ID}/completion`)) {
       const next = completions.shift();
       return Promise.resolve(jsonResponse(next ?? completions.at(-1) ?? noCompletion));
+    }
+    if (url.endsWith(`/v1/quests/${QUEST_ID}/reward-resolution`)) {
+      return Promise.resolve(
+        rewardResolution
+          ? jsonResponse(rewardResolution)
+          : jsonResponse({ detail: 'Reward snapshot unavailable.' }, 404),
+      );
+    }
+    if (url.includes('/v1/quests?') && url.includes('category=CleanReduceWaste')) {
+      return Promise.resolve(jsonResponse(recommendations));
     }
     if (url.endsWith('/v1/users/me/progression')) {
       return Promise.resolve(jsonResponse({
@@ -121,6 +181,7 @@ function renderPanel(
       <MemoryRouter>
         <RewardFeedbackProvider>
           <QuestCompletionPanel
+            questCategory="CleanReduceWaste"
             questId={QUEST_ID}
             questTitle="Dated Stream Cleanup"
             registrationMode={registrationMode}
@@ -183,12 +244,40 @@ describe('Participant quest completion panel', () => {
     stubParticipantApi({ completionQueue: [verifiedCompletion] });
     renderPanel();
 
-    expect(await screen.findByText('Quest completed. Nice work!')).toBeInTheDocument();
+    expect(await screen.findByText('Quest verified. Your Impact Passport is updated.')).toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
     expect(screen.getByText('Verified')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Complete quest' })).not.toBeInTheDocument();
     const section = screen.getByRole('region', { name: 'Quest completion' });
     expect(section.textContent).not.toMatch(/XP|achievement|badge|level|leaderboard/i);
+  });
+
+  it('makes the concrete next Quest the primary completion action', async () => {
+    stubParticipantApi({
+      completionQueue: [verifiedCompletion],
+      rewardResolution: redemptionResult.reward,
+    });
+    renderPanel();
+
+    await screen.findByText('Restore the Harbour Wetland');
+    const nextQuest = screen.getByTestId('next-quest-action');
+    const passport = screen.getByRole('link', { name: 'View Passport' });
+    const share = screen.getByRole('link', { name: 'Share your story in Community' });
+
+    expect(nextQuest).toHaveAttribute('href', `/quests/${NEXT_QUEST_ID}`);
+    expect(nextQuest).toHaveTextContent('Next Quest');
+    expect(nextQuest).toHaveTextContent('Restore the Harbour Wetland');
+    expect(nextQuest).toHaveClass('btn-primary');
+    expect(passport).not.toHaveClass('btn-primary');
+    expect(share).toHaveClass('kiwi-share-action');
+    expect(screen.getByText('Community')).toHaveClass('font-black');
+    expect(screen.queryByTestId('completion-celebration')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-stamp-band="mission-complete"]'))
+      .not.toBeInTheDocument();
+    expect(nextQuest.compareDocumentPosition(share) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+    expect(share.compareDocumentPosition(passport) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
   });
 
   it('shows the OwnQuest explanation without a form', async () => {
@@ -234,14 +323,14 @@ describe('Participant quest completion panel', () => {
     await user.type(input, ENTERED_TYPED);
     await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
-    expect(await screen.findByText('Quest completed. Nice work!')).toBeInTheDocument();
+    expect(await screen.findByText('Quest verified. Your Impact Passport is updated.')).toBeInTheDocument();
     expect(screen.queryByLabelText('Completion code')).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Quest completion reward' }))
       .toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Congratulation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'MISSION COMPLETE' })).toBeInTheDocument();
     expect(screen.getByText('Quest complete!')).toBeInTheDocument();
-    expect(screen.getByText('Dated Stream Cleanup')).toBeInTheDocument();
-    expect(screen.getByText('+50 XP')).toBeInTheDocument();
+    expect(screen.getAllByText('Dated Stream Cleanup')).toHaveLength(2);
+    expect(screen.getAllByText('+50 XP')).toHaveLength(2);
     expect(screen.getByText('220 total')).toBeInTheDocument();
 
     const posts = redeemCalls(fetchMock);
@@ -307,7 +396,7 @@ describe('Participant quest completion panel', () => {
     await user.type(await openCompletionDialog(user), ENTERED_TYPED);
     await user.click(screen.getByRole('button', { name: 'Verify completion' }));
 
-    expect(await screen.findByText('Quest completed. Nice work!')).toBeInTheDocument();
+    expect(await screen.findByText('Quest verified. Your Impact Passport is updated.')).toBeInTheDocument();
   });
 
   it('maps the missing-participation 409 to the accepted detail', async () => {

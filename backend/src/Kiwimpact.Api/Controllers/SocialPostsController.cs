@@ -103,6 +103,7 @@ public sealed class SocialPostsController : ControllerBase
                     .ToArray(),
                 request.Tags ?? [],
                 request.IsHidden,
+                request.SourceCompletionId,
                 ct);
             return StatusCode(StatusCodes.Status201Created, ToDto(post));
         }
@@ -423,7 +424,8 @@ public sealed class SocialPostsController : ControllerBase
             post.CommentCount,
             post.IsLikedByViewer,
             post.CanDelete,
-            post.IsHidden);
+            post.IsHidden,
+            post.IsVerifiedQuestStory);
 
     private static SocialCommentThreadDto ToThreadDto(SocialCommentThread thread) =>
         new(

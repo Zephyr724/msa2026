@@ -26,6 +26,7 @@ import { CATEGORY_PRESENTATION } from '../lib/questPresentation.ts';
 import { QUEST_CATEGORIES, type QuestCategory } from '../types/quest.ts';
 import CategoryEmblem from '../components/quest/CategoryEmblem.tsx';
 import { useMyAchievementProfile } from '../hooks/useAchievements.ts';
+import PublicPassportSettingsCard from '../components/passport/PublicPassportSettingsCard.tsx';
 
 const PROGRESSION_NOT_READY_TYPE =
   'https://kiwimpact.app/problems/progression-not-ready';
@@ -224,6 +225,7 @@ export default function PassportPage() {
           <h2 className="mt-1 text-2xl" id="passport-preferences-heading">
             Passport settings
           </h2>
+          <PublicPassportSettingsCard />
           <div className="grid gap-6 md:grid-cols-2">
             <Link
               className="kiwi-panel mt-6 flex items-start gap-4 p-5 transition-colors hover:border-primary/35"
@@ -287,7 +289,7 @@ export default function PassportPage() {
                 Completion history
               </h2>
             </div>
-            <Link className="btn btn-outline btn-sm rounded-full" to="/passport/share">
+            <Link className="btn kiwi-share-action btn-sm rounded-full" to="/passport/share">
               <Share2 aria-hidden="true" className="size-3.5" />
               Create share card
             </Link>

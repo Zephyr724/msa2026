@@ -2,6 +2,7 @@ import { FileCheck2, KeyRound, NotebookPen } from 'lucide-react';
 import { useState } from 'react';
 import type {
   QuestRegistrationMode,
+  QuestCategory,
   QuestSourceType,
 } from '../../types/quest.ts';
 import QuestCompletionPanel from './QuestCompletionPanel.tsx';
@@ -12,6 +13,7 @@ type CompletionChoice = 'code' | 'claim' | 'self';
 interface QuestCompletionMethodsProps {
   questId: string;
   questTitle: string;
+  questCategory: QuestCategory;
   registrationMode: QuestRegistrationMode | null;
   sourceType: QuestSourceType;
 }
@@ -48,6 +50,7 @@ const METHOD_PRESENTATION = {
 export default function QuestCompletionMethods({
   questId,
   questTitle,
+  questCategory,
   registrationMode,
   sourceType,
 }: QuestCompletionMethodsProps) {
@@ -111,6 +114,7 @@ export default function QuestCompletionMethods({
             key={questId}
             questId={questId}
             questTitle={questTitle}
+            questCategory={questCategory}
             registrationMode={registrationMode}
           />
         ) : (

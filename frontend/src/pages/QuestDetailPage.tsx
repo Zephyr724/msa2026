@@ -13,7 +13,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QuestCompletionMethods from '../components/quest/QuestCompletionMethods.tsx';
 import QuestParticipationPanel from '../components/quest/QuestParticipationPanel.tsx';
@@ -31,11 +31,19 @@ import { useQuestDetail, useQuestImages, useQuestList } from '../hooks/useQuests
 import { ApiError } from '../lib/api/apiFetch.ts';
 import QuestCard from '../components/quest/QuestCard.tsx';
 import QuestImage from '../components/quest/QuestImage.tsx';
+import MissionCompletedStamp from '../components/passport/MissionCompletedStamp.tsx';
+import {
+  useMyQuestCompletionQuery,
+  useQuestRewardResolution,
+} from '../hooks/useCompletion.ts';
 
 export default function QuestDetailPage() {
   const { questId } = useParams<{ questId: string }>();
   const questQuery = useQuestDetail(questId!);
   const images = useQuestImages(questId!);
+  const completion = useMyQuestCompletionQuery(questId!);
+  const verified = completion.data?.status === 'Verified';
+  const rewardResolution = useQuestRewardResolution(questId!, verified);
   const related = useQuestList(
     {
       category: questQuery.data?.category,
@@ -45,6 +53,20 @@ export default function QuestDetailPage() {
     Boolean(questQuery.data),
   );
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const questActionsRef = useRef<HTMLElement>(null);
+  const [questActionsVisible, setQuestActionsVisible] = useState(false);
+
+  useEffect(() => {
+    const actions = questActionsRef.current;
+    if (!actions || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setQuestActionsVisible(Boolean(entry?.isIntersecting)),
+      { rootMargin: '0px 0px -112px 0px', threshold: 0.01 },
+    );
+    observer.observe(actions);
+    return () => observer.disconnect();
+  }, [questQuery.data?.id]);
 
   if (questQuery.isLoading) return <QuestDetailSkeleton />;
 
@@ -111,7 +133,23 @@ export default function QuestDetailPage() {
   ].join(' · ');
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-base-200">
+    <div className="relative isolate min-h-[calc(100vh-4rem)] bg-base-200">
+      {verified && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 z-20"
+          data-testid="quest-completion-stamp-overlay"
+        >
+          <div className="kiwi-page grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_21.25rem]">
+            <div className="relative h-[58rem] overflow-hidden lg:h-[66rem]">
+              <MissionCompletedStamp
+                className="absolute left-1/2 top-[45%] h-auto w-[190%] max-w-none -translate-x-1/2 -translate-y-1/2 text-primary opacity-[0.08] sm:top-1/2 sm:w-[150%] lg:top-[62%] lg:w-[110%]"
+                decorative
+              />
+            </div>
+          </div>
+        </div>
+      )}
       <section className="relative h-64 overflow-hidden bg-secondary md:h-[26.25rem]">
         <QuestImage
           alt={quest.coverImage?.altText}
@@ -147,7 +185,7 @@ export default function QuestDetailPage() {
         </div>
       </section>
 
-      <main className="kiwi-page grid gap-8 pb-12 pt-8 lg:grid-cols-[minmax(0,1fr)_21.25rem] lg:items-start">
+      <main className="kiwi-page grid grid-cols-[minmax(0,1fr)] gap-8 pb-12 pt-8 lg:grid-cols-[minmax(0,1fr)_21.25rem] lg:items-start">
         <div className="min-w-0">
           <div className="flex flex-wrap gap-2">
             <span className="badge badge-success badge-outline">Published quest</span>
@@ -190,6 +228,22 @@ export default function QuestDetailPage() {
               </div>
             )}
           </section>
+
+          {rewardResolution.data && (
+            <section
+              aria-labelledby="quest-celebration-heading"
+              className="mt-5 rounded-[1.25rem] border border-primary/25 bg-primary/8 p-5"
+              data-testid="quest-completion-celebration"
+            >
+              <p className="kiwi-stat-label text-primary">Mission complete · verified impact</p>
+              <h2 className="kiwi-celebration-title mt-1 text-2xl" id="quest-celebration-heading">
+                {rewardResolution.data.celebrationTitle}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm font-bold leading-relaxed text-base-content">
+                {rewardResolution.data.celebrationMessage}
+              </p>
+            </section>
+          )}
 
           <section className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-5 dark:border-amber-700 dark:bg-amber-900/20">
             <h2 className="flex items-center gap-2 text-xl text-amber-800 dark:text-amber-200">
@@ -352,7 +406,11 @@ export default function QuestDetailPage() {
           )}
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-24" id="quest-actions">
+        <aside
+          className="space-y-4 lg:sticky lg:top-24"
+          id="quest-actions"
+          ref={questActionsRef}
+        >
           <section className="kiwi-panel p-5">
             <h2 className="text-xl">Quest snapshot</h2>
             <dl className="mt-4 grid gap-3 text-sm">
@@ -371,10 +429,12 @@ export default function QuestDetailPage() {
             </dl>
           </section>
           <QuestParticipationPanel
+            completionStatus={completion.data?.status ?? null}
             questId={quest.id}
             registrationMode={quest.registrationMode}
           />
           <QuestCompletionMethods
+            questCategory={quest.category}
             questId={quest.id}
             questTitle={quest.title}
             registrationMode={quest.registrationMode}
@@ -401,11 +461,13 @@ export default function QuestDetailPage() {
         </section>
       )}
 
-      <div className="fixed inset-x-0 bottom-[4.35rem] z-30 border-t border-base-300 bg-base-100/95 p-3 shadow-xl backdrop-blur md:hidden">
-        <a className="btn btn-primary w-full rounded-full" href="#quest-actions">
-          View quest actions <ArrowRight aria-hidden="true" className="size-4" />
-        </a>
-      </div>
+      {!questActionsVisible && (
+        <div className="fixed inset-x-0 bottom-[4.35rem] z-30 border-t border-base-300 bg-base-100/95 p-3 shadow-xl backdrop-blur md:hidden">
+          <a className="btn btn-primary w-full rounded-full" href="#quest-actions">
+            View quest actions <ArrowRight aria-hidden="true" className="size-4" />
+          </a>
+        </div>
+      )}
     </div>
   );
 }

@@ -99,6 +99,8 @@ describe('Home member momentum composition', () => {
 
     expect(await screen.findByRole('heading', { name: 'Aroha' }))
       .toBeInTheDocument();
+    expect(screen.getByText('MY PROGRESS')).toBeInTheDocument();
+    expect(screen.getByText('OUR PROGRESS')).toBeInTheDocument();
     expect(await screen.findByText('Level 3 · Novice · 120 XP')).toBeInTheDocument();
     expect(await screen.findByText('3 weeks')).toBeInTheDocument();
     expect(screen.getAllByText('Henderson-Massey')).not.toHaveLength(0);

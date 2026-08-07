@@ -7,14 +7,17 @@ import {
   useMyQuestParticipationQuery,
 } from '../../hooks/useParticipation';
 import { ApiError } from '../../lib/api/apiFetch';
+import type { MyCompletionStatus } from '../../types/completion';
 import type { QuestRegistrationMode } from '../../types/quest';
 
 interface QuestParticipationPanelProps {
+  completionStatus: MyCompletionStatus | null;
   questId: string;
   registrationMode: QuestRegistrationMode | null;
 }
 
 export default function QuestParticipationPanel({
+  completionStatus,
   questId,
   registrationMode,
 }: QuestParticipationPanelProps) {
@@ -25,6 +28,8 @@ export default function QuestParticipationPanel({
   const cancel = useCancelQuestParticipationMutation(questId);
   const mutationPending = join.isPending || cancel.isPending;
   const mutationError = join.error ?? cancel.error;
+  const completionFinal = completionStatus === 'Verified'
+    || completionStatus === 'SelfReported';
 
   async function handleJoin() {
     if (mutationPending || !participation.data?.canJoin) return;
@@ -87,13 +92,17 @@ export default function QuestParticipationPanel({
       {state.status === 'Active' ? (
         <div className="space-y-3">
           <p className="font-semibold text-success" role="status">You have joined this Quest.</p>
-          {confirmingCancel ? (
-            <div className="rounded-lg border border-warning/40 bg-warning/10 p-4">
+          {completionFinal ? null : completionStatus === null ? (
+            <p className="text-sm text-muted-content" aria-live="polite">
+              Checking completion status…
+            </p>
+          ) : confirmingCancel ? (
+            <div className="rounded-lg border border-error/35 bg-error/8 p-4">
               <p className="mb-3">Cancel your participation? You can rejoin later if space remains.</p>
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="grid gap-2">
                 <button
                   aria-busy={cancel.isPending}
-                  className="btn btn-warning w-full sm:w-auto"
+                  className="btn btn-error w-full"
                   disabled={mutationPending}
                   onClick={handleCancel}
                   type="button"
@@ -101,7 +110,7 @@ export default function QuestParticipationPanel({
                   {cancel.isPending ? 'Cancelling…' : 'Confirm cancellation'}
                 </button>
                 <button
-                  className="btn btn-ghost w-full sm:w-auto"
+                  className="btn btn-success w-full"
                   disabled={mutationPending}
                   onClick={() => setConfirmingCancel(false)}
                   type="button"
@@ -112,7 +121,7 @@ export default function QuestParticipationPanel({
             </div>
           ) : (
             <button
-              className="btn btn-outline w-full sm:w-auto"
+              className="btn btn-error w-full"
               disabled={mutationPending}
               onClick={() => setConfirmingCancel(true)}
               type="button"

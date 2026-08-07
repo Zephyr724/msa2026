@@ -15,6 +15,7 @@ export interface SocialPostDto {
   isLikedByViewer: boolean;
   canDelete: boolean;
   isHidden: boolean;
+  isVerifiedQuestStory: boolean;
 }
 
 export interface SocialPostImageDto {
@@ -68,6 +69,7 @@ export interface CreateSocialPostInput {
   }>;
   tags: string[];
   isHidden: boolean;
+  sourceCompletionId?: string | null;
 }
 
 export interface UpdateSocialPostInput {

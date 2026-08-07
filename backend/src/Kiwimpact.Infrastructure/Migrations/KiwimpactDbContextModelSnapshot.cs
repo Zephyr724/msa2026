@@ -133,6 +133,46 @@ namespace Kiwimpact.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Kiwimpact.Core.Entities.CompletionCelebrationCopy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(280)
+                        .HasColumnType("character varying(280)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "SortOrder")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CompletionCelebrationCopies_Kind_Order");
+
+                    b.HasIndex("Kind", "Text")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CompletionCelebrationCopies_Kind_Text");
+
+                    b.ToTable("CompletionCelebrationCopies", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CompletionCelebrationCopies_SortOrder_NonNegative", "\"SortOrder\" >= 0");
+
+                            t.HasCheckConstraint("CK_CompletionCelebrationCopies_Text_NotBlank", "length(btrim(\"Text\")) > 0");
+                        });
+                });
+
             modelBuilder.Entity("Kiwimpact.Core.Entities.CompletionCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -232,6 +272,195 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.HasIndex("ReviewedByUserId");
 
                     b.ToTable("EvidenceClaimDetails", (string)null);
+                });
+
+            modelBuilder.Entity("Kiwimpact.Core.Entities.FeaturedPassportAchievement", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AchievementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "AchievementId");
+
+                    b.HasIndex("AchievementId")
+                        .HasDatabaseName("IX_FeaturedPassportAchievements_AchievementId");
+
+                    b.HasIndex("UserId", "SortOrder")
+                        .IsUnique()
+                        .HasDatabaseName("UX_FeaturedPassportAchievements_User_SortOrder");
+
+                    b.ToTable("FeaturedPassportAchievements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FeaturedPassportAchievements_SortOrder", "\"SortOrder\" BETWEEN 0 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("Kiwimpact.Core.Entities.MemberRewardEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CelebrationMessage")
+                        .IsRequired()
+                        .HasMaxLength(280)
+                        .HasColumnType("character varying(280)");
+
+                    b.Property<string>("CelebrationTitle")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid?>("CommunityChallengeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("CommunityChallengePreviousProgress")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("CommunityChallengeProgress")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("CommunityChallengeTarget")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CommunityName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("HasVerifiedImpactThisWeek")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("PreviousHasVerifiedImpactThisWeek")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PreviousLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PreviousRankTitle")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("PreviousStreakWeeks")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("PreviousTotalXp")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("QuestCompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("QuestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("QuestTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RankTitle")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTimeOffset?>("SeenAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("StreakWeeks")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("TotalXp")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VerificationMethod")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("XpAwarded")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestCompletionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MemberRewardEvents_QuestCompletionId");
+
+                    b.HasIndex("UserId", "QuestId", "CreatedAt")
+                        .HasDatabaseName("IX_MemberRewardEvents_User_Quest");
+
+                    b.HasIndex("UserId", "SeenAtUtc", "CreatedAt")
+                        .HasDatabaseName("IX_MemberRewardEvents_User_Inbox");
+
+                    b.ToTable("MemberRewardEvents", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MemberRewardEvents_CommunitySnapshot_Complete", "(\"CommunityChallengeId\" IS NULL AND \"CommunityName\" IS NULL AND \"CommunityChallengePreviousProgress\" IS NULL AND \"CommunityChallengeProgress\" IS NULL AND \"CommunityChallengeTarget\" IS NULL) OR (\"CommunityChallengeId\" IS NOT NULL AND \"CommunityName\" IS NOT NULL AND \"CommunityChallengePreviousProgress\" IS NOT NULL AND \"CommunityChallengeProgress\" IS NOT NULL AND \"CommunityChallengeTarget\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_MemberRewardEvents_Level_Range", "\"Level\" BETWEEN 1 AND 99 AND \"PreviousLevel\" BETWEEN 1 AND 99");
+
+                            t.HasCheckConstraint("CK_MemberRewardEvents_Streak_NonNegative", "\"StreakWeeks\" >= 0 AND \"PreviousStreakWeeks\" >= 0");
+
+                            t.HasCheckConstraint("CK_MemberRewardEvents_TotalXp_Order", "\"TotalXp\" >= \"PreviousTotalXp\"");
+
+                            t.HasCheckConstraint("CK_MemberRewardEvents_XpAwarded_Positive", "\"XpAwarded\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Kiwimpact.Core.Entities.MemberRewardEventAchievement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AchievementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid>("RewardEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RewardEventId", "AchievementId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MemberRewardEventAchievements_Event_Achievement");
+
+                    b.HasIndex("RewardEventId", "SortOrder")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MemberRewardEventAchievements_Event_Order");
+
+                    b.ToTable("MemberRewardEventAchievements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MemberRewardEventAchievements_SortOrder", "\"SortOrder\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Kiwimpact.Core.Entities.Quest", b =>
@@ -655,6 +884,9 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.Property<Guid?>("QuestId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SourceCompletionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -670,6 +902,11 @@ namespace Kiwimpact.Infrastructure.Migrations
 
                     b.HasIndex("QuestId")
                         .HasDatabaseName("IX_SocialPosts_QuestId");
+
+                    b.HasIndex("SourceCompletionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SocialPosts_SourceCompletionId")
+                        .HasFilter("\"SourceCompletionId\" IS NOT NULL");
 
                     b.HasIndex("CreatedAt", "Id")
                         .HasDatabaseName("IX_SocialPosts_CreatedAt_Id");
@@ -810,6 +1047,11 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.Property<Guid?>("HomeCommunityRegionId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsPublicPassportEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTimeOffset?>("LastCommunityChangeAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -817,6 +1059,9 @@ namespace Kiwimpact.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
+
+                    b.Property<Guid?>("PublicPassportShareId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("ShowCommunityOnPassport")
                         .ValueGeneratedOnAdd()
@@ -836,6 +1081,11 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.HasIndex("AchievementEvaluationVersion");
 
                     b.HasIndex("HomeCommunityRegionId");
+
+                    b.HasIndex("PublicPassportShareId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_UserProfiles_PublicPassportShareId")
+                        .HasFilter("\"PublicPassportShareId\" IS NOT NULL");
 
                     b.ToTable("UserProfiles", null, t =>
                         {
@@ -1139,6 +1389,73 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.Navigation("QuestCompletion");
                 });
 
+            modelBuilder.Entity("Kiwimpact.Core.Entities.FeaturedPassportAchievement", b =>
+                {
+                    b.HasOne("Kiwimpact.Core.Entities.Achievement", null)
+                        .WithMany()
+                        .HasForeignKey("AchievementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Kiwimpact.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Kiwimpact.Core.Entities.MemberRewardEvent", b =>
+                {
+                    b.HasOne("Kiwimpact.Core.Entities.XpTransaction", "XpTransaction")
+                        .WithOne()
+                        .HasForeignKey("Kiwimpact.Core.Entities.MemberRewardEvent", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Kiwimpact.Core.Entities.QuestCompletion", "QuestCompletion")
+                        .WithOne()
+                        .HasForeignKey("Kiwimpact.Core.Entities.MemberRewardEvent", "QuestCompletionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Kiwimpact.Core.Entities.Quest", "Quest")
+                        .WithMany()
+                        .HasForeignKey("QuestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Kiwimpact.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Quest");
+
+                    b.Navigation("QuestCompletion");
+
+                    b.Navigation("XpTransaction");
+                });
+
+            modelBuilder.Entity("Kiwimpact.Core.Entities.MemberRewardEventAchievement", b =>
+                {
+                    b.HasOne("Kiwimpact.Core.Entities.Achievement", "Achievement")
+                        .WithMany()
+                        .HasForeignKey("AchievementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Kiwimpact.Core.Entities.MemberRewardEvent", "RewardEvent")
+                        .WithMany("UnlockedAchievements")
+                        .HasForeignKey("RewardEventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Achievement");
+
+                    b.Navigation("RewardEvent");
+                });
+
             modelBuilder.Entity("Kiwimpact.Core.Entities.Quest", b =>
                 {
                     b.HasOne("Kiwimpact.Infrastructure.Identity.ApplicationUser", null)
@@ -1259,6 +1576,11 @@ namespace Kiwimpact.Infrastructure.Migrations
                     b.HasOne("Kiwimpact.Core.Entities.Quest", "Quest")
                         .WithMany()
                         .HasForeignKey("QuestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Kiwimpact.Core.Entities.QuestCompletion", null)
+                        .WithMany()
+                        .HasForeignKey("SourceCompletionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Quest");
@@ -1419,6 +1741,11 @@ namespace Kiwimpact.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Kiwimpact.Core.Entities.MemberRewardEvent", b =>
+                {
+                    b.Navigation("UnlockedAchievements");
                 });
 
             modelBuilder.Entity("Kiwimpact.Core.Entities.Quest", b =>

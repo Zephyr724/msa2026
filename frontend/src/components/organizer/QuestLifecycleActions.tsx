@@ -145,7 +145,11 @@ export default function QuestLifecycleActions({
       <div className="flex flex-wrap gap-2">
         {availableActions.map((availableAction) => (
           <button
-            className={availableAction === 'delete' ? 'btn btn-error btn-sm' : 'btn btn-outline btn-sm'}
+            className={availableAction === 'cancel' || availableAction === 'delete'
+              ? 'btn btn-error btn-sm'
+              : availableAction === 'publish'
+                ? 'btn btn-success btn-sm'
+                : 'btn btn-outline btn-sm'}
             disabled={disabled || pending}
             key={availableAction}
             onClick={() => openAction(availableAction)}
@@ -159,12 +163,14 @@ export default function QuestLifecycleActions({
         <ConfirmActionDialog
           confirmLabel={ACTION_COPY[action].confirmLabel}
           description={ACTION_COPY[action].description}
+          destructive={action === 'cancel' || action === 'delete'}
           error={actionError}
           onClose={closeAction}
           onConfirm={confirmAction}
           open
           pending={pending}
           pendingLabel={ACTION_COPY[action].pendingLabel}
+          positive={action === 'publish'}
           title={ACTION_COPY[action].title}
         >
           {action === 'cancel' && (

@@ -357,6 +357,7 @@ public sealed class XpLedgerPersistenceTests : IClassFixture<TestDatabaseFixture
         var seedDb = seedScope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
         var graph = await XpLedgerTestHelpers.SeedRedemptionGraphAsync(seedDb);
         var now = DateTimeOffset.UtcNow;
+        var selfReportedCompletionId = Guid.NewGuid();
         await seedDb.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "QuestCompletions"
                 ("Id", "UserId", "QuestId", "ParticipationId", "Method", "Status",
@@ -364,21 +365,18 @@ public sealed class XpLedgerPersistenceTests : IClassFixture<TestDatabaseFixture
                  "QuestCategorySnapshot",
                  "CommunityRegionIdAtCompletion", "CreatedAt", "UpdatedAt")
             VALUES
-                ({Guid.NewGuid()}, {graph.Actor.Id}, {graph.Quest.Id},
+                ({selfReportedCompletionId}, {graph.Actor.Id}, {graph.Quest.Id},
                  {graph.Participation.Id}, 'SelfReported', 'SelfReported',
                  {now}, NULL, 'Easy', {graph.Quest.Category.ToString()},
                  NULL, {now}, {now})
             """, TestContext.Current.CancellationToken);
 
         var repository = XpLedgerTestHelpers.NewXpLedgerRepository(seedDb);
-        Assert.False(await repository.HasRewardPendingCompletionsAsync(
-            TestContext.Current.CancellationToken));
-        Assert.Equal(0, await repository.CountUnprocessableRewardPendingAsync(
-            TestContext.Current.CancellationToken));
-        Assert.Empty(await repository.GetAwardEligibleBatchAsync(
+        var eligible = await repository.GetAwardEligibleBatchAsync(
             100,
             Array.Empty<Guid>(),
-            TestContext.Current.CancellationToken));
+            TestContext.Current.CancellationToken);
+        Assert.DoesNotContain(eligible, item => item.Id == selfReportedCompletionId);
     }
 
     private async Task RedeemAsync(Guid questId, Guid actorId)

@@ -9,6 +9,7 @@ import {
   MapPin,
   MessageCircle,
   Pencil,
+  ShieldCheck,
   Trash2,
   X,
 } from 'lucide-react';
@@ -150,6 +151,11 @@ export default function SocialPostDetailPage() {
               </header>
 
               <div className="py-5">
+                {post.isVerifiedQuestStory && (
+                  <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-primary">
+                    <ShieldCheck aria-hidden="true" className="size-4" /> Verified Quest Story
+                  </p>
+                )}
                 <h1 className="break-words text-2xl leading-tight">{post.title}</h1>
                 <p className="mt-3 whitespace-pre-wrap break-words text-[0.95rem] leading-7">{post.content}</p>
                 {post.tags.length > 0 && (

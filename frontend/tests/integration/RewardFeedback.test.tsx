@@ -1,12 +1,18 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import RewardFeedbackProvider from '../../src/components/reward/RewardFeedbackProvider.tsx';
 import { useRewardFeedback } from '../../src/components/reward/rewardFeedback.ts';
 import type { RewardFeedbackEvent } from '../../src/components/reward/rewardFeedback.ts';
 
 const standardReward: RewardFeedbackEvent = {
   rewardEventId: '8f43bb27-89c7-4b12-8234-12c70f5d6395',
+  questCompletionId: '936b96fb-f895-42fa-8c53-008e37fc38f7',
+  questId: '9ed6a4a5-631d-4b55-8203-72b760039c47',
   questTitle: 'Waitākere Stream Care',
+  celebrationTitle: 'Well Done!',
+  celebrationMessage: 'Your verified action is now part of the community impact story.',
+  verificationMethod: 'CompletionCode',
   xpAwarded: 50,
   previousTotalXp: 170,
   totalXp: 220,
@@ -14,7 +20,16 @@ const standardReward: RewardFeedbackEvent = {
   level: 4,
   previousRankTitle: 'Novice',
   rankTitle: 'Novice',
+  streak: {
+    previousWeeks: 2,
+    previousHasVerifiedImpactThisWeek: true,
+    weeks: 2,
+    hasVerifiedImpactThisWeek: true,
+  },
+  communityChallenge: null,
   unlockedAchievements: [],
+  createdAtUtc: '2026-08-06T12:00:00.0000000Z',
+  seenAtUtc: null,
   motionPreference: 'full',
 };
 
@@ -30,9 +45,11 @@ function Harness({ reward = standardReward }: { reward?: RewardFeedbackEvent }) 
 
 function renderReward(reward = standardReward) {
   return render(
-    <RewardFeedbackProvider>
-      <Harness reward={reward} />
-    </RewardFeedbackProvider>,
+    <MemoryRouter>
+      <RewardFeedbackProvider>
+        <Harness reward={reward} />
+      </RewardFeedbackProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -123,12 +140,12 @@ describe('Reward feedback', () => {
 
     expect(screen.getByRole('region', { name: 'Quest completion reward' }))
       .toBeInTheDocument();
-    const title = screen.getByRole('heading', { name: 'Congratulation' });
+    const title = screen.getByRole('heading', { name: 'MISSION COMPLETE' });
     const stateHeading = screen.getByRole('heading', { name: 'Quest complete!' });
     expect(title).toHaveAttribute('data-reward-congratulation');
     expect(title.querySelector('svg')).toHaveClass('w-[86%]');
     expect(title.querySelector('text')).toHaveAttribute('textLength', '310');
-    expect(title.querySelector('textPath')).toHaveTextContent('Congratulation');
+    expect(title.querySelector('textPath')).toHaveTextContent('Mission Complete');
     expect(title.compareDocumentPosition(stateHeading) & Node.DOCUMENT_POSITION_FOLLOWING)
       .toBeTruthy();
     const xpValue = screen.getByText('+50 XP');
@@ -140,13 +157,22 @@ describe('Reward feedback', () => {
     expect(document.activeElement).not.toBe(
       screen.getByRole('button', { name: 'Close reward notification' }),
     );
+    expect(screen.getByRole('link', {
+      name: 'Passport saved. View your Impact Passport',
+    })).toHaveAttribute('href', '/passport');
+    expect(screen.getByText('Your record is updated')).toHaveClass('sm:whitespace-nowrap');
+    expect(document.querySelector('[data-reward-host]')).toHaveClass('sm:w-[27rem]');
+    expect(screen.getByRole('link', { name: 'Review Quest' }))
+      .toHaveClass('btn-primary');
+    expect(screen.getByRole('link', { name: 'Review Quest' }))
+      .toHaveAttribute('href', `/quests/${standardReward.questId}`);
 
     fireEvent.click(screen.getByRole('button', { name: 'Close reward notification' }));
     expect(screen.getByRole('region', { name: 'Quest completion reward' }))
       .toHaveClass('kiwi-reward-toast-leave');
   });
 
-  it('auto-dismisses after five active seconds and pauses while hovered', () => {
+  it('auto-dismisses after twenty active seconds and pauses while hovered', () => {
     vi.useFakeTimers();
     renderReward();
     fireEvent.click(screen.getByRole('button', { name: 'Show reward' }));
@@ -154,11 +180,32 @@ describe('Reward feedback', () => {
 
     act(() => vi.advanceTimersByTime(3000));
     fireEvent.mouseEnter(toast);
+    expect(document.querySelector<HTMLElement>('[data-reward-timer]')?.style.animationPlayState)
+      .toBe('paused');
     act(() => vi.advanceTimersByTime(5000));
     expect(toast).toBeInTheDocument();
 
     fireEvent.mouseLeave(toast);
-    act(() => vi.advanceTimersByTime(2200));
+    expect(document.querySelector<HTMLElement>('[data-reward-timer]')?.style.animationPlayState)
+      .toBe('running');
+    act(() => vi.advanceTimersByTime(17200));
+    expect(screen.queryByRole('region', { name: 'Quest completion reward' }))
+      .not.toBeInTheDocument();
+  });
+
+  it('waits for visibility before timing a reward delivered into a hidden tab', () => {
+    vi.useFakeTimers();
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    renderReward();
+    fireEvent.click(screen.getByRole('button', { name: 'Show reward' }));
+
+    act(() => vi.advanceTimersByTime(25_000));
+    expect(screen.getByRole('region', { name: 'Quest completion reward' }))
+      .toBeInTheDocument();
+
+    hidden.mockReturnValue(false);
+    fireEvent(document, new Event('visibilitychange'));
+    act(() => vi.advanceTimersByTime(20_300));
     expect(screen.queryByRole('region', { name: 'Quest completion reward' }))
       .not.toBeInTheDocument();
   });
@@ -180,7 +227,8 @@ describe('Reward feedback', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Show reward' }));
 
-    expect(screen.getByRole('heading', { name: 'Congratulation' })).toBeInTheDocument();
+    const title = screen.getByRole('heading', { name: 'CONGRATULATIONS!' });
+    expect(title.querySelector('textPath')).toHaveTextContent('Congratulations!');
     expect(screen.getByText('Level up!')).toBeInTheDocument();
     expect(screen.getByText('Rank up')).toBeInTheDocument();
     expect(screen.getByLabelText('Level 9 to Level 10')).toBeInTheDocument();
@@ -199,10 +247,10 @@ describe('Reward feedback', () => {
     expect(host?.style.getPropertyValue('--kiwi-reward-level-target-delay')).toBe('3184ms');
     expect(host?.style.getPropertyValue('--kiwi-reward-achievement-delay')).toBe('4280ms');
     expect(document.querySelector<HTMLElement>('[data-reward-timer]')?.style.animation)
-      .toContain('10000ms');
+      .toContain('20000ms');
   });
 
-  it('keeps a combined reward visible for ten seconds', () => {
+  it('keeps a combined reward visible for twenty seconds', () => {
     vi.useFakeTimers();
     renderReward({
       ...standardReward,
@@ -216,13 +264,24 @@ describe('Reward feedback', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Show reward' }));
 
-    act(() => vi.advanceTimersByTime(5200));
+    act(() => vi.advanceTimersByTime(10200));
     expect(screen.getByRole('region', { name: 'Quest completion reward' }))
       .toBeInTheDocument();
 
-    act(() => vi.advanceTimersByTime(5000));
+    act(() => vi.advanceTimersByTime(10000));
     expect(screen.queryByRole('region', { name: 'Quest completion reward' }))
       .not.toBeInTheDocument();
+  });
+
+  it('renders the Evidence Approval title in readable Title Case', () => {
+    renderReward({
+      ...standardReward,
+      verificationMethod: 'EvidenceClaim',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Show reward' }));
+
+    const title = screen.getByRole('heading', { name: 'MISSION VERIFIED' });
+    expect(title.querySelector('textPath')).toHaveTextContent('Mission Verified');
   });
 
   it('provides a particle-free reduced-motion variant', () => {
@@ -243,11 +302,11 @@ describe('Reward feedback', () => {
     const trigger = screen.getByRole('button', { name: 'Show reward' });
     fireEvent.click(trigger);
     fireEvent.click(trigger);
-    expect(screen.getAllByRole('heading', { name: 'Congratulation' })).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { name: 'MISSION COMPLETE' })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Close reward notification' }));
     act(() => vi.advanceTimersByTime(200));
-    expect(screen.queryByRole('heading', { name: 'Congratulation' }))
+    expect(screen.queryByRole('heading', { name: 'MISSION COMPLETE' }))
       .not.toBeInTheDocument();
   });
 });

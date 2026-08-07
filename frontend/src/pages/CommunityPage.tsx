@@ -5,6 +5,7 @@ import SocialPostCard from '../components/social/SocialPostCard';
 import SocialPostComposer from '../components/social/SocialPostComposer';
 import { useAuthQuery } from '../hooks/useAuth';
 import { useSocialFeed } from '../hooks/useSocialFeed';
+import type { SocialPostDto } from '../types/social.ts';
 
 export default function CommunityPage() {
   const auth = useAuthQuery();
@@ -16,11 +17,28 @@ export default function CommunityPage() {
   const [searchInput, setSearchInput] = useState(search);
   const [composerOpen, setComposerOpen] = useState(false);
   const [published, setPublished] = useState(false);
+  const [publishedPost, setPublishedPost] = useState<SocialPostDto | null>(null);
+  const verifiedCompletionId = searchParams.get('compose') === 'verified'
+    ? searchParams.get('completionId')
+    : null;
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const feed = useSocialFeed(search, mine);
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = feed;
 
   useEffect(() => setSearchInput(search), [search]);
+
+  useEffect(() => {
+    if (canWrite && verifiedCompletionId) setComposerOpen(true);
+  }, [canWrite, verifiedCompletionId]);
+
+  function closeComposer() {
+    setComposerOpen(false);
+    if (!verifiedCompletionId) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('compose');
+    next.delete('completionId');
+    setSearchParams(next, { replace: true });
+  }
 
   function setView(nextMine: boolean) {
     const next = new URLSearchParams(searchParams);
@@ -126,7 +144,10 @@ export default function CommunityPage() {
 
       <div className="kiwi-page-wide py-7">
         {published && (
-          <div className="alert alert-success mb-6 rounded-2xl" role="status">Your post is now in the community feed.</div>
+          <div className="alert alert-success mb-6 rounded-2xl" role="status">
+            <span>{publishedPost?.isVerifiedQuestStory ? 'Your Verified Quest Story is now part of your public impact record.' : 'Your post is now in the community feed.'}</span>
+            {publishedPost && <Link className="btn btn-ghost btn-sm" to={`/community/posts/${publishedPost.id}`}>View story →</Link>}
+          </div>
         )}
 
         {mineRequested && !auth.isPending && !canWrite ? (
@@ -209,7 +230,12 @@ export default function CommunityPage() {
         </Link>
       ))}
 
-      <SocialPostComposer onClose={() => setComposerOpen(false)} onPublished={() => setPublished(true)} open={composerOpen} />
+      <SocialPostComposer
+        onClose={closeComposer}
+        onPublished={(post) => { setPublished(true); setPublishedPost(post); }}
+        open={composerOpen}
+        verifiedCompletionId={verifiedCompletionId}
+      />
     </div>
   );
 }

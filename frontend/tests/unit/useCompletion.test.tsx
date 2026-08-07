@@ -6,6 +6,8 @@ import { useAuthQuery } from '../../src/hooks/useAuth';
 import {
   completionCodeKeys,
   completionKeys,
+  rewardEventKeys,
+  syncMemberRewardSurfaces,
   useCompletionCodeStatusQuery,
   useGenerateOrRotateCompletionCode,
   useMyQuestCompletionQuery,
@@ -62,6 +64,12 @@ const redemptionResult = {
   },
   reward: {
     rewardEventId: '8f43bb27-89c7-4b12-8234-12c70f5d6395',
+    questCompletionId: '936b96fb-f895-42fa-8c53-008e37fc38f7',
+    questId,
+    questTitle: 'Waitākere Stream Care',
+    celebrationTitle: 'Well Done!',
+    celebrationMessage: 'Your verified action is now part of the community impact story.',
+    verificationMethod: 'CompletionCode' as const,
     xpAwarded: 50,
     previousTotalXp: 170,
     totalXp: 220,
@@ -69,7 +77,16 @@ const redemptionResult = {
     level: 4,
     previousRankTitle: 'Novice',
     rankTitle: 'Novice',
+    streak: {
+      previousWeeks: 2,
+      previousHasVerifiedImpactThisWeek: true,
+      weeks: 2,
+      hasVerifiedImpactThisWeek: true,
+    },
+    communityChallenge: null,
     unlockedAchievements: [],
+    createdAtUtc: '2026-08-06T12:00:00.0000000Z',
+    seenAtUtc: null,
   },
 };
 
@@ -155,6 +172,8 @@ describe('completion Query hooks', () => {
       queryKey: ['quest', questId],
       exact: true,
     });
+    expect(queryClient.getQueryData(rewardEventKeys.quest(questId)))
+      .toEqual(redemptionResult.reward);
     // The submitted code must not persist as MutationCache variables.
     expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
   });
@@ -185,6 +204,21 @@ describe('completion Query hooks', () => {
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: leaderboardKeys.all,
     });
+  });
+
+  it('resyncs Passport category progress when an asynchronous reward is delivered', async () => {
+    const queryClient = createQueryClient();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await syncMemberRewardSurfaces(queryClient, questId);
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: passportKeys.all });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: progressionKeys.me,
+      exact: true,
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: achievementKeys.all });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: leaderboardKeys.all });
   });
 
   it('resyncs authoritative state on a redeem 409 and rethrows without retrying', async () => {

@@ -83,6 +83,7 @@ export function validateSocialPost(value: unknown): SocialPostDto {
     isLikedByViewer: booleanValue(value.isLikedByViewer, 'viewer like state'),
     canDelete: booleanValue(value.canDelete, 'post delete permission'),
     isHidden: booleanValue(value.isHidden, 'post visibility'),
+    isVerifiedQuestStory: booleanValue(value.isVerifiedQuestStory, 'verified Quest story marker'),
   };
 }
 

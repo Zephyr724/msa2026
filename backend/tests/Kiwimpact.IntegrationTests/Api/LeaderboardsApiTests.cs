@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
+using Kiwimpact.Api.Contracts;
 using Kiwimpact.Core.Entities;
 using Kiwimpact.Core.Enums;
 using Kiwimpact.Infrastructure.Data;
@@ -15,6 +17,9 @@ namespace Kiwimpact.IntegrationTests.Api;
 public sealed class LeaderboardsApiTests
     : IClassFixture<CustomWebApplicationFactory>
 {
+    private const string Password = "ValidPass!1234";
+    private static readonly JsonSerializerOptions JsonOptions =
+        new(JsonSerializerDefaults.Web);
     private const string LeaderboardPath = "/api/v1/leaderboards/people";
     private const string NzAllTimePath =
         LeaderboardPath + "?scope=nz&period=allTime";
@@ -40,11 +45,14 @@ public sealed class LeaderboardsApiTests
             NzAllTimePath,
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(
+            response.StatusCode == HttpStatusCode.OK,
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         var json = await ReadJsonAsync(response);
         AssertExactKeys(
             json,
             "collectiveProgress",
+            "currentUser",
             "isPrivacyProtected",
             "page",
             "pageSize",
@@ -52,6 +60,7 @@ public sealed class LeaderboardsApiTests
             "rows",
             "scope",
             "totalCount");
+        Assert.Equal(JsonValueKind.Null, json.GetProperty("currentUser").ValueKind);
         Assert.Equal("nz", json.GetProperty("scope").GetString());
         Assert.Equal("allTime", json.GetProperty("period").GetString());
         var rows = json.GetProperty("rows");
@@ -191,6 +200,52 @@ public sealed class LeaderboardsApiTests
         Assert.DoesNotContain(
             rows.EnumerateArray(),
             row => row.GetProperty("displayName").GetString() == "Person 10");
+    }
+
+    [Fact]
+    public async Task AuthenticatedMemberPositionIsReturnedOutsideTopTen()
+    {
+        await ResetLeaderboardDataAsync();
+        var actor = await CreateAuthenticatedMemberAsync();
+        await SeedRankedCompletionsAsync(
+            actor.UserId,
+            "Person 10",
+            QuestDifficulty.Easy);
+        for (var index = 0; index < 10; index++)
+        {
+            await SeedRankedUserAsync(
+                $"Person {index:D2}",
+                null,
+                QuestDifficulty.Easy);
+        }
+
+        var response = await actor.Client.GetAsync(
+            NzAllTimePath,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await ReadJsonAsync(response);
+        Assert.Equal(10, json.GetProperty("rows").GetArrayLength());
+        Assert.DoesNotContain(
+            json.GetProperty("rows").EnumerateArray(),
+            row => row.GetProperty("isCurrentUser").GetBoolean());
+        var current = json.GetProperty("currentUser");
+        AssertExactKeys(
+            current,
+            "activeMemberCount",
+            "hasReachedScopeUpgradeThreshold",
+            "percentile",
+            "rank",
+            "surpassedMemberCount",
+            "totalXp",
+            "verifiedCompletionCount");
+        Assert.Equal(11, current.GetProperty("rank").GetInt32());
+        Assert.Equal(11, current.GetProperty("activeMemberCount").GetInt32());
+        Assert.Equal(0, current.GetProperty("surpassedMemberCount").GetInt32());
+        Assert.Equal(0m, current.GetProperty("percentile").GetDecimal());
+        Assert.False(current.GetProperty("hasReachedScopeUpgradeThreshold").GetBoolean());
+        Assert.Equal(50, current.GetProperty("totalXp").GetInt64());
+        Assert.Equal(1, current.GetProperty("verifiedCompletionCount").GetInt64());
     }
 
     [Theory]
@@ -439,6 +494,85 @@ public sealed class LeaderboardsApiTests
 
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         return user.Id;
+    }
+
+    private async Task SeedRankedCompletionsAsync(
+        Guid userId,
+        string displayName,
+        params QuestDifficulty[] difficulties)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var profile = await db.UserProfiles.SingleAsync(
+            item => item.Id == userId,
+            TestContext.Current.CancellationToken);
+        profile.UpdateDisplayName(displayName, DateTimeOffset.UtcNow);
+        foreach (var difficulty in difficulties)
+        {
+            var creator = XpLedgerTestHelpers.NewUser("leaderboard-creator");
+            var quest = XpLedgerTestHelpers.NewQuest(creator.Id, difficulty);
+            var participation = QuestParticipation.CreateActive(
+                userId,
+                quest.Id,
+                DateTimeOffset.UtcNow.AddMinutes(-5));
+            var completion = QuestCompletion.CreateVerifiedWithCode(
+                userId,
+                quest,
+                participation,
+                null,
+                DateTimeOffset.UtcNow);
+            db.Set<ApplicationUser>().Add(creator);
+            db.Quests.Add(quest);
+            db.QuestParticipations.Add(participation);
+            db.QuestCompletions.Add(completion);
+            db.XpTransactions.Add(XpTransaction.CreateFromVerifiedCompletion(completion));
+        }
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    private async Task<(HttpClient Client, Guid UserId)> CreateAuthenticatedMemberAsync()
+    {
+        var client = _factory.CreateClient();
+        var email = $"leaderboard-{Guid.NewGuid():N}@example.test";
+        var register = await PostJsonWithCsrfAsync(
+            client,
+            "/api/v1/auth/register",
+            new
+            {
+                email,
+                password = Password,
+                passwordConfirmation = Password,
+                displayName = "Leaderboard member",
+            });
+        Assert.Equal(HttpStatusCode.Created, register.StatusCode);
+        var login = await PostJsonWithCsrfAsync(
+            client,
+            "/api/v1/auth/login",
+            new { email, password = Password });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+        var userId = await db.Users
+            .Where(item => item.NormalizedEmail == email.ToUpperInvariant())
+            .Select(item => item.Id)
+            .SingleAsync(TestContext.Current.CancellationToken);
+        return (client, userId);
+    }
+
+    private static async Task<HttpResponseMessage> PostJsonWithCsrfAsync(
+        HttpClient client,
+        string path,
+        object body)
+    {
+        var csrf = await client.GetFromJsonAsync<AntiforgeryTokenDto>(
+            "/api/v1/auth/csrf-token",
+            TestContext.Current.CancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(body, options: JsonOptions),
+        };
+        request.Headers.Add("X-CSRF-TOKEN", csrf!.Token);
+        return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
     private async Task SeedCommunityCompletionAsync(

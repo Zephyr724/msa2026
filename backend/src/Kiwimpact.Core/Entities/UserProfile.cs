@@ -16,6 +16,8 @@ public sealed class UserProfile
     public string DisplayName { get; internal set; }
     public Guid? HomeCommunityRegionId { get; internal set; }
     public bool ShowCommunityOnPassport { get; internal set; }
+    public bool IsPublicPassportEnabled { get; internal set; }
+    public Guid? PublicPassportShareId { get; internal set; }
     public DateTimeOffset? LastCommunityChangeAt { get; internal set; }
     public long TotalXp { get; internal set; }
     public int Level { get; internal set; } = ProgressionRules.MinLevel;
@@ -36,6 +38,8 @@ public sealed class UserProfile
             DisplayName = normalizedDisplayName,
             HomeCommunityRegionId = null,
             ShowCommunityOnPassport = false,
+            IsPublicPassportEnabled = false,
+            PublicPassportShareId = null,
             LastCommunityChangeAt = null,
             TotalXp = 0,
             Level = ProgressionRules.MinLevel,
@@ -44,6 +48,16 @@ public sealed class UserProfile
             CreatedAt = now,
             UpdatedAt = now,
         };
+    }
+
+    public Guid? UpdatePublicPassportVisibility(bool isEnabled, DateTimeOffset now)
+    {
+        if (isEnabled && !PublicPassportShareId.HasValue)
+            PublicPassportShareId = Guid.NewGuid();
+
+        IsPublicPassportEnabled = isEnabled;
+        UpdatedAt = now.ToUniversalTime();
+        return PublicPassportShareId;
     }
 
     public void UpdateDisplayName(string displayName, DateTimeOffset now)

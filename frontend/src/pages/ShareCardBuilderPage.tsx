@@ -283,7 +283,7 @@ export default function ShareCardBuilderPage() {
                 <button className="btn btn-primary" onClick={() => void download()} type="button">
                   <Download aria-hidden="true" className="size-4" /> Download PNG
                 </button>
-                <button className="btn btn-outline" onClick={() => void share()} type="button">
+                <button className="btn kiwi-share-action" onClick={() => void share()} type="button">
                   <Share2 aria-hidden="true" className="size-4" /> Share
                 </button>
               </div>

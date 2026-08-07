@@ -1,4 +1,4 @@
-import { Heart, ImageIcon, Images, LockKeyhole } from 'lucide-react';
+import { Heart, ImageIcon, Images, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSetSocialLike } from '../../hooks/useSocialFeed';
 import type { SocialPostDto } from '../../types/social';
@@ -49,6 +49,11 @@ export default function SocialPostCard({
             <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 text-xs font-bold text-white">
               <LockKeyhole aria-hidden="true" className="size-3.5" />
               Only you
+            </span>
+          )}
+          {post.isVerifiedQuestStory && (
+            <span className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-primary/90 px-2 py-1 text-[0.65rem] font-black uppercase tracking-wide text-primary-content shadow-sm">
+              <ShieldCheck aria-hidden="true" className="size-3.5" /> Verified Story
             </span>
           )}
         </div>

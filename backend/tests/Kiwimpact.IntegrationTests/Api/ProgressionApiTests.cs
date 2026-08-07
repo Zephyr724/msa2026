@@ -293,14 +293,24 @@ public sealed class ProgressionApiTests
         var rewardJson = redemptionJson.GetProperty("reward");
         AssertExactKeys(
             rewardJson,
+            "communityChallenge",
+            "celebrationMessage",
+            "celebrationTitle",
+            "createdAtUtc",
             "level",
             "previousLevel",
             "previousRankTitle",
             "previousTotalXp",
+            "questCompletionId",
+            "questId",
+            "questTitle",
             "rankTitle",
             "rewardEventId",
+            "seenAtUtc",
+            "streak",
             "totalXp",
             "unlockedAchievements",
+            "verificationMethod",
             "xpAwarded");
         Assert.Equal(100, rewardJson.GetProperty("xpAwarded").GetInt32());
         Assert.Equal(0, rewardJson.GetProperty("previousTotalXp").GetInt64());

@@ -161,7 +161,7 @@ function ChallengeAdminPanel({ challenges }: { challenges: CommunityChallenge[] 
           </h3>
         </div>
         {editing && (
-          <button className="btn btn-ghost btn-sm" onClick={() => setEditing(null)} type="button">
+          <button className="btn btn-error btn-sm" onClick={() => setEditing(null)} type="button">
             Cancel edit
           </button>
         )}

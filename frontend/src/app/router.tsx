@@ -23,6 +23,7 @@ import ShareCardBuilderPage from '../pages/ShareCardBuilderPage.tsx';
 import ProfileSettingsPage from '../pages/ProfileSettingsPage.tsx';
 import CommunityPage from '../pages/CommunityPage.tsx';
 import SocialPostDetailPage from '../pages/SocialPostDetailPage.tsx';
+import PublicPassportPage from '../pages/PublicPassportPage.tsx';
 
 const developmentRoutes = import.meta.env.DEV
   ? [{
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
       { path: '/leaderboard', element: <LeaderboardPage /> },
       { path: '/community', element: <CommunityPage /> },
       { path: '/community/posts/:postId', element: <SocialPostDetailPage /> },
+      { path: '/p/:shareId', element: <PublicPassportPage /> },
       ...developmentRoutes,
       {
         element: <RequireAuth />,

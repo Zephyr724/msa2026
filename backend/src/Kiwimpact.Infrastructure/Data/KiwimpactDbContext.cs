@@ -21,6 +21,13 @@ public sealed class KiwimpactDbContext
     public DbSet<XpTransaction> XpTransactions => Set<XpTransaction>();
     public DbSet<Achievement> Achievements => Set<Achievement>();
     public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
+    public DbSet<FeaturedPassportAchievement> FeaturedPassportAchievements =>
+        Set<FeaturedPassportAchievement>();
+    public DbSet<MemberRewardEvent> MemberRewardEvents => Set<MemberRewardEvent>();
+    public DbSet<MemberRewardEventAchievement> MemberRewardEventAchievements =>
+        Set<MemberRewardEventAchievement>();
+    public DbSet<CompletionCelebrationCopy> CompletionCelebrationCopies =>
+        Set<CompletionCelebrationCopy>();
     public DbSet<CommunityChallenge> CommunityChallenges => Set<CommunityChallenge>();
     public DbSet<SocialPost> SocialPosts => Set<SocialPost>();
     public DbSet<SocialPostImage> SocialPostImages => Set<SocialPostImage>();

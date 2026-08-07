@@ -28,16 +28,14 @@ export default function PlayerStatusSummary() {
   );
   const aucklandLeaderboard = usePeopleLeaderboard('auckland', 'weekly');
   const [showLevelDetails, setShowLevelDetails] = useState(false);
-  const communityRank = communityLeaderboard.data?.rows
-    .find((row) => row.isCurrentUser)?.rank;
-  const aucklandRank = aucklandLeaderboard.data?.rows
-    .find((row) => row.isCurrentUser)?.rank;
+  const communityRank = communityLeaderboard.data?.currentUser?.rank;
+  const aucklandRank = aucklandLeaderboard.data?.currentUser?.rank;
 
   return (
     <>
       <section
         aria-labelledby="player-status-title"
-        className="kiwi-panel kiwi-topography relative overflow-hidden p-6"
+        className="kiwi-panel kiwi-topography relative overflow-visible p-6"
       >
         <div className="relative grid items-center gap-5 sm:grid-cols-[auto_minmax(0,1fr)] lg:grid-cols-[auto_minmax(0,1fr)_auto]">
           <RankCrest rankTitle={progression.data?.rankTitle ?? 'Novice'} size={56} />
@@ -84,7 +82,7 @@ export default function PlayerStatusSummary() {
                 <span className="mt-0.5 block text-xs text-muted-content">Week streak</span>
               </button>
               <div
-                className="absolute bottom-full left-1/2 z-20 mb-2 hidden w-64 -translate-x-1/2 rounded-xl bg-neutral p-3 text-xs text-neutral-content shadow-xl group-focus-within:block group-hover:block"
+                className="absolute bottom-full left-0 z-50 mb-2 hidden w-64 rounded-xl bg-neutral p-3 text-xs text-neutral-content shadow-xl group-focus-within:block group-hover:block sm:left-1/2 sm:-translate-x-1/2"
                 id="weekly-streak-help"
                 role="tooltip"
               >

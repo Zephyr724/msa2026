@@ -22,6 +22,21 @@ public interface IQuestCompletionService
         string? submittedCode,
         CancellationToken ct = default);
 
+    Task<IReadOnlyList<MemberRewardEventRecord>> ListUnseenRewardEventsAsync(
+        Guid actorId,
+        int take = 10,
+        CancellationToken ct = default);
+
+    Task<MemberRewardEventRecord> MarkRewardEventSeenAsync(
+        Guid rewardEventId,
+        Guid actorId,
+        CancellationToken ct = default);
+
+    Task<MemberRewardEventRecord?> GetQuestRewardEventAsync(
+        Guid questId,
+        Guid actorId,
+        CancellationToken ct = default);
+
     Task<MyQuestCompletionState> GetStateAsync(
         Guid questId,
         Guid actorId,

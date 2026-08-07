@@ -7,6 +7,8 @@ interface ConfirmActionDialogProps {
   confirmLabel: string;
   pendingLabel: string;
   cancelLabel?: string;
+  destructive?: boolean;
+  positive?: boolean;
   pending: boolean;
   error?: string | null;
   children?: ReactNode;
@@ -21,6 +23,8 @@ export default function ConfirmActionDialog({
   confirmLabel,
   pendingLabel,
   cancelLabel = 'Keep quest',
+  destructive = false,
+  positive = false,
   pending,
   error,
   children,
@@ -93,7 +97,7 @@ export default function ConfirmActionDialog({
             {cancelLabel}
           </button>
           <button
-            className="btn btn-primary"
+            className={`btn ${destructive ? 'btn-error' : positive ? 'btn-success' : 'btn-primary'}`}
             disabled={pending}
             onClick={onConfirm}
             type="button"

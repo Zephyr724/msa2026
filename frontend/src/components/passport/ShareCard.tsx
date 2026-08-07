@@ -27,7 +27,7 @@ export default function ShareCard({ completion }: ShareCardProps) {
           ? `Ready to feature “${completion.questTitle}”.`
           : 'Complete a verified Quest to unlock your first card.'}
       </p>
-      <Link className="btn btn-primary btn-sm mt-auto self-start rounded-full" to="/passport/share">
+      <Link className="btn kiwi-share-action btn-sm mt-auto self-start rounded-full" to="/passport/share">
         Open builder <ArrowRight aria-hidden="true" className="size-4" />
       </Link>
     </section>
