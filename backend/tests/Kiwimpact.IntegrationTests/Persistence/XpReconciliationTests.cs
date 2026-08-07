@@ -268,15 +268,17 @@ public sealed class XpReconciliationTests : IClassFixture<TestDatabaseFixture>
     [Fact]
     public async Task FailureThenAlreadyAwardedThenFailureDoesNotTripTheCircuitBreaker()
     {
+        // This test can be the first member of the class selected by a filter,
+        // so migrate the class database before the initial drain query.
+        using var seedScope = await _fixture.CreateSeededScopeAsync();
+        var seedDb = seedScope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
+
         await using var provider = CreateProvider();
         var service = CreateService(provider, new XpReconciliationOptions
         {
             MaxConsecutiveRowFailures = 2,
         });
         await DrainAsync(service);
-
-        using var seedScope = await _fixture.CreateSeededScopeAsync();
-        var seedDb = seedScope.ServiceProvider.GetRequiredService<KiwimpactDbContext>();
         var now = DateTimeOffset.UtcNow;
         var firstFailure = await XpLedgerTestHelpers.SeedPendingCompletionAsync(
             seedDb, QuestDifficulty.Easy, verifiedAtUtc: now.AddMinutes(-3));

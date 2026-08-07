@@ -18,8 +18,8 @@
 ## Files changed
 
 - `backend/tests/Kiwimpact.IntegrationTests/Persistence/AchievementConcurrencyTests.cs`
-- `specs/ai/prompts/99-achievement-concurrency-ci-week-boundary-fix.md`
-- `specs/implementation/reports/42-achievement-concurrency-ci-week-boundary-fix-completion.md`
+- `specs/ai/prompts/107-achievement-concurrency-ci-week-boundary-fix.md`
+- `specs/implementation/reports/47-achievement-concurrency-ci-week-boundary-fix-completion.md`
 
 ## Verification
 
