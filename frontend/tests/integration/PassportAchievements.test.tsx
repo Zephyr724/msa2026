@@ -323,7 +323,8 @@ describe('Passport achievements section', () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
+    expect(await screen.findByRole('progressbar', { name: 'Progress toward Level 4' }))
+      .toHaveAttribute('aria-valuetext', '20 of 65 XP toward Level 4');
     expect(screen.getByText('No verified completions yet.')).toBeInTheDocument();
     expect(screen.getByText('Loading your achievements…')).toBeInTheDocument();
   });
@@ -394,7 +395,8 @@ describe('Passport achievements section', () => {
     )).toBeInTheDocument();
     expect(screen.queryByText('Internal reconciliation detail.'))
       .not.toBeInTheDocument();
-    expect(screen.getByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Progress toward Level 4' }))
+      .toHaveAttribute('aria-valuetext', '20 of 65 XP toward Level 4');
     expect(screen.getByText('No verified completions yet.')).toBeInTheDocument();
 
     await user.click(within(achievementsRegion()).getByRole('button', {

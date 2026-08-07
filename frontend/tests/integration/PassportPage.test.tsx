@@ -267,7 +267,8 @@ describe('PassportPage', () => {
     });
     renderPassport();
 
-    expect(await screen.findByText('0 / 45 XP toward Level 2')).toBeInTheDocument();
+    expect(await screen.findByRole('progressbar', { name: 'Progress toward Level 2' }))
+      .toHaveAttribute('aria-valuetext', '0 of 45 XP toward Level 2');
     expect(screen.getByText('45 XP to Level 2')).toBeInTheDocument();
     expect(screen.getByText('Level 1')).toBeInTheDocument();
     expect(screen.getByText('No verified completions yet.')).toBeInTheDocument();
@@ -312,12 +313,14 @@ describe('PassportPage', () => {
     expect(await screen.findByRole('heading', { name: 'Aroha — Passport' }))
       .toBeInTheDocument();
     expect(await screen.findByText('Harbour restoration day')).toBeInTheDocument();
-    expect(await screen.findByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
+    expect(await screen.findByRole('progressbar', { name: 'Progress toward Level 4' }))
+      .toHaveAttribute('aria-valuetext', '20 of 65 XP toward Level 4');
     expect(screen.getByText('Level 3')).toBeInTheDocument();
     expect(screen.getByText('Novice')).toBeInTheDocument();
     expect(screen.getByText(/Total XP:/)).toBeInTheDocument();
     expect(screen.getByText('120 XP')).toBeInTheDocument();
-    expect(screen.getByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
+    expect(screen.getByText('20 / 65')).toBeInTheDocument();
+    expect(screen.queryByText('20 / 65 XP toward Level 4')).not.toBeInTheDocument();
     expect(screen.getByText('45 XP to Level 4')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Silver Trophy' }))
       .toBeInTheDocument();
@@ -376,7 +379,8 @@ describe('PassportPage', () => {
     });
     renderPassport();
 
-    expect(await screen.findByText('0 / 65 XP toward Level 4')).toBeInTheDocument();
+    expect(await screen.findByRole('progressbar', { name: 'Progress toward Level 4' }))
+      .toHaveAttribute('aria-valuetext', '0 of 65 XP toward Level 4');
     expect(screen.getByText('65 XP to Level 4')).toBeInTheDocument();
   });
 
@@ -438,7 +442,8 @@ describe('PassportPage', () => {
       .not.toHaveTextContent('being prepared');
 
     await user.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
+    expect(await screen.findByRole('progressbar', { name: 'Progress toward Level 4' }))
+      .toHaveAttribute('aria-valuetext', '20 of 65 XP toward Level 4');
     expect(fetchMock.mock.calls.filter(([url]) =>
       String(url).endsWith('/v1/users/me/progression'))).toHaveLength(2);
   });
@@ -449,7 +454,8 @@ describe('PassportPage', () => {
     });
     renderPassport();
 
-    expect(await screen.findByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
+    expect(await screen.findByRole('progressbar', { name: 'Progress toward Level 4' }))
+      .toHaveAttribute('aria-valuetext', '20 of 65 XP toward Level 4');
     expect(historyRegion())
       .toHaveTextContent('Your completion history is being prepared. Try again shortly.');
     expect(summaryRegion()).not.toHaveTextContent('being prepared');
@@ -507,7 +513,8 @@ describe('PassportPage', () => {
     const retryButtons = screen.getAllByRole('button', { name: 'Retry' });
     expect(retryButtons).toHaveLength(2);
     await user.click(retryButtons[0]!);
-    expect(await screen.findByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
+    expect(await screen.findByRole('progressbar', { name: 'Progress toward Level 4' }))
+      .toHaveAttribute('aria-valuetext', '20 of 65 XP toward Level 4');
     expect(fetchMock.mock.calls.filter(([url]) =>
       String(url).endsWith('/v1/users/me/progression'))).toHaveLength(2);
   });
@@ -545,7 +552,8 @@ describe('PassportPage', () => {
       renderPassport();
 
       expect(await screen.findByText(expectedMessage)).toBeInTheDocument();
-      expect(screen.getByText('20 / 65 XP toward Level 4')).toBeInTheDocument();
+      expect(screen.getByRole('progressbar', { name: 'Progress toward Level 4' }))
+        .toHaveAttribute('aria-valuetext', '20 of 65 XP toward Level 4');
       expect(screen.getByRole('region', { name: 'Achievements' }))
         .toHaveTextContent('First Steps');
       expect(historyRegion()).toHaveTextContent('Harbour restoration day');

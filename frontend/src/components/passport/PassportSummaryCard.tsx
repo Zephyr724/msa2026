@@ -128,9 +128,6 @@ export default function PassportSummaryCard({
                 valueText={`${levelProgress.currentLevelXp} of ${levelProgress.levelSpanXp} XP toward Level ${nextLevel}`}
               />
               <p className="text-right text-xs text-primary-content/60">
-                {levelProgress.currentLevelXp} / {levelProgress.levelSpanXp} XP toward Level {nextLevel}
-              </p>
-              <p className="text-right text-xs text-primary-content/60">
                 {levelProgress.xpToNextLevel} XP to Level {nextLevel}
               </p>
             </>
