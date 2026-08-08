@@ -370,11 +370,11 @@ public static class DemoSocialSeed
         DemoPostDefinition ProductionMirror(
             string title,
             string content,
-            params int[] imageIndexes) =>
+            params int[] postIndexes) =>
             new(
                 title,
                 content,
-                imageIndexes.Select(index => productionImages[index]).ToArray(),
+                AssessmentDataSeed.CommunityStoryImagesForPost(postIndexes[0]),
                 "production-image-mirror");
 
         DemoPostDefinition CommunityStory(
@@ -387,7 +387,7 @@ public static class DemoSocialSeed
             new(
                 title,
                 content,
-                imageIndexes.Select(index => productionImages[index]).ToArray(),
+                imageIndexes.Take(1).Select(index => productionImages[index]).ToArray(),
                 "community-story",
                 questIndex,
                 authorIndex,
@@ -398,23 +398,17 @@ public static class DemoSocialSeed
             new(
                 "Landscape cover · stream restoration",
                 "This fictional local post demonstrates a deliberately cropped landscape fixture in the masonry feed.",
-                [new SocialPostImageDetails(
-                    DemoImage("community-landscape.jpg"),
-                    "Volunteers planting trees in an open green space")],
+                [productionImages[1]],
                 "landscape-cover"),
             new(
                 "Square cover · planting notes",
                 "This fictional local post demonstrates a square fixture without forcing a shared card height.",
-                [new SocialPostImageDetails(
-                    DemoImage("community-square-native.png"),
-                    "Two volunteers planting a complete young native tree")],
+                [productionImages[0]],
                 "square-cover"),
             new(
                 "Tall cover · a bounded portrait",
-                "This fictional local post demonstrates an extra-tall source. Only the feed cover is cropped to the 0.76 width-to-height limit.",
-                [new SocialPostImageDetails(
-                    DemoImage("community-tall.jpg"),
-                    "Several people holding young green plants together")],
+                "This fictional local post demonstrates a portrait source while the feed preserves its original aspect ratio.",
+                [productionImages[2]],
                 "tall-cover"),
             new(
                 "Text cover · no image supplied",
@@ -735,9 +729,6 @@ public static class DemoSocialSeed
         "The shelf has already changed one purchase without any household rule-making. That feels more sustainable than trying to overhaul everything.",
         "I nearly included the location, then realised the wider habitat was the actual story. I am glad we kept the observation general.",
     ];
-
-    private static string DemoImage(string fileName) =>
-        $"https://local.kiwimpact.invalid/images/demo/{fileName}";
 
     private sealed record DemoPostDefinition(
         string Title,

@@ -44,7 +44,7 @@ export default function SocialPostImageCarousel({ images, detail = false }: { im
         {images.map((image) => (
           <img
             alt={image.imageAltText}
-            className="h-full min-w-full snap-center object-cover"
+            className={`h-full w-full min-w-full flex-none snap-center ${detail ? 'object-contain' : 'object-cover'}`}
             key={`${image.sortOrder}-${image.imageUrl}`}
             loading="lazy"
             referrerPolicy="no-referrer"

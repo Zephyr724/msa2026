@@ -65,6 +65,8 @@ public static class AssessmentSocialSeed
         var definitions = Definitions();
         var existingPosts = await db.SocialPosts
             .Where(post => PostIds.Contains(post.Id))
+            .Include(post => post.Images)
+            .Include(post => post.Tags)
             .ToDictionaryAsync(post => post.Id, cancellationToken);
         var missingPostIndexes = Enumerable.Range(0, definitions.Count)
             .Where(index => !existingPosts.ContainsKey(PostIds[index]))
@@ -78,48 +80,28 @@ public static class AssessmentSocialSeed
                     $"Assessment Post ID {existingPost.Id} is owned by another user.");
             }
         }
-        if (missingPostIndexes.Count == 0)
-            return;
-
-        var coverQuestIds = missingPostIndexes
-            .SelectMany(index => definitions[index].ImageQuestIndexes)
-            .Select(index => AssessmentDataSeed.QuestIds[index])
-            .Distinct()
-            .ToArray();
-        var covers = await db.QuestImages
-            .AsNoTracking()
-            .Where(image =>
-                coverQuestIds.Contains(image.QuestId) && image.IsCover)
-            .ToDictionaryAsync(image => image.QuestId, cancellationToken);
-        if (covers.Count != coverQuestIds.Length)
-        {
-            throw new InvalidOperationException(
-                "Assessment social seeding requires every credited Quest cover.");
-        }
-        if (covers.Values.Any(image =>
-                !image.ImageUrl.StartsWith("https://images.pexels.com/", StringComparison.Ordinal) ||
-                image.SourceUrl is null ||
-                !image.SourceUrl.Contains("pexels.com/photo/", StringComparison.Ordinal)))
-        {
-            throw new InvalidOperationException(
-                "Assessment social stories require the checked Pexels cover set.");
-        }
-
         var createdPostIndexes = new HashSet<int>();
-        foreach (var index in missingPostIndexes.Order())
+        for (var index = 0; index < definitions.Count; index++)
         {
             var definition = definitions[index];
             var author = users[definition.AuthorIndex];
             var createdAt = PostCreatedAt(seedNow, index);
-            var images = definition.ImageQuestIndexes
-                .Select(questIndex =>
-                {
-                    var cover = covers[AssessmentDataSeed.QuestIds[questIndex]];
-                    return new SocialPostImageDetails(
-                        cover.ImageUrl,
-                        $"Illustrative stock photo: {cover.AltText}");
-                })
-                .ToArray();
+            var images = AssessmentDataSeed.CommunityStoryImagesForPost(index);
+            if (existingPosts.TryGetValue(PostIds[index], out var existingPost))
+            {
+                // Deterministic showcase media is deployment content. Reconcile
+                // it on restart while preserving reviewer edits to post copy,
+                // tags, Quest relationship, visibility, and timestamps.
+                existingPost.Update(
+                    existingPost.QuestId,
+                    existingPost.Title,
+                    existingPost.Content,
+                    images,
+                    existingPost.Tags.Select(tag => tag.Name).ToArray(),
+                    existingPost.UpdatedAt);
+                continue;
+            }
+
             var post = SocialPost.Create(
                 author.Id,
                 AssessmentDataSeed.QuestIds[definition.QuestIndex],
@@ -258,140 +240,120 @@ public static class AssessmentSocialSeed
             10,
             "First field-day lesson: slow down and listen",
             "I went in expecting the binoculars to do all the work. The useful lesson was to stop talking, wait a full minute, and notice how many calls appear once the group settles. What helped you learn your first few bird calls?",
-            [10],
             ["Auckland", "bird-monitoring", "assessment-showcase"]),
         new(
             6,
             11,
             "The five-minute trap check that became a habit",
             "Putting the check beside my Sunday coffee reminder made it much easier to remember. I am still learning what to record, but the small routine finally feels manageable rather than like another big job.",
-            [11],
             ["Auckland", "backyard-action", "assessment-showcase"]),
         new(
             1,
             12,
             "A quiet team makes a long track feel short",
             "The best part of a maintenance morning is how naturally everyone falls into a rhythm: one person clears, another carries, someone else checks the next section. I arrived nervous and left with three names to remember for next time.",
-            [12, 14],
             ["Wellington", "volunteering", "assessment-showcase"]),
         new(
             7,
             13,
             "What I pack for a community ranger morning",
             "Gloves, water, a pencil that works in drizzle, and one more warm layer than I think I need. Keeping the kit by the door removes most of the friction. Add your one essential item below—I am refining the list.",
-            [13],
             ["Wellington", "field-notes", "assessment-showcase"]),
         new(
             2,
             14,
             "One patch of weeds, one very good morning",
             "It was not a dramatic before-and-after, just a small patch with more breathing room around the natives. That scale felt surprisingly satisfying. The patient jobs are easier when someone beside you can explain what to leave alone.",
-            [14],
             ["Wellington", "restoration", "assessment-showcase"]),
         new(
             8,
             15,
             "Planting day: wet boots, warm welcome",
             "The weather turned halfway through, but nobody made the newcomer feel slow. A quick planting-depth check saved me from repeating the same mistake all morning. Practical kindness might be my favourite kind of community spirit.",
-            [15, 18],
             ["Christchurch", "native-planting", "assessment-showcase"]),
         new(
             3,
             16,
             "Three things a first-time bird counter notices",
             "One: movement is often easier to spot than colour. Two: writing the time immediately matters. Three: experienced counters still say ‘not sure’. That last one made citizen science feel much more welcoming.",
-            [16],
             ["Christchurch", "citizen-science", "assessment-showcase"]),
         new(
             9,
             17,
             "The stream looked clear—then the test kit told the story",
             "I assumed clear water meant healthy water. Working through the measurements showed why observation needs a repeatable method, not just a quick glance. I would love a simple cheat sheet for remembering the order next time.",
-            [17],
             ["Christchurch", "water-quality", "assessment-showcase"]),
         new(
             4,
             18,
             "Tiny plants, big future shade",
             "The seedlings looked almost too small for the open site, but imagining the same place in ten years changed the whole morning. I labelled my photo with the species name so I can actually recognise it when I return.",
-            [18, 29],
             ["Hamilton", "planting-day", "assessment-showcase"]),
         new(
             5,
             19,
             "A screen-free lunch walk through Kirikiriroa",
             "I chose one short trail and left the headphones in my bag. Twenty minutes was enough to notice the gully getting cooler, hear tūī overhead, and return to work with a much clearer head. Small nature breaks count too.",
-            [19],
             ["Hamilton", "nature-walk", "assessment-showcase"]),
         new(
             6,
             20,
             "The question that stopped everyone: who lives under this leaf?",
             "A simple insect search turned into the longest conversation of the session. The young explorers did not need a perfect answer—they needed time, a magnifier, and permission to be curious. I am borrowing that approach for my own walks.",
-            [20],
             ["Hamilton", "kids-in-nature", "assessment-showcase"]),
         new(
             0,
             21,
             "Dune planting taught me where not to step",
             "I had never noticed how one shortcut can cut through fragile dune plants. Learning to read the marked access paths made the planting work feel connected to every future beach visit, not just one volunteer session.",
-            [21, 26],
             ["Tauranga", "coast-care", "assessment-showcase"]),
         new(
             7,
             22,
             "A two-bag clean-up and one useful surprise",
             "We separated what we collected instead of treating it as one pile. Seeing the mix made it obvious which items keep escaping nearby bins. Next time I want to record the top three types so the clean-up also produces a useful clue.",
-            [22, 27],
             ["Tauranga", "litter-cleanup", "assessment-showcase"]),
         new(
             1,
             23,
             "My compost bin finally stopped smelling",
             "The fix was less dramatic than expected: more dry carbon, smaller scraps, and a proper mix. Sharing the failed first attempt because the troubleshooting was more useful than another photo of perfect compost.",
-            [23],
             ["Tauranga", "composting", "assessment-showcase"]),
         new(
             8,
             24,
             "New-volunteer nerves disappeared at the tool shed",
             "I nearly turned around in the car park because everyone else looked like they knew where to go. A clear welcome, a name tag, and one specific first job changed that in five minutes. If you are new too, arriving early really helps.",
-            [24],
             ["Dunedin", "first-time-volunteer", "assessment-showcase"]),
         new(
             2,
             25,
             "Small jobs make a wetland feel cared for",
             "Today was mostly clearing around young plants and checking guards. It was quiet, repetitive work—and exactly the kind that makes the next season possible. I am learning not to measure every contribution by how photogenic it looks.",
-            [25],
             ["Dunedin", "wetland-care", "assessment-showcase"]),
         new(
             9,
             26,
             "Helping habitat without getting in the way",
             "The strongest message was that wildlife space comes first. Staying with the assigned task, keeping distance, and following the local team matters more than getting a close photo. That boundary made the work feel more meaningful.",
-            [26],
             ["Dunedin", "wildlife-habitat", "assessment-showcase"]),
         new(
             3,
             27,
             "Our adopted corner is starting to look loved",
             "There is still plenty to do, but regular visits have changed how I see this little public space. I notice fresh litter sooner, recognise which plants are settling in, and say hello to neighbours who stop to ask what is happening.",
-            [27],
             ["Nelson", "adopt-a-spot", "assessment-showcase"]),
         new(
             4,
             28,
             "Backyard tracking: the print I could not identify",
             "The mark in the tracking tunnel did not match my first guess, so I saved the photo and asked instead of forcing an answer. That tiny uncertainty turned into a useful conversation about careful records. Any beginner-friendly identification tips?",
-            [28],
             ["Nelson", "backyard-trapping", "assessment-showcase"]),
         new(
             5,
             29,
             "The best part of planting was the tea afterwards",
             "The plants went in quickly; the conversations afterwards are what made me want to return. People swapped garden cuttings, bus-route tips, and the dates of the next working bee. Community grows in the gaps between the tasks too.",
-            [29, 18],
             ["Palmerston-North", "green-corridors", "assessment-showcase"]),
     ];
 
@@ -436,6 +398,5 @@ public static class AssessmentSocialSeed
         int QuestIndex,
         string Title,
         string Content,
-        IReadOnlyList<int> ImageQuestIndexes,
         IReadOnlyList<string> Tags);
 }

@@ -34,7 +34,7 @@ export default function SocialPostCard({
           {cover && !coverFailed ? (
             <img
               alt={cover.imageAltText}
-              className={`${coverCrop === 'tall' ? 'aspect-[19/25] object-cover' : coverCrop === 'wide' ? 'aspect-[4/3] object-cover' : 'h-auto'} w-full transition duration-300 group-hover:scale-[1.015]`}
+              className={`${coverCrop === 'tall' ? 'aspect-[19/25] object-cover' : coverCrop === 'wide' ? 'aspect-[4/3] object-cover' : 'h-auto'} w-full`}
               loading="lazy"
               onError={() => setFailedCoverUrl(cover.imageUrl)}
               onLoad={(event) => {
