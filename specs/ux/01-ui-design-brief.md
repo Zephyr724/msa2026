@@ -489,7 +489,7 @@ high-fidelity frame for every state.
 - checked text/control contrast;
 - associated form errors;
 - reduced motion;
-- optional sound off by default;
+- interface sounds with a persistent user-controlled mute;
 - complete list alternative to maps;
 - accessible names for icon-only controls;
 - no hover-only information.

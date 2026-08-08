@@ -170,6 +170,15 @@ as `member1@kiwimpact.test` with the ignored local `DemoAccounts:Password` and
 redeem a real organizer-issued Completion Code to verify the persisted,
 server-authoritative reward path.
 
+#### Interface sounds
+
+The interface plays short feedback sounds for button clicks, dialog
+confirm/cancel actions, and the reward toast fanfare. Sounds are on by
+default and can be muted from the speaker toggle in the header; the
+preference persists in `localStorage`. The four m4a assets live in
+`frontend/public/sounds/` with sources, licenses, and replacement
+instructions documented in that directory's README.
+
 **Selected public endpoints:**
 
 | Endpoint | URL |

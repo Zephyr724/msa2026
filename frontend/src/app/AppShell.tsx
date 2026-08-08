@@ -10,6 +10,8 @@ import {
   Target,
   Trophy,
   UserRoundCog,
+  Volume2,
+  VolumeX,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -26,6 +28,8 @@ import PlayerStatusCapsule, {
 } from '../components/PlayerStatusCapsule.tsx';
 import ThemeSwitcher from '../components/ThemeSwitcher.tsx';
 import { useAuthQuery, useLogoutMutation } from '../hooks/useAuth.ts';
+import { useGlobalClickSound } from '../hooks/useGlobalClickSound.ts';
+import { playUiSound, setSoundMuted, useSoundMuted } from '../lib/uiSounds.ts';
 import { useThemeSync } from '../hooks/useThemeSync.ts';
 import { useMyAchievementProfile } from '../hooks/useAchievements.ts';
 import { TrophyArtwork } from '../components/game/GameArtwork.tsx';
@@ -65,6 +69,7 @@ export default function AppShell() {
 }
 
 function AppShellContent() {
+  useGlobalClickSound();
   const auth = useAuthQuery();
   const logout = useLogoutMutation();
   const location = useLocation();
@@ -145,6 +150,7 @@ function AppShellContent() {
               </NavLink>
             )}
             <ThemeSwitcher />
+            <SoundToggle />
 
             {auth.isPending ? (
               <span aria-live="polite" className="hidden text-xs text-muted-content sm:inline">
@@ -273,6 +279,30 @@ function AppShellContent() {
         </nav>
       )}
     </div>
+  );
+}
+
+function SoundToggle() {
+  const muted = useSoundMuted();
+  const label = muted ? 'Unmute interface sounds' : 'Mute interface sounds';
+  return (
+    <button
+      aria-label={label}
+      aria-pressed={muted}
+      className="btn btn-ghost btn-sm btn-square"
+      data-no-click-sound
+      onClick={() => {
+        const nextMuted = !muted;
+        setSoundMuted(nextMuted);
+        if (!nextMuted) playUiSound('click');
+      }}
+      title={label}
+      type="button"
+    >
+      {muted
+        ? <VolumeX aria-hidden="true" className="size-4" />
+        : <Volume2 aria-hidden="true" className="size-4" />}
+    </button>
   );
 }
 

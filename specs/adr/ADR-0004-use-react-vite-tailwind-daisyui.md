@@ -43,8 +43,8 @@ during scaffolding after compatibility checks and proven by `package.json` and
 
 The frontend must support Kiwimpact Light/Dark themes, accepted visual tokens,
 responsive layouts, keyboard access, semantic HTML, reduced motion, skippable
-reward sequences, optional sound off by default, and clear loading/empty/error/
-forbidden/not-found states.
+reward sequences, interface sounds with a persistent user-controlled mute, and
+clear loading/empty/error/forbidden/not-found states.
 
 The interface is friendly, rounded, energetic, and slightly cartoon-like
 without copying another product or becoming childish.
