@@ -26,6 +26,7 @@ import {
   type RewardFeedbackEvent,
   type RewardPhase,
 } from './rewardFeedback.ts';
+import { playUiSound } from '../../lib/uiSounds.ts';
 
 const REWARD_PARTICLE_COUNT = 7;
 const REWARD_PARTICLE_SIZE_PX = 27;
@@ -73,6 +74,7 @@ export default function RewardFeedbackProvider({ children }: { children: ReactNo
 
   useEffect(() => {
     if (!activeReward) return;
+    playUiSound('achievement');
     setPhase(prefersReducedMotion(activeReward) ? 'arrived' : 'flying');
     if (prefersReducedMotion(activeReward)) return;
     const arrivalTimer = window.setTimeout(() => setPhase('arrived'), REWARD_ARRIVAL_MS);

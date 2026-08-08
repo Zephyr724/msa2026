@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { playUiSound } from '../../lib/uiSounds.ts';
 
 interface ConfirmActionDialogProps {
   open: boolean;
@@ -62,7 +63,13 @@ export default function ConfirmActionDialog({
 
   function closeDialog() {
     if (pending) return;
+    playUiSound('cancel');
     onClose();
+  }
+
+  function confirmDialog() {
+    playUiSound('confirm');
+    onConfirm();
   }
 
   return (
@@ -99,7 +106,7 @@ export default function ConfirmActionDialog({
           <button
             className={`btn ${destructive ? 'btn-error' : positive ? 'btn-success' : 'btn-primary'}`}
             disabled={pending}
-            onClick={onConfirm}
+            onClick={confirmDialog}
             type="button"
           >
             {pending ? pendingLabel : confirmLabel}

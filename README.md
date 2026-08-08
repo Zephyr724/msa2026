@@ -108,9 +108,10 @@ The outer layer makes the mechanics legible rather than merely decorative:
   make individual contribution part of a broader shared experience.
 - **Feedback remains accessible.** Reward feedback is readable without motion,
   supports reduced-motion preferences, uses semantic live status, and can be
-  paused or dismissed. Music and sound can be part of a game's outer layer,
-  but the current Kiwimpact release intentionally contains no audio and never
-  relies on sound to communicate success or failure.
+  paused or dismissed. Short interface sounds (button clicks, confirm and
+  cancel feedback, and a reward fanfare) reinforce these moments; they are
+  on by default with a persistent mute toggle in the header, and sound is
+  never the only signal for success or failure.
 
 This presentation layer helps users recognize state, understand consequences,
 and feel that progress matters. On its own, however, it would only make the
