@@ -6,7 +6,7 @@ Actual implementation instruction, delivered by the human on 2026-08-07 to the
 Kimi session acting as sole implementation owner. The controlling Codex
 session acts only as the independent reviewer after implementation evidence
 exists. The human explicitly authorized sending this private repository source
-and `/Users/zephyr/Downloads/需要优化内容V2.pdf` content to the Moonshot Kimi
+and `/Users/zephyr/Downloads/content-to-optimise-V2.pdf` content to the Moonshot Kimi
 API for this implementation.
 
 ## Instruction (verbatim, lightly trimmed of no content)
@@ -19,7 +19,7 @@ unrelated user modification: do not edit or revert that file. Do not stage,
 commit, push, create a PR, change branches, deploy, or perform destructive
 operations.
 
-Source feedback is `/Users/zephyr/Downloads/需要优化内容V2.pdf`. Implement the
+Source feedback is `/Users/zephyr/Downloads/content-to-optimise-V2.pdf`. Implement the
 four requested outcomes as one coherent frontend-focused vertical slice:
 
 1. Make Act together / Community challenges understandable and not visually

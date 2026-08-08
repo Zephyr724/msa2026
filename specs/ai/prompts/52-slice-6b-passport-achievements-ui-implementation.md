@@ -4,7 +4,7 @@ Date: 2026-07-26
 
 ## Actual human instruction
 
-> 批准
+> Approved
 
 ## Approved context applied by Codex
 

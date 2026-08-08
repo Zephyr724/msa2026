@@ -4,7 +4,7 @@ Date: 2026-07-26
 
 ## Actual human instruction
 
-> 已merge 并切换到main，下一步吧
+> Merged and switched to main; let's move on to the next step.
 
 ## Execution context applied by Codex
 

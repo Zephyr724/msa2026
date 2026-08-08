@@ -375,7 +375,8 @@
 
 Actual human instruction, verbatim:
 
-> 换一下角色，你来写代码，k3审核，你直接修好这个问题
+> Switch the roles: you write the code, K3 reviews it — go ahead and fix this
+> problem directly.
 
 Execution context applied by Codex:
 

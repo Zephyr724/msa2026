@@ -13,7 +13,7 @@
 After Codex closed the four original Major findings and updated Review 35 to
 `APPROVE`, the human replied:
 
-> 批准
+> Approved
 
 This approves the corrected plan's recommended D1–D7 decisions and its §6
 scope, §7 schema, §14 test matrix, and §17 workflow. It authorizes the
