@@ -365,7 +365,62 @@ public static class DemoSocialSeed
 
     private static IReadOnlyList<DemoPostDefinition> Definitions()
     {
-        var productionImages = AssessmentDataSeed.CommunityStoryImages();
+        const string localCommunityImageOrigin =
+            "https://local.kiwimpact.invalid/images/community/";
+        IReadOnlyList<SocialPostImageDetails> LocalPhoto(
+            (string FileName, string AltText) image) =>
+            [new($"{localCommunityImageOrigin}{image.FileName}", image.AltText)];
+
+        var mirrorImages = new (string FileName, string AltText)[]
+        {
+            ("30-wetland-birds-monochrome.jpg", "Water birds reflected in a wetland"),
+            ("08-trap-check-near-square.jpg", "A person observing a natural area beside a conservation fence"),
+            ("07-track-maintenance-portrait.jpg", "A group walking together along a forest track"),
+            ("43-environmental-cleanup.jpg", "Volunteers working together in a public green space"),
+            ("23-young-tree-care-portrait.jpg", "A person observing an open natural area"),
+            ("01-stream-planting-square.jpg", "Two volunteers planting young trees in an open green space"),
+            ("15-bird-box-portrait.jpg", "A volunteer using binoculars to observe wildlife"),
+            ("36-water-fieldwork.jpg", "Researchers carrying out water fieldwork in a wetland"),
+            ("13-native-seed-collecting-square.jpg", "Several people holding young green plants together"),
+            ("42-children-forest-walk.jpg", "Children exploring a sunlit forest path"),
+            ("18-youth-pollinator-plan-landscape.jpg", "Two volunteers navigating a forest with a map and binoculars"),
+            ("14-dune-guard-check-landscape.jpg", "Coastal grasses growing across a sandy dune habitat"),
+            ("25-beach-cleanup-group.jpg", "Volunteers collecting litter together on a beach"),
+            ("38-compost-hands.jpg", "Hands holding rich compost beside garden plants"),
+            ("19-tool-cleaning-portrait.jpg", "A conservation volunteer resting outdoors after fieldwork"),
+            ("11-wetland-guards-portrait.jpg", "Volunteers planting on a sandy restoration site"),
+            ("29-coastal-cleanup-landscape.jpg", "A broad coastal habitat with a volunteer working in the distance"),
+            ("41-park-cleanup-group.jpg", "A group of volunteers cleaning a public park"),
+            ("34-wetland-heron.jpg", "A grey heron wading through a wetland"),
+            ("44-volunteer-group.jpg", "Volunteers taking a group photo after community work"),
+        }
+            .Select(LocalPhoto)
+            .ToArray();
+
+        var storyImages = new (string FileName, string AltText)[]
+        {
+            ("02-beach-cleanup-landscape.jpg", "A group of volunteers collecting rubbish beside the water"),
+            ("16-rain-garden-near-square.jpg", "A volunteer supporting a newly planted tree"),
+            ("04-recycling-workshop-near-square.jpg", "Volunteers sorting plastic, paper, and glass for recycling"),
+            ("03-wetland-notes-portrait.jpg", "Water birds among reeds in a wetland habitat"),
+            ("05-water-quality-square.jpg", "A field researcher assessing water quality outdoors"),
+            ("09-home-compost-square.jpg", "A person collecting kitchen scraps for composting"),
+            ("26-beach-cleanup-family.jpg", "Adults and children taking part in a beach clean-up"),
+            ("10-bikes-working-bee-landscape.jpg", "Young volunteers working together in a green public space"),
+            ("47-greenhouse-gardening.jpg", "Two gardeners potting plants together in a greenhouse"),
+            ("17-stream-invertebrates-square.jpg", "Reeds and native habitat in a wetland landscape"),
+            ("35-wetland-duck.jpg", "A duck standing in a natural wetland habitat"),
+            ("12-nature-walk-near-square.jpg", "Two people exploring a forest with a map and binoculars"),
+            ("46-community-potting-session.jpg", "A group taking part in a community potting session"),
+            ("21-litter-audit-square.jpg", "A person sorting recyclable materials into a large sack"),
+            ("45-greenhouse-seedling-planting.jpg", "Two people planting rows of young seedlings"),
+            ("22-invasive-vine-removal-landscape.jpg", "A volunteer collecting litter in a green public space"),
+            ("06-community-garden-landscape.jpg", "A group planting a young tree together"),
+            ("37-wetland-dawn.jpg", "Birds across a misty wetland at dawn"),
+            ("20-working-bee-tea-near-square.jpg", "A volunteer sorting reusable and recyclable household items"),
+            ("39-wetland-egret.jpg", "A white egret standing in a grassy wetland"),
+        };
+        var storyImageIndex = 0;
 
         DemoPostDefinition ProductionMirror(
             string title,
@@ -374,7 +429,7 @@ public static class DemoSocialSeed
             new(
                 title,
                 content,
-                AssessmentDataSeed.CommunityStoryImagesForPost(postIndexes[0]),
+                mirrorImages[postIndexes[0]],
                 "production-image-mirror");
 
         DemoPostDefinition CommunityStory(
@@ -382,12 +437,12 @@ public static class DemoSocialSeed
             int questIndex,
             string title,
             string content,
-            IReadOnlyList<int> imageIndexes,
+            IReadOnlyList<int> _imageIndexes,
             params string[] tags) =>
             new(
                 title,
                 content,
-                imageIndexes.Take(1).Select(index => productionImages[index]).ToArray(),
+                LocalPhoto(storyImages[storyImageIndex++]),
                 "community-story",
                 questIndex,
                 authorIndex,
@@ -398,17 +453,17 @@ public static class DemoSocialSeed
             new(
                 "Landscape cover · stream restoration",
                 "This fictional local post demonstrates a deliberately cropped landscape fixture in the masonry feed.",
-                [productionImages[1]],
+                LocalPhoto(("32-forest-cleanup.jpg", "Volunteers picking up recyclable litter in a forest")),
                 "landscape-cover"),
             new(
                 "Square cover · planting notes",
                 "This fictional local post demonstrates a square fixture without forcing a shared card height.",
-                [productionImages[0]],
+                LocalPhoto(("33-compost-bin.jpg", "A gardener working beside an outdoor compost bin")),
                 "square-cover"),
             new(
                 "Tall cover · a bounded portrait",
                 "This fictional local post demonstrates a portrait source while the feed preserves its original aspect ratio.",
-                [productionImages[2]],
+                LocalPhoto(("40-litter-pickup-pair.jpg", "Two volunteers picking up litter outdoors")),
                 "tall-cover"),
             new(
                 "Text cover · no image supplied",
@@ -500,7 +555,7 @@ public static class DemoSocialSeed
                 0,
                 "What we found in forty minutes beside the stream",
                 "I expected the usual drink bottles and wrappers, but the small pieces were what filled our bags fastest: cable ties, torn foam, and bits of plastic caught under roots. We worked slowly around the planted edge so we did not damage the new growth. By the end, the visible change was modest, yet the waterline looked noticeably calmer. Next time I am bringing a separate bucket for sharp fragments and a notebook so we can compare what keeps returning after rain.",
-                [12, 17, 7],
+                [1],
                 "stream-cleanup",
                 "field-notes"),
             CommunityStory(
@@ -508,7 +563,7 @@ public static class DemoSocialSeed
                 1,
                 "The planting lesson I wish I had learned earlier",
                 "My first few holes were far too deep, and I was embarrassed when someone gently asked me to check where the root flare sat. Once I understood what to look for, the rest of the row went much faster. We also left space around each stem instead of piling mulch against it. I took photos of the finished guards and labels because I want to recognise these trees on a return visit, not just remember a busy morning of digging.",
-                [5, 8, 19, 4],
+                [0],
                 "native-planting",
                 "beginner-tip"),
             CommunityStory(
@@ -516,7 +571,7 @@ public static class DemoSocialSeed
                 2,
                 "A recycling question that split our whole table",
                 "We brought a bag of confusing household items to the workshop and discovered that almost everyone had been confidently sorting at least one thing incorrectly. The most useful part was not memorising a longer list; it was learning to check the local guidance when packaging changes. I have put a small container beside the recycling bin for lids and pieces that need a second look. It is already stopping the rushed guesses that used to happen on collection night.",
-                [13, 12],
+                [3],
                 "recycling",
                 "practical-learning"),
             CommunityStory(
@@ -524,7 +579,7 @@ public static class DemoSocialSeed
                 3,
                 "A quiet morning checking the habitat edge",
                 "The ranger asked us to pay attention to signs rather than trying to get close to wildlife. We noted fresh tracks, checked the marked line, and kept voices low near the denser vegetation. That slower pace changed the whole experience: I noticed calls I would normally miss and understood why some areas need to stay visually uneventful for visitors. The best photo was taken from well back on the path, and the most useful work happened where nobody would think to pose.",
-                [0, 1, 18, 16],
+                [15],
                 "habitat-care",
                 "responsible-volunteering"),
             CommunityStory(
@@ -532,7 +587,7 @@ public static class DemoSocialSeed
                 4,
                 "Clear water does not always mean healthy water",
                 "I nearly wrote down that the stream looked fine before we opened the test kit. Working through temperature, clarity, and the other measurements reminded me how unreliable a quick visual judgement can be. Our first reading seemed odd, so we rinsed the container and repeated it instead of forcing the number to fit our expectation. I would like to return after a wet week and compare the results; one careful measurement feels useful, but a pattern over time would tell a much better story.",
-                [7, 15, 12],
+                [4],
                 "water-quality",
                 "citizen-science"),
             CommunityStory(
@@ -540,7 +595,7 @@ public static class DemoSocialSeed
                 5,
                 "The children asked better compost questions than I did",
                 "I arrived with a tidy explanation prepared, then the first group immediately asked why worms do not drown when the bin is wet. We ended up examining texture, smell, and moisture together instead of following my planned order. Giving everyone a small job kept the session moving, especially for the quieter students who did not want to speak in front of the class. I left with fewer perfect answers but a much better idea of how curiosity can guide environmental learning.",
-                [10, 13, 19],
+                [8],
                 "environmental-education",
                 "youth-learning"),
             CommunityStory(
@@ -548,7 +603,7 @@ public static class DemoSocialSeed
                 6,
                 "Four bags from one short stretch of coast",
                 "The beach looked fairly clean from the car park, but the high-tide line told a different story. We separated rope, soft plastic, and general rubbish as we moved, then photographed the unusual items before disposal. Gloves were essential around the driftwood, and working in pairs made it easier to watch the incoming water while reaching awkward spots. The biggest lesson was how quickly tiny fragments disappear into sand; the final ten metres took almost as long as the first fifty.",
-                [11, 12, 16, 17],
+                [22],
                 "coastal-cleanup",
                 "waste-reduction"),
             CommunityStory(
@@ -556,7 +611,7 @@ public static class DemoSocialSeed
                 7,
                 "Planting beside the bike path changed my commute",
                 "I pass this route most weekdays and had never thought about who maintained the narrow green strip beside it. During the working bee we planted low native shrubs, checked sight lines around the crossing, and kept tools clear of riders. Now I notice which plants are holding moisture and where litter gathers after windy days. It is a small project, but seeing it repeatedly makes the contribution feel more tangible than work in a place I may never visit again.",
-                [5, 4, 19],
+                [17],
                 "bike-path",
                 "urban-restoration"),
             CommunityStory(
@@ -564,7 +619,7 @@ public static class DemoSocialSeed
                 8,
                 "Our first garden harvest was smaller than the shared lunch",
                 "We picked only a modest bowl of greens, but everyone brought something and the table kept expanding. Before eating, we repaired the edge of one bed, added dry material to the compost, and wrote down which seedlings had struggled in the exposed corner. The notes felt overly careful at first, then a longtime gardener explained how much guesswork they save next season. I came for practical growing advice and stayed because the conversation made the garden feel genuinely shared.",
-                [13, 19, 8],
+                [5],
                 "community-garden",
                 "composting"),
             CommunityStory(
@@ -572,7 +627,7 @@ public static class DemoSocialSeed
                 9,
                 "Wetland work is mostly patience and wet socks",
                 "There was no dramatic transformation today. We cleared around young plants, checked guards, and carried cut material back along a muddy edge without stepping into the softest ground. The coordinator showed us how to distinguish a planted native from a similar-looking weed, which slowed me down in the best way. On the walk out we spotted birds using the sheltered water near last season's planting. That small sign made the repetitive maintenance feel connected to a much longer recovery.",
-                [15, 6, 4],
+                [16],
                 "wetland-restoration",
                 "wildlife-habitat"),
             CommunityStory(
@@ -580,7 +635,7 @@ public static class DemoSocialSeed
                 10,
                 "My bird-count notes were messy but still useful",
                 "I worried that everyone else would identify birds instantly, while I was still writing descriptions like ‘small, fast, pale underneath’. The experienced counter beside me said those observations were better than an overconfident guess. We recorded time, direction, behaviour, and the calls we could recognise, then reviewed uncertain entries together. By the second location I was listening more carefully and reaching for the guide less often. I am posting this for anyone who thinks beginner notes do not belong in citizen science.",
-                [0, 6, 18],
+                [2],
                 "bird-count",
                 "beginner-observations"),
             CommunityStory(
@@ -588,7 +643,7 @@ public static class DemoSocialSeed
                 11,
                 "Ten minutes in the backyard became a tiny survey",
                 "I started with one patch beside the fence and resisted the urge to search the entire garden. In ten minutes I found different leaf shapes, two kinds of visiting insects, and several marks I could not identify. Photographing the wider plant before the close-up made the record much easier to understand later. I have added the same short survey to my calendar for next month because repeating one bounded observation may reveal more than a single ambitious afternoon.",
-                [6, 18],
+                [11],
                 "backyard-biodiversity",
                 "nature-journal"),
             CommunityStory(
@@ -596,7 +651,7 @@ public static class DemoSocialSeed
                 12,
                 "The eco-club activity that finally got everyone talking",
                 "We asked each group to choose one overlooked corner and imagine how it could support more life without becoming difficult to maintain. The ideas ranged from a small herb bed to leaving seed heads through winter. Once the students could draw and rearrange the plan, the quieter voices started shaping the discussion. We finished by assigning one realistic next step rather than promising a complete transformation. I am keeping that format; it made stewardship feel practical instead of abstract.",
-                [10, 19, 8],
+                [9],
                 "youth-eco-club",
                 "community-learning"),
             CommunityStory(
@@ -604,7 +659,7 @@ public static class DemoSocialSeed
                 13,
                 "A waste audit makes one lunch bin impossible to ignore",
                 "Sorting a single sample was enough to show how much avoidable packaging moved through the space each day. We weighed broad categories, photographed the layout, and wrote down the items that were hardest to classify. The conversation shifted from blaming people to asking whether bins, labels, and purchasing choices made the right action easy. Our next step is deliberately small: improve one confusing station, repeat the same sample, and see whether the mix changes before proposing anything larger.",
-                [12, 13, 17],
+                [21],
                 "waste-audit",
                 "measurement"),
             CommunityStory(
@@ -612,7 +667,7 @@ public static class DemoSocialSeed
                 14,
                 "Harakeke, heavy clay, and a very patient team leader",
                 "The ground beside the stream looked soft until the spade met a dense layer of clay. We adjusted the spacing, loosened each hole properly, and made sure the plants were firm without being buried. Someone kept the path clear while others carried water, so the group settled into an easy rhythm despite the slow digging. I wrote the planting date on my phone and want to revisit after summer. Survival will be a more honest result than the number we planted today.",
-                [7, 4, 15, 19],
+                [10],
                 "stream-planting",
                 "native-plants"),
             CommunityStory(
@@ -620,7 +675,7 @@ public static class DemoSocialSeed
                 0,
                 "The cleanup kit that now lives by my front door",
                 "After arriving without a spare pair of gloves last time, I made a small grab-and-go kit: gloves, hand sanitiser, a reusable water bottle, and two old sacks for separating what we collect. It removes the morning scramble and makes spontaneous neighbourhood cleanups much easier. I still leave unknown or hazardous material alone and report it rather than trying to be heroic. The kit is simple, but turning preparation into a routine has made me much more likely to show up.",
-                [12, 17],
+                [20],
                 "volunteer-kit",
                 "cleanup-routine"),
             CommunityStory(
@@ -628,7 +683,7 @@ public static class DemoSocialSeed
                 1,
                 "I returned to the planting site three weeks later",
                 "The row looked less dramatic than it did in the group photo, which was exactly why the return visit mattered. A few guards needed straightening, mulch had shifted, and one exposed plant looked stressed. I sent the observations to the coordinator instead of attempting changes I was unsure about. Most seedlings were settling in well, and recognising the labels made the place feel familiar. Planting day was satisfying; checking what happened afterwards made it feel like responsibility rather than a one-off event.",
-                [5, 8, 4],
+                [12],
                 "planting-follow-up",
                 "site-care"),
             CommunityStory(
@@ -636,7 +691,7 @@ public static class DemoSocialSeed
                 10,
                 "A dawn bird count without a perfect checklist",
                 "We began before the park became busy and used the first few minutes simply to listen. I missed several calls while trying to write and look at the same time, so we divided roles for the next interval. That small change produced calmer, clearer notes and let everyone contribute at their own confidence level. The final list was not enormous, but the repeated locations and timestamps made it useful. Next time I will bring a clipboard and fewer expectations about identifying everything immediately.",
-                [0, 18, 6],
+                [14],
                 "early-morning",
                 "citizen-science"),
             CommunityStory(
@@ -644,7 +699,7 @@ public static class DemoSocialSeed
                 2,
                 "The awkward packaging shelf in our kitchen",
                 "After the recycling workshop, we created a temporary shelf for packaging we could not confidently sort. Once a week we check the local guidance, remove labels where required, and decide whether the product is worth buying again. The shelf is not photogenic, but it has exposed patterns that a tidy bin hid from us. We are choosing one replacement at a time rather than attempting a perfect low-waste household overnight, and that pace has made the changes stick.",
-                [13, 19],
+                [19],
                 "household-waste",
                 "small-changes"),
             CommunityStory(
@@ -652,7 +707,7 @@ public static class DemoSocialSeed
                 3,
                 "The best habitat photo was the one I did not take",
                 "A bird moved near the track and my first instinct was to step closer for a clearer image. The volunteer beside me quietly pointed out the boundary marker, so we stayed back and watched for only a moment before continuing. Later we photographed the wider habitat and recorded what we had observed without sharing a precise location. That choice felt less exciting in the moment, but it respected the reason we were there. Responsible participation sometimes looks like deciding that documentation is not the priority.",
-                [1, 16, 6, 18],
+                [7],
                 "wildlife-ethics",
                 "habitat-protection"),
         ];
