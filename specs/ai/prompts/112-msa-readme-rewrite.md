@@ -27,6 +27,11 @@ The user then requested a concise personal-experience and audience rationale:
 
 > Further refine the part from just now — just add and modify a few sentences: 1. Change the first sentence "I think" to: objectively summarised and analysed from my past ten years of experience as a game designer and product manager. 2. Then, in this How Kiwimpact meets the Gamification theme section, still emphasise that although I have made many casual games before, considering our market audience this time (ages from XX to XX), I did not mechanically copy my previous experience, and also decided not to adopt a childish UI style, so that our broad and wide-ranging audience can all like it and learn to use it. My personal judgement is that usability, practicality, and functionality take far higher priority than gamification. Therefore I ultimately chose the current balanced, well-considered UI style. Add the above content at an appropriate place — it does not have to be one whole large paragraph. The purpose is to optimise and supplement how the current How Kiwimpact meets the Gamification theme section is expressed.
 
+After UI sound effects were implemented, the user requested that the audio
+description be corrected:
+
+> I have added sound effects, so you can update the related README description. It is no longer a version without sounds — it just has no music. The reason is that music could hurt the experience and startle users; we are still an application-oriented product, not a game.
+
 ## Implementation contract derived from accepted repository requirements
 
 Rewrite the root README so it satisfies the accepted MSA 2026 README contract
@@ -52,11 +57,16 @@ advanced-requirement selection that contradicts the accepted Top 3 boundary.
 
 Rewrite the Gamification section around the user's two-layer model. Ground the
 outer layer in implemented UI, visual identity, visible mechanics, reward
-animation, themes, accessibility, and the deliberate absence of audio. Expand
-the existing action, progression/reward-economy, and community loops with why
-each loop supports return participation. Preserve the user's retention insight
-while framing it as ethical sustained engagement rather than intentionally
-addictive or compulsive design.
+animation, themes, accessibility, and the implemented optional UI sound
+effects. Distinguish those short interaction/reward sounds from background
+music: Kiwimpact deliberately omits continuous music because it is primarily
+an application rather than a traditional game, and unexpected music could
+distract or startle its broad audience. Explain that sound supplements rather
+than replaces visual and semantic feedback. Expand the existing action,
+progression/reward-economy, and community loops with why each loop supports
+return participation. Preserve the user's retention insight while framing it
+as ethical sustained engagement rather than intentionally addictive or
+compulsive design.
 
 Add the product owner's Shop trade-off to the progression/reward-economy
 discussion. Explain that the original currency/Shop concept supported Quest

@@ -108,10 +108,19 @@ The outer layer makes the mechanics legible rather than merely decorative:
   make individual contribution part of a broader shared experience.
 - **Feedback remains accessible.** Reward feedback is readable without motion,
   supports reduced-motion preferences, uses semantic live status, and can be
-  paused or dismissed. Short interface sounds (button clicks, confirm and
-  cancel feedback, and a reward fanfare) reinforce these moments; they are
-  on by default with a persistent mute toggle in the header, and sound is
-  never the only signal for success or failure.
+  paused or dismissed. Four short UI sounds reinforce clicks, confirmations,
+  cancellations, and achievement rewards, while a persistent mute control lets
+  each user opt out. Sound complements the visual and semantic feedback; it is
+  never the only way success or failure is communicated. See the
+  [sound implementation](frontend/src/lib/uiSounds.ts) and
+  [asset notes](frontend/public/sounds/README.md).
+
+Kiwimpact intentionally does not use background music. Unlike a traditional
+game, it is primarily an application for taking real-world environmental and
+community action. Unexpected or continuous music could distract or startle
+users across its broad audience, making an otherwise useful experience feel
+intrusive. Short, optional interaction sounds add immediacy without turning
+everyday app use into a game session.
 
 This presentation layer helps users recognize state, understand consequences,
 and feel that progress matters. On its own, however, it would only make the
@@ -526,8 +535,9 @@ CYPRESS_E2E_MEMBER_EMAIL=member1@kiwimpact.test \
 
 Latest recorded full local gates for the current implementation lineage:
 
-- Frontend: lint, type-check, and build passed; 59 files / 485 Vitest tests
-  passed ([report](specs/implementation/reports/51-passport-xp-progress-simplification-completion.md)).
+- Frontend: lint, type-check, and build passed; 60 files / 490 Vitest tests
+  passed after the UI sound implementation
+  ([report](specs/implementation/reports/52-ui-sound-effects-completion.md)).
 - Backend: build passed; 316 unit tests and 350 PostgreSQL integration tests
   passed ([report](specs/implementation/reports/48-member-loop-v2-integration-completion.md)).
 - Cypress: two real local full-stack journeys passed together
@@ -619,3 +629,38 @@ For the authoritative distinction between accepted scope, implemented source,
 and observed verification, use the accepted decisions and dated evidence under
 [`specs/`](specs/). [`PROJECT_STATUS.md`](PROJECT_STATUS.md) is a historical
 running log and still requires a separate current-state refresh.
+
+## Individual project and GitHub identity clarification
+
+Kiwimpact was designed and developed as an **individual project by one human
+developer**. GitHub may show two participant avatars on some pull requests:
+[`Zephyr724`](https://github.com/Zephyr724) and
+[`zephyr942`](https://github.com/zephyr942). Both accounts are controlled by
+me; the second avatar does not represent a second human developer or an
+external human contributor.
+
+The duplicate attribution came from two separate Git mechanisms. Repository
+ownership, pull-request creation, and merging were associated with `Zephyr724`,
+while local commits made through the agent-assisted workflow inherited the
+user-global Git author identity associated with `zephyr942` and its University
+of Auckland email address. GitHub maps commit authors from the email stored
+inside each commit; the account or credential used to push does not rewrite
+that author metadata. This matches GitHub's official guidance on
+[commits linked to the wrong user](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/troubleshooting-commits/why-are-my-commits-linked-to-the-wrong-user).
+The workflow should have verified a repository-specific author identity before
+committing, and failing to do so created this avoidable ambiguity.
+
+For a public example, [PR #42](https://github.com/Zephyr724/msa2026/pull/42)
+was opened and merged by the repository owner `Zephyr724`, while its
+[implementation commit](https://github.com/Zephyr724/msa2026/commit/b02db7b547ff39fd3af9ccb3ac5f129d06faf5de)
+and
+[acceptance-evidence commit](https://github.com/Zephyr724/msa2026/commit/ed03ef524ddcd5985397cc65bdb207854f7d5a27)
+were attributed by GitHub to `zephyr942`. Both commits came from a branch in
+this same `Zephyr724/msa2026` repository, not an external fork. The dated
+[Git identity attribution record](specs/implementation/reports/54-git-identity-attribution-clarification.md)
+documents the commands, public API observations, limitation of the evidence,
+and corrective action. AI assistance is disclosed above and in `specs/`; it is
+not presented as a second human participant. After the repository-local author
+identity was corrected, GitHub publicly attributed
+[this clarification commit](https://github.com/Zephyr724/msa2026/commit/b96a20aac1a268f5d829b75661b06004b15a52a4)
+to `Zephyr724` as both author and committer.

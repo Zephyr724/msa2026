@@ -39,9 +39,14 @@ Prompt: `specs/ai/prompts/112-msa-readme-rewrite.md`
 - Grounded the outer layer in observed implementation: the eco-adventure visual
   system, Quest/Mission language, visible progression and identity, reward
   particles and milestone reveals, community surfaces, responsive themes, and
-  reduced-motion/semantic feedback. The README explicitly states that the
-  current release contains no audio rather than implying that planned music or
-  sound exists.
+  reduced-motion/semantic feedback.
+- Updated the audio description after UI sound effects were implemented. The
+  README now accurately records the four short click, confirmation,
+  cancellation, and achievement sounds; the persistent mute control; and the
+  rule that visual and semantic feedback remains sufficient without sound. It
+  separately explains why Kiwimpact omits background music: it is primarily an
+  application, and unexpected or continuous music could distract or startle
+  its broad audience.
 - Expanded the inner layer from describing what each loop does to explaining
   why action closure, a controlled progression economy, short/long goals,
   trusted rewards, belonging, social proof, and re-entry paths support sustained
@@ -70,6 +75,7 @@ Prompt: `specs/ai/prompts/112-msa-readme-rewrite.md`
 
 - `README.md`
 - `specs/ai/prompts/112-msa-readme-rewrite.md`
+- `specs/ai/reviews/97-msa-readme-rewrite-codex-review.md`
 - `specs/implementation/reports/52-msa-readme-rewrite-completion.md`
 
 ## Verification and observed results
@@ -123,6 +129,11 @@ applicable to this documentation-only task.
   refinement: 0 Blockers, 0 Majors, and 1 wording Minor. Replacing
   `a practical, objective view` with `a practical, product-focused approach`
   closed that Minor.
+- A later factual correction replaced the obsolete no-audio statement after
+  commits `73c982e` and `f405c4b` added and accepted the UI sound effects. The
+  implementation and human acceptance evidence are recorded in
+  `specs/implementation/reports/52-ui-sound-effects-completion.md` and
+  `specs/ai/reviews/97-ui-sound-effects-human-review.md`.
 - The review found one repository-process Major: the missing review record and
   stale review-status text. This follow-up evidence correction closes it.
 - The public submission video remains an explicitly open final-submission gate,

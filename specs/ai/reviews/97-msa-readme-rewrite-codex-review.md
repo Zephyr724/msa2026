@@ -67,7 +67,9 @@ accurate README. It must be closed before the MSA form is submitted.
   economy, non-economic cosmetics, and Shop deferral match ADR-0008 and current
   implementation evidence.
 - The baseline tree contains no Shop, wallet, currency, or purchasing
-  implementation and no audio asset or browser audio integration.
+  implementation. At the time of this baseline review it also contained no
+  audio asset or browser audio integration; that audio observation was later
+  superseded by the UI sound implementation described below.
 - Deployment homepage, liveness, readiness, Scalar, OpenAPI, and public GitHub
   repository checks returned HTTP 200 during review. The deployed OpenAPI
   document exposed the principal route families described by the README.
@@ -102,6 +104,21 @@ The reviewer found 0 Blockers, 0 Majors, and 1 non-blocking wording Minor. The
 Minor noted that `a practical, objective view` read as self-evaluative alongside
 the later `My product judgement`. The final wording uses `a practical,
 product-focused approach`, closing the Minor without changing scope or meaning.
+
+## Later UI sound implementation
+
+After the reviewed README baseline, commit `73c982e` added four short UI sounds
+for clicks, confirmations, cancellations, and achievement feedback, together
+with a persistent mute control. Commit `f405c4b` recorded the product owner's
+human acceptance review in
+`specs/ai/reviews/97-ui-sound-effects-human-review.md`.
+
+The README's former statement that Kiwimpact contained no audio was therefore
+corrected. It now distinguishes optional interaction/reward sounds from
+background music and records the current application-first decision not to use
+continuous music, which could distract or startle the product's broad audience.
+Sound remains supplementary: visual and semantic feedback communicates state
+without requiring audio.
 
 ## Classification and readiness
 
