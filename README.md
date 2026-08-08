@@ -49,7 +49,9 @@ Discover → Understand → Join → Complete → Verify
 
 ## How Kiwimpact meets the Gamification theme
 
-I think about gamification at two levels.
+Drawing on ten years of experience in game design and product management, I
+take a practical, product-focused approach to analysing gamification at two
+levels.
 
 The first is the **outer layer**, or presentation layer: the game-like systems,
 UI, animation, music or sound, visual rewards, and visible mechanics that a user
@@ -65,6 +67,20 @@ use. It is to turn one useful action into a credible reason to take the next
 one. The two layers are explained below.
 
 ### Outer layer — what users can see and feel
+
+Although I have previously designed many casual games, I did not mechanically
+copy those products or apply a child-oriented game UI to Kiwimpact. The intended
+audience is deliberately broad, spanning younger users through adults around 60
+years old. The experience therefore needs to be approachable, learnable, and
+comfortable for people with very different levels of digital and gaming
+familiarity.
+
+My product judgement is that usability, practical value, and functional clarity
+must take priority over visible gamification. Gameful presentation should make
+real actions easier to understand and more rewarding to complete; it should
+never make the product harder to learn or distract from its environmental
+purpose. The current UI is the result of that deliberate balance rather than a
+direct copy of my previous casual-game experience.
 
 The visual direction is a friendly eco-adventure: energetic, optimistic,
 rounded, and gameful without becoming childish. Green nature tones, warm gold

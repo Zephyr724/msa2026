@@ -57,6 +57,14 @@ Prompt: `specs/ai/prompts/112-msa-readme-rewrite.md`
   personalisation compromise, while preserving a future Shop as a separately
   designed option after the core product is stable rather than claiming it was
   permanently rejected.
+- Added the product owner's ten years of game-design/product-management
+  experience as the lens for the two-layer analysis, without treating prior
+  casual-game work as a template for this product.
+- Explained the accepted audience range—young users through adults around
+  60—and the resulting decision to avoid a child-oriented UI. The README now
+  states the product priority explicitly: usability, practical value, and
+  functional clarity come before visible gamification, producing the current
+  balanced eco-adventure style.
 
 ## Files changed
 
@@ -111,6 +119,10 @@ applicable to this documentation-only task.
 - Independent read-only review: complete against committed baseline `82abd69`;
   see `specs/ai/reviews/97-msa-readme-rewrite-codex-review.md`.
 - Review result: 0 content Blockers, 0 content Majors, and 0 content Minors.
+- A limited post-review wording addendum covered the later experience/audience
+  refinement: 0 Blockers, 0 Majors, and 1 wording Minor. Replacing
+  `a practical, objective view` with `a practical, product-focused approach`
+  closed that Minor.
 - The review found one repository-process Major: the missing review record and
   stale review-status text. This follow-up evidence correction closes it.
 - The public submission video remains an explicitly open final-submission gate,

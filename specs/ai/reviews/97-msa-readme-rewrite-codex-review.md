@@ -79,11 +79,36 @@ accurate README. It must be closed before the MSA form is submitted.
 - Every relative README link resolves within the baseline tree.
 - `git diff-tree --check` passed for the baseline commit.
 
+## Post-review wording addendum
+
+After the baseline review, the product owner requested a limited wording
+refinement to the Gamification introduction. The same independent reviewer
+inspected only that uncommitted diff against `02e1143`; no second full review
+was performed.
+
+The addendum confirmed that:
+
+- the ten years of game-design/product-management experience and prior casual-
+  game work are clearly personal-experience statements, not implementation
+  evidence;
+- the audience wording matches ADR-0008's accepted range from younger users to
+  adults around 60 without implying an unsupported exact minimum age;
+- prioritising usability, practical value, and functional clarity over visible
+  Gamification matches the accepted accessible, gameful-but-not-childish UX;
+- the wording adds no unsupported product, deployment, security, or user-
+  research claim.
+
+The reviewer found 0 Blockers, 0 Majors, and 1 non-blocking wording Minor. The
+Minor noted that `a practical, objective view` read as self-evaluative alongside
+the later `My product judgement`. The final wording uses `a practical,
+product-focused approach`, closing the Minor without changing scope or meaning.
+
 ## Classification and readiness
 
 - Content Blocker: 0
 - Content Major: 0
-- Content Minor: 0
+- Baseline content Minor: 0
+- Addendum Minor: 1, closed by the wording correction above
 - Repository-process Major: 1, closed by this follow-up evidence correction
 - External final-submission gate: public video link, open
 - Merge readiness: **Ready after this review record and completion-report
