@@ -314,7 +314,7 @@ public sealed class SeedConfigurationTests
                 Assert.Equal(38, firstCounts.EvidenceDetails);
                 Assert.True(firstCounts.Achievements >= 20);
                 Assert.Equal(20, firstCounts.Posts);
-                Assert.Equal(26, firstCounts.PostImages);
+                Assert.Equal(24, firstCounts.PostImages);
                 Assert.Equal(60, firstCounts.PostTags);
                 Assert.Equal(80, firstCounts.PostLikes);
                 Assert.Equal(28, firstCounts.Comments);
@@ -418,14 +418,17 @@ public sealed class SeedConfigurationTests
                     Assert.NotEmpty(post.Comments);
                     Assert.All(post.Images, image =>
                     {
-                        Assert.StartsWith("https://images.pexels.com/", image.Url);
-                        Assert.StartsWith("Illustrative stock photo:", image.AltText);
+                        Assert.StartsWith(
+                            "https://local.kiwimpact.invalid/images/community/",
+                            image.Url);
+                        Assert.EndsWith(".jpg", image.Url);
+                        Assert.NotEmpty(image.AltText);
                     });
                 });
-                Assert.Equal(6, posts.Count(post => post.Images.Count == 2));
-                Assert.Equal(14, posts.Count(post => post.Images.Count == 1));
+                Assert.Equal(4, posts.Count(post => post.Images.Count == 2));
+                Assert.Equal(16, posts.Count(post => post.Images.Count == 1));
                 Assert.Equal(
-                    20,
+                    24,
                     posts
                         .SelectMany(post => post.Images)
                         .Select(image => image.Url)
@@ -439,6 +442,10 @@ public sealed class SeedConfigurationTests
 
                 var postToEdit = posts.Single(post =>
                     post.Id == AssessmentSocialSeed.PostIds[0]);
+                var staleImage = postToEdit.Images.Single();
+                staleImage.Url =
+                    "https://images.pexels.com/photos/450516/pexels-photo-450516.jpeg" +
+                    "?auto=compress&cs=tinysrgb&fit=crop&w=900&h=900";
                 postToEdit.Update(
                     postToEdit.QuestId,
                     "Reviewer-edited community story",
@@ -482,6 +489,14 @@ public sealed class SeedConfigurationTests
                         image.QuestId == AssessmentDataSeed.QuestIds[10] &&
                         image.IsCover)
                     .Select(image => image.ImageUrl)
+                    .SingleAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(
+                AssessmentDataSeed.CommunityStoryImagesForPost(0)[0].Url,
+                await finalDb.SocialPostImages
+                    .Where(image =>
+                        image.PostId == AssessmentSocialSeed.PostIds[0] &&
+                        image.SortOrder == 0)
+                    .Select(image => image.Url)
                     .SingleAsync(TestContext.Current.CancellationToken));
         }
         finally
@@ -923,7 +938,7 @@ public sealed class SeedConfigurationTests
                 .OrderBy(post => post.Id)
                 .ToListAsync(TestContext.Current.CancellationToken);
             Assert.Equal(44, demoPosts.Count);
-            Assert.Equal(90, demoPosts.Sum(post => post.Images.Count));
+            Assert.Equal(47, demoPosts.Sum(post => post.Images.Count));
             Assert.Single(demoPosts, post => post.Images.Count == 0);
             Assert.Contains(demoPosts, post =>
                 post.Tags.Any(tag => tag.NormalizedName == "LANDSCAPE-COVER"));
@@ -938,7 +953,7 @@ public sealed class SeedConfigurationTests
                     tag.NormalizedName == "PRODUCTION-IMAGE-MIRROR"))
                 .ToArray();
             Assert.Equal(20, mirroredPosts.Length);
-            Assert.Equal(26, mirroredPosts.Sum(post => post.Images.Count));
+            Assert.Equal(24, mirroredPosts.Sum(post => post.Images.Count));
             Assert.Equal(
                 AssessmentDataSeed.CommunityStoryImages()
                     .Select(image => image.Url)
@@ -960,7 +975,7 @@ public sealed class SeedConfigurationTests
                     tag.NormalizedName == "COMMUNITY-STORY"))
                 .ToArray();
             Assert.Equal(20, communityStories.Length);
-            Assert.Equal(61, communityStories.Sum(post => post.Images.Count));
+            Assert.Equal(20, communityStories.Sum(post => post.Images.Count));
             Assert.All(communityStories, post =>
             {
                 Assert.True(post.Content.Length >= 300);
@@ -998,7 +1013,7 @@ public sealed class SeedConfigurationTests
                 post.Tags.Any(tag => tag.NormalizedName == "SQUARE-COVER"));
             var squareImage = Assert.Single(squarePost.Images);
             Assert.Equal(
-                "https://local.kiwimpact.invalid/images/demo/community-square-native.png",
+                "https://local.kiwimpact.invalid/images/community/01-stream-planting-square.jpg",
                 squareImage.Url);
             squareImage.Url =
                 "https://images.pexels.com/photos/450516/pexels-photo-450516.jpeg" +
@@ -1019,7 +1034,7 @@ public sealed class SeedConfigurationTests
                     comment => DemoSocialSeed.PostIds.Contains(comment.PostId),
                     TestContext.Current.CancellationToken));
             Assert.Equal(
-                "https://local.kiwimpact.invalid/images/demo/community-square-native.png",
+                "https://local.kiwimpact.invalid/images/community/01-stream-planting-square.jpg",
                 await db.SocialPostImages
                     .Where(image => image.PostId == squarePost.Id)
                     .Select(image => image.Url)

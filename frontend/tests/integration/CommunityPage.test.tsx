@@ -186,6 +186,7 @@ describe('Community post discovery and detail', () => {
     fireEvent.load(squareImage);
     expect(squareImage).toHaveClass('h-auto');
     expect(squareImage).not.toHaveClass('object-cover');
+    expect(squareImage.className).not.toContain('group-hover:scale');
     const tallImage = screen.getByAltText('Extra-tall cover example');
     Object.defineProperties(tallImage, {
       naturalWidth: { configurable: true, value: 600 },
@@ -448,6 +449,12 @@ describe('Community post discovery and detail', () => {
 
     expect(await screen.findByText('1 / 2')).toBeInTheDocument();
     const slides = screen.getByRole('group', { name: 'Image slides' });
+    const detailImages = slides.querySelectorAll('img');
+    expect(detailImages).toHaveLength(2);
+    detailImages.forEach((image) => {
+      expect(image).toHaveClass('object-contain');
+      expect(image).not.toHaveClass('object-cover');
+    });
     Object.defineProperty(slides, 'clientWidth', { configurable: true, value: 300 });
     Object.defineProperty(slides, 'scrollLeft', { configurable: true, value: 300, writable: true });
     fireEvent.scroll(slides);
