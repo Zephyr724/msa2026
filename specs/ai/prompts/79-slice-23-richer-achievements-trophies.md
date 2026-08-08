@@ -6,12 +6,15 @@ The product owner instructed Codex to implement four later product tasks,
 beginning with a richer achievement system and achievement-unlocked Passport
 cosmetics. They then extended the achievement requirement:
 
-> 增加很多成就，包括稀有成就，获得后，显示每个成就在全国完成人数，
-> 百分比越低表示越稀有。
+> Add many achievements, including rare achievements. Once earned, show how
+> many people nationwide have completed each achievement — the lower the
+> percentage, the rarer it is.
 >
-> 当成就到一定成就后，点亮一个独立的奖杯，有钻石，白金，黄金，
-> 白银，青铜，一直下去（这个也显示稀有度，同时奖杯显示在nav的
-> 用户名旁边成就能否加这个？ 其他方案同意
+> Once a certain number of achievements has been reached, light up a
+> dedicated trophy — diamond, platinum, gold, silver, bronze, and so on
+> (this also shows rarity, and the trophy is displayed next to the username
+> in the nav). Can this be added to the achievements? I agree with the other
+> proposals.
 
 Codex must implement the approved contract in
 `specs/implementation/23-richer-achievements-trophies.md` as the sole

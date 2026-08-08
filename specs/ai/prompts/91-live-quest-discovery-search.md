@@ -8,7 +8,7 @@
 
 The human provided a screenshot of the Discover Quest search field and asked:
 
-> 搜索框做成不需要用户按回车确认，输入多少就开始搜索这种
+> Make the search box work without requiring the user to press Enter to confirm — start searching as soon as they type.
 
 ## Implementation instruction
 

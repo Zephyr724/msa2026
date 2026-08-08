@@ -2,7 +2,7 @@
 
 ## Actual human instruction
 
-> 添加更多的post，尽量真实，营造真实良好的氛围感，体现这个post的作用
+> Add more posts, as realistic as possible, to create an authentic and positive atmosphere and demonstrate the value of posts.
 
 ## Reconstructed implementation instruction
 

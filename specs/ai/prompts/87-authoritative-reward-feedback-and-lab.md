@@ -6,86 +6,86 @@
 
 ## Product-owner instruction
 
-> 根据之前跟你讨论的内容，设计一套增强交互和视觉效果的方案，不用实施，先把方案和技术都准备好。我这边需求是，符合主题游戏，增加动画，配合当前风格，不是要幼儿化。 最少要实施：1.在完成任务的时候，弹出toast，toast提示恭喜完成任务，然后从toast中有星星粒子效果飞到右上角xp这里。用户可以点击关闭toast或者5秒后自动消失。或者类似的方案。 2.升级时候，也弹出toast，恭喜升级。 其他可以提升gamification的建议，在你调研后告诉我。
+> Based on what we discussed before, design a plan to enhance the interaction and visual effects — no implementation yet, just prepare the plan and the technology first. My requirements here are: fit the game theme, add animation, and match the current style — it must not be childish. At minimum, implement: 1. When a quest is completed, pop up a toast that congratulates the user on completing the quest, and from the toast have a star particle effect fly to the XP in the top-right corner. The user can click to close the toast, or it disappears automatically after 5 seconds. Or a similar approach. 2. When levelling up, also pop up a toast congratulating the level-up. For other suggestions that could improve gamification, tell me after you have researched.
 
 The product owner then approved implementation and required a complete test
 path:
 
-> 上面的方案可以，实现吧。要考虑给我设计一个测试帐号或者测试功能，我要跑通所有的设计
+> The plan above is fine, implement it. Also consider designing a test account or a test feature for me — I want to run through all of the designs.
 
 After exercising the Lab, the product owner reported that the preview buttons
 showed no visible animation and explicitly requested the correction:
 
-> [http://localhost:5173/dev/rewards](http://localhost:5173/dev/rewards)这个页面我点击每个测试按钮，看不到任何动画，为什么？
+> [http://localhost:5173/dev/rewards](http://localhost:5173/dev/rewards) On this page I click each test button and cannot see any animation. Why?
 
-> 修复
+> Fix it.
 
 The product owner then refined the approved visual hierarchy and motion:
 
-> 修改特效：1.布局不对，最上面是标题Congratulation，其他内容放在这个下面。 2.Congratulation选用夸张的英文花字体，颜色选用接近金色的黄色。3.这个Congratulation是稍微有向上凸的弧度，左右宽度尽量撑满toast的70%宽度。 4.星星特效看不清楚，粒子放大一点。能不能做成一条弧线，一个一个星星飞到那个地方
+> Modify the effects: 1. The layout is wrong — the title Congratulation goes at the very top, with all other content placed below it. 2. Use an exaggerated English script font for Congratulation, in a yellow close to gold. 3. The Congratulation should have a slight upward-bulging arc, and its width should fill up to 70% of the toast width. 4. The star effect is hard to see — enlarge the particles a bit. Can you make them follow an arc, with the stars flying one by one to that spot?
 
-> 一个接一个星星飞到终点位置
+> The stars fly to the destination one after another.
 
-> 星星移动的动画慢一点，慢20%，现在看不清
+> Slow the star movement animation down — 20% slower; right now it is too fast to see clearly.
 
-> **+50** **XP** 要有适合的出场动画；**→ Level** **10也要有出场动画，这个是箭头从左边level的最后一个字母往右移出，level 10，从隐形出现， Level** **10 选用接近金色的黄色**
+> **+50** **XP** needs a suitable entrance animation; **→ Level** **10 also needs an entrance animation — the arrow moves rightward from the last letter of the level on the left, and level 10 appears from invisible. Level** **10 uses a yellow close to gold.**
 
 The product owner clarified the intended XP symbol:
 
-> 我说是星星是指Sparkles这个，所有xp相关的图标都改成这个，而不是闪电
+> When I said stars, I meant the Sparkles icon — change all XP-related icons to this one, not the lightning bolt.
 
 The product owner selected the exact title face and weight:
 
-> Congraculation字体选用Pinyon Script，中间的厚度
+> Use the Pinyon Script font for Congraculation, the middle weight.
 
 The product owner clarified that the in-flight particles use the same symbol:
 
-> 飞上去的星星也是用这个Sparkles啊
+> The stars that fly up also use this Sparkles icon.
 
 The product owner then specified the complete reward sequence:
 
-> **+50** **XP也是相同的金黄色，只有+50** **XP有动画，图标没有。顺序优化一下，获得xp，然后飞星星，飞星星后隔一秒播放升级的动画，最后再是获得成就的动画。成就也是金黄色，动画是类似盖章的动画，大到小“盖章到”那个位置。Congratulation的字体加粗一个级别**
+> **+50** **XP is the same golden yellow; only +50** **XP has animation, the icon does not. Optimise the sequence: gain XP, then the stars fly; one second after the stars finish flying, play the level-up animation; and finally the achievement-earned animation. The achievement is also golden yellow, and its animation is like a stamp — from large to small, "stamping onto" that spot. Make the Congratulation font one weight bolder.
 
-> 等级箭头动画播放后停1秒，播放成就
+> After the level arrow animation plays, pause for 1 second, then play the achievement.
 
 The product owner requested a smoother, accelerating particle stream:
 
-> 星星飞上去的动画不流畅，总感觉中间少了几帧。选用星星的速度，越后面出现的星星速度越快，就是整体速度越来越快的方式。整个动画控制在2.5秒。星星不知道是透明度问题还是被toast框覆盖裁剪问题，离开了框感觉就变透明了，而不是清晰地飞到nav的等级上
+> The star flight animation is not smooth — it always feels like a few frames are missing in the middle. For the star speed, make the stars that appear later move faster, so the overall speed keeps increasing. Keep the whole animation within 2.5 seconds. I cannot tell whether it is an opacity issue or the stars being covered and clipped by the toast frame, but once they leave the frame they seem to go transparent instead of clearly flying to the level in the nav.
 
 The product owner clarified the stamp target:
 
-> 成就不是整个盖章，是那个成就的title有盖章效果，例如“**Building Momentum**”
+> The achievement is not stamped as a whole — it is the achievement's title that has the stamp effect, for example “**Building Momentum**”.
 
 The product owner further increased the title emphasis and width:
 
-> COngraculation再加粗一级，而且宽度不够，再往左右多占更多空间，就是左右两边各留10%够了
+> Make COngraculation one level bolder, and the width is not enough — take up more space to the left and right; leaving 10% on each side is enough.
 
 The product owner simplified the flight glyph and shortened the stream:
 
-> 星星的粒子选用sparkles类似的四角星星，不要四角星星左右还有小星星的形式。整个动画在2秒内完成
+> For the star particles, use a four-point star similar to sparkles — not the form that also has small stars to the left and right of the four-point star. Complete the whole animation within 2 seconds.
 
 The product owner made the final title width/weight adjustment:
 
-> Congraculation再左右多占一点，但是字体粗度缩小一点点
+> Let Congraculation take up a bit more space left and right, but reduce the font weight slightly.
 
 The product owner enlarged the level and particles, extended combined rewards,
 and corrected the stamp's depth direction:
 
-> 升级后的大小level 10放大一点。如果是**Combined reward，toast停留时间多5秒。盖章效果不是现在这个，上一版的效果更像盖章。现在更像是右边插进来。我需要的效果是更像是从z轴就是屏幕外盖下去的。星星飞上去的那个例子大50%**
+> Enlarge the size of level 10 after level-up. If it is a **Combined reward, keep the toast on screen for 5 more seconds. The stamp effect is not the current one — the previous version looked more like stamping. Now it looks more like it slides in from the right. The effect I need is more like stamping down along the z-axis, that is, from outside the screen. Make that flying star particle 50% bigger.
 
 The product owner selected a hollow flight-star treatment:
 
-> 四角星星有没有中空的替换现在的？
+> Is there a hollow four-point star to replace the current one?
 
 The product owner added a restrained arrival accent to the new level:
 
-> level 5出现后，加一点震动效果
+> After level 5 appears, add a slight shake effect.
 
 The product owner increased the hollow sparkle outline weight:
 
-> 星星框加粗20%
+> Make the star outline 20% thicker.
 
-> 再加粗20%
+> Another 20% thicker.
 
 ## Reconstructed implementation instruction
 

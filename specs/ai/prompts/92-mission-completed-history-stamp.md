@@ -9,35 +9,43 @@
 The human supplied screenshots of the Passport Completion history and a
 distressed circular stamp, then requested:
 
-> 这里完成的图标变成mission completed的章，画成跟参考图一样
+> Change the completed icon here into a mission completed stamp, drawn to
+> match the reference image.
 
 The human clarified the required color:
 
-> 绿色
+> Green
 
 The human then refined the reference match:
 
-> 不需要透明磨损划痕。其他一样，文字要大一点，completed你仔细观察，左右两边压在章上
+> No transparent wear-and-scratch marks needed. Everything else stays the
+> same, but the text should be a bit larger. Look carefully at "completed" —
+> its left and right edges overlap onto the stamp.
 
 The human further clarified the ring and banner construction:
 
-> 章的完全外圈比较粗，里面还有一圈很细的线，现在内圈太粗了。completed你改后看不清跟那两个圈交织在一起，参考原版做法，completed应该是有白色背景的
+> The stamp's outermost ring is fairly thick, and inside it there is another
+> very thin circle; the inner circle is too thick right now. After your
+> change, "completed" is illegible where it intertwines with the two rings.
+> Follow the original's approach: "completed" should have a white background.
 
 The human then supplied a clearer badge-and-ribbon reference and requested:
 
-> 你做不出来这个感觉，做成这样能吗？
+> You couldn't reproduce that feel — can you make it like this instead?
 
 The human supplied a final, simpler seal reference and requested:
 
-> 改成这个。。。总能做出来吧，绿色
+> Change it to this one ... surely you can make this, in green.
 
 The human refined the proportions and theme treatment:
 
-> 绿色选用我们的主题绿色。星星变小点，你观察原图标的比例。锯齿和线的比例也不对。底图用透明，不是白色。章再大30%
+> Use our theme green. Make the stars smaller — look at the proportions of
+> the original icon. The proportions of the serrations and the lines are also
+> wrong. Use a transparent background, not white. Make the stamp 30% larger.
 
 The human requested one final compositing adjustment:
 
-> 加20%透明度
+> Add 20% transparency.
 
 ## Implementation instruction
 

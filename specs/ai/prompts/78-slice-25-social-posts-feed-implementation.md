@@ -5,11 +5,11 @@
 The product owner supplied the following implementation instruction on
 2026-07-31:
 
-> 新建一个分支，做：社交帖子、搜索、瀑布流、发布、点赞及两级评论。这个需求清楚了吧，清楚就可以开始了
+> Create a new branch and build: social posts, search, masonry feed, publishing, likes, and two-level comments. This requirement is clear now, right? If it's clear, you can get started.
 
 The product owner then explicitly approved the required database migration:
 
-> 批准数据库迁移
+> Database migration approved.
 
 The implementation owner reconstructed the detailed execution contract below
 from those instructions, the accepted repository decisions, and the inspected

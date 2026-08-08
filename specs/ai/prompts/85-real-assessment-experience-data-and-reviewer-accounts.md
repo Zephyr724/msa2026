@@ -7,7 +7,7 @@ Codex task.
 
 ## Human prompt
 
-> 查看现在代码，看看要如何补充3个东西：1.真实的活动，成就数据。活动最好能链接到真实的，能跳转到不同的新西兰的环保活动网页和council的。 2.每个不同的身份，创建3个不同账号的。给测试和丰富社区。 3.创建6个，供评委能使用的的账号。这个必须仔细阅读msa2026的需求后创建。
+> Look at the current code and figure out how to add 3 things: 1. Real activities and achievement data. The activities should ideally link to real ones that can navigate to various New Zealand environmental activity websites and council websites. 2. For each different identity, create 3 different accounts — for testing and enriching the community. 3. Create 6 accounts for the judges to use. These must be created only after carefully reading the msa2026 requirements.
 
 ## Repository-grounded interpretation used for implementation
 
