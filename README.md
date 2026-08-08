@@ -660,4 +660,7 @@ this same `Zephyr724/msa2026` repository, not an external fork. The dated
 [Git identity attribution record](specs/implementation/reports/54-git-identity-attribution-clarification.md)
 documents the commands, public API observations, limitation of the evidence,
 and corrective action. AI assistance is disclosed above and in `specs/`; it is
-not presented as a second human participant.
+not presented as a second human participant. After the repository-local author
+identity was corrected, GitHub publicly attributed
+[this clarification commit](https://github.com/Zephyr724/msa2026/commit/b96a20aac1a268f5d829b75661b06004b15a52a4)
+to `Zephyr724` as both author and committer.

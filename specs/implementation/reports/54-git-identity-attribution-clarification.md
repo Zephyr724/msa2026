@@ -135,18 +135,17 @@ Public API endpoints used for verification:
   independently visible in Git/GitHub metadata.
 - Did not rewrite existing Git history: doing so would change published commit
   hashes and require force-pushing shared branches.
-- Did not change the current Git configuration because the intended canonical
-  name/email must be confirmed by the product owner before modifying repository
-  metadata.
-
-Before the next commit, configure and verify a repository-local identity for
-the intended `Zephyr724` account, then confirm it with:
+- After the product owner authorized the push, configured and verified the
+  repository-local author identity associated with `Zephyr724`:
 
 ```bash
-git config --local user.name '<intended display name>'
-git config --local user.email '<email linked to Zephyr724>'
+git config --local user.name 'Zephyr'
+git config --local user.email 'zephyr724@gmail.com'
 git config --show-origin --get-regexp '^user\.(name|email)$'
 ```
+
+The repository-local values now override the user-global `zephyr942` values
+for future commits in this repository.
 
 ## Verification
 
@@ -154,6 +153,11 @@ git config --show-origin --get-regexp '^user\.(name|email)$'
 - README relative-link existence check — passed; no missing local target.
 - Independent read-only review — completed; see
   `specs/ai/reviews/98-readme-github-identity-clarification-codex-review.md`.
+- Commit `b96a20a` was created with `Zephyr <zephyr724@gmail.com>` as both Git
+  author and committer and pushed to `origin/fix/community-masonry-images`.
+- GitHub's public commit API maps both the `author.login` and
+  `committer.login` of `b96a20a` to `Zephyr724`, publicly verifying that the
+  repository-local correction is effective.
 
 No application source, dependency, database, authentication, deployment, or
 runtime behavior was changed; application build and test gates are not
@@ -169,8 +173,6 @@ applicable to this documentation-only clarification.
   observed commit attribution and is not claimed in the README.
 - Existing published commits remain attributed to `zephyr942`. The README and
   this record clarify why rather than altering public history.
-- Future commits will repeat the ambiguity until an intended repository-local
-  author identity is configured and verified.
 
 ## Review status
 
