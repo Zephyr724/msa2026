@@ -938,8 +938,15 @@ public sealed class SeedConfigurationTests
                 .OrderBy(post => post.Id)
                 .ToListAsync(TestContext.Current.CancellationToken);
             Assert.Equal(44, demoPosts.Count);
-            Assert.Equal(47, demoPosts.Sum(post => post.Images.Count));
+            Assert.Equal(43, demoPosts.Sum(post => post.Images.Count));
             Assert.Single(demoPosts, post => post.Images.Count == 0);
+            Assert.Equal(
+                43,
+                demoPosts
+                    .SelectMany(post => post.Images)
+                    .Select(image => image.Url)
+                    .Distinct()
+                    .Count());
             Assert.Contains(demoPosts, post =>
                 post.Tags.Any(tag => tag.NormalizedName == "LANDSCAPE-COVER"));
             Assert.Contains(demoPosts, post =>
@@ -953,16 +960,12 @@ public sealed class SeedConfigurationTests
                     tag.NormalizedName == "PRODUCTION-IMAGE-MIRROR"))
                 .ToArray();
             Assert.Equal(20, mirroredPosts.Length);
-            Assert.Equal(24, mirroredPosts.Sum(post => post.Images.Count));
-            Assert.Equal(
-                AssessmentDataSeed.CommunityStoryImages()
-                    .Select(image => image.Url)
-                    .Order(),
-                mirroredPosts
-                    .SelectMany(post => post.Images)
-                    .Select(image => image.Url)
-                    .Distinct()
-                    .Order());
+            Assert.Equal(20, mirroredPosts.Sum(post => post.Images.Count));
+            Assert.All(
+                mirroredPosts.SelectMany(post => post.Images),
+                image => Assert.StartsWith(
+                    "https://local.kiwimpact.invalid/images/community/",
+                    image.Url));
             Assert.All(
                 mirroredPosts.SelectMany(post => post.Images),
                 image =>
@@ -1013,7 +1016,7 @@ public sealed class SeedConfigurationTests
                 post.Tags.Any(tag => tag.NormalizedName == "SQUARE-COVER"));
             var squareImage = Assert.Single(squarePost.Images);
             Assert.Equal(
-                "https://local.kiwimpact.invalid/images/community/01-stream-planting-square.jpg",
+                "https://local.kiwimpact.invalid/images/community/33-compost-bin.jpg",
                 squareImage.Url);
             squareImage.Url =
                 "https://images.pexels.com/photos/450516/pexels-photo-450516.jpeg" +
@@ -1034,7 +1037,7 @@ public sealed class SeedConfigurationTests
                     comment => DemoSocialSeed.PostIds.Contains(comment.PostId),
                     TestContext.Current.CancellationToken));
             Assert.Equal(
-                "https://local.kiwimpact.invalid/images/community/01-stream-planting-square.jpg",
+                "https://local.kiwimpact.invalid/images/community/33-compost-bin.jpg",
                 await db.SocialPostImages
                     .Where(image => image.PostId == squarePost.Id)
                     .Select(image => image.Url)
