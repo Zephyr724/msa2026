@@ -1,5 +1,6 @@
 import { Trash2, X } from 'lucide-react';
 import { useEffect, useRef, type MouseEvent } from 'react';
+import { playUiSound } from '../../lib/uiSounds.ts';
 
 interface SocialPostDeleteDialogProps {
   postId: string;
@@ -38,7 +39,14 @@ export default function SocialPostDeleteDialog({
   }, [open]);
 
   function close() {
-    if (!pending) onClose();
+    if (pending) return;
+    playUiSound('cancel');
+    onClose();
+  }
+
+  function confirm() {
+    playUiSound('confirm');
+    onConfirm();
   }
 
   return (
@@ -70,7 +78,7 @@ export default function SocialPostDeleteDialog({
         {error && <p className="mt-4 rounded-xl bg-error/10 p-3 text-sm text-error" role="alert">{error}</p>}
         <div className="modal-action">
           <button className="btn btn-ghost" disabled={pending} onClick={close} ref={cancelRef} type="button">Keep post</button>
-          <button className="btn btn-error" disabled={pending} onClick={onConfirm} type="button">
+          <button className="btn btn-error" disabled={pending} onClick={confirm} type="button">
             <Trash2 aria-hidden="true" className="size-4" />
             {pending ? 'Deleting…' : 'Delete permanently'}
           </button>

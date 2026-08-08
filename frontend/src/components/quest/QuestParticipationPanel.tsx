@@ -7,6 +7,7 @@ import {
   useMyQuestParticipationQuery,
 } from '../../hooks/useParticipation';
 import { ApiError } from '../../lib/api/apiFetch';
+import { playUiSound } from '../../lib/uiSounds.ts';
 import type { MyCompletionStatus } from '../../types/completion';
 import type { QuestRegistrationMode } from '../../types/quest';
 
@@ -42,12 +43,20 @@ export default function QuestParticipationPanel({
 
   async function handleCancel() {
     if (mutationPending) return;
+    // "Confirm cancellation" is semantically a cancel action.
+    playUiSound('cancel');
     try {
       await cancel.mutateAsync();
       setConfirmingCancel(false);
     } catch {
       // The authoritative server error is rendered below.
     }
+  }
+
+  function handleKeepParticipation() {
+    // "Keep participation" is semantically a confirm action.
+    playUiSound('confirm');
+    setConfirmingCancel(false);
   }
 
   if (auth.isPending) {
@@ -112,7 +121,7 @@ export default function QuestParticipationPanel({
                 <button
                   className="btn btn-success w-full"
                   disabled={mutationPending}
-                  onClick={() => setConfirmingCancel(false)}
+                  onClick={handleKeepParticipation}
                   type="button"
                 >
                   Keep participation
