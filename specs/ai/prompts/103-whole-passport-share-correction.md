@@ -4,11 +4,11 @@
 
 Actual product-owner clarification and implementation instruction, 2026-08-07:
 
-> 之前有一个是分享整个passport的页面，优化的也是这个页面……这两个是针对某个任务的
+> There was previously a page for sharing the whole Passport, and the page to be optimized is also that one... those two are for a specific Quest.
 
-> 对啊，重做啊
+> Yes, exactly — redo it.
 
-> 你直接做吧，别用k3做了
+> Just go ahead and do it yourself; don't use K3 for it.
 
 ## Implemented interpretation
 

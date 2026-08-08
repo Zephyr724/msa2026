@@ -5,34 +5,34 @@
 The product owner rejected the narrowed Slice 25 Community implementation and
 supplied these correction instructions on 2026-08-04:
 
-> community跟我跟你商定的，差很远，你重新查一下我我的需求，你没做到啊。列出我的需求，补做完剩下的内容
+> The community feature is far from what you and I agreed on. Go back and check my requirements — you did not deliver them. List my requirements and finish the remaining work.
 
-> 不止，我说参考小红书的产品来设计：1.新建帖子是一个按钮，你现在做的是什么玩意？2.点击按钮后才是一个弹窗页面来创建帖子。 3.基本功能也没有啊，可以传多张图，哪怕是url，现在也没实现。4.有标题 5.有正文 6.关联活动（这个才是目的 7能加tag 8.能发布 9.能删除 10.能存draft最好，不行先不实现了，优先其他功能
+> That is not all. I said to design it with reference to the Xiaohongshu product: 1. Creating a new post should be a button — what is this thing you made now? 2. Only after clicking the button should a pop-up page appear to create the post. 3. Even the basic features are missing — it should be possible to attach multiple images, even just via URLs, and that is still not implemented now. 4. There is a title 5. There is a body 6. Related activity (this is the actual purpose) 7. Tags can be added 8. Can publish 9. Can delete 10. Saving a draft would be best; if that is not feasible, skip it for now and prioritise the other features.
 
 The product owner first added and then corrected requirement 11:
 
-> 11.活动能公开和隐藏
+> 11. Activities can be public and hidden.
 
-> 11.修正为发布的帖子能公开和隐藏
+> 11. Corrected to: published posts can be public and hidden.
 
 The product owner then added the multi-image browsing requirement:
 
-> 12.添加的多张图片在浏览帖子时为滚动轮播功能，也支持用户点击左右翻看
+> 12. When browsing a post, the multiple added images should work as a scrollable carousel, and also support the user clicking to page left and right.
 
 The original social-feed instruction and migration approval remain relevant:
 
-> 新建一个分支，做：社交帖子、搜索、瀑布流、发布、点赞及两级评论。这个需求清楚了吧，清楚就可以开始了
+> Create a new branch and build: social posts, search, waterfall feed, publishing, likes, and two-level comments. This requirement is clear now, right? If it is clear, you can start.
 
-> 批准数据库迁移
+> Database migration approved.
 
 The product owner also required Kimi K3 review and correction of findings:
 
-> 写完让K3审查一次，有问题你记得修复
+> When you finish writing, have K3 review it once, and remember to fix any problems.
 
 After recovery and review, the product owner corrected the Quest rule on
 2026-08-05:
 
-> Related Quest 是optional 不是必须，只是强烈推荐
+> Related Quest is optional, not mandatory — just strongly recommended.
 
 ## Reconstructed implementation instruction
 

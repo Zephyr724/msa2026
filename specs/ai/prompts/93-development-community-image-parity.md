@@ -2,7 +2,7 @@
 
 ## Actual human instruction
 
-> 现在production和dev的post的测试图是不是一样的？我看到dev环境只有5张图，如果不是一样的，把dev改成production的那几十张图，还是强调一下，图还有竖向，横向，正方形，有截图（非4：3或者0.76比例），没有截取的。
+> Are the test images for posts the same in production and dev right now? I see the dev environment only has 5 images. If they are not the same, change dev to use those dozens of images from production. And to emphasise again: the images include portrait, landscape, and square ones, with some cropped (not in 4:3 or 0.76 ratio) and some not cropped.
 
 ## Implementation instruction
 

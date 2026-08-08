@@ -2,9 +2,9 @@
 
 ## Actual human instruction
 
-> post再多加20条，要求还是如上，文字要更长一些，看起来更真实一点。，图尽量多，关联现有各种任务。tag适量增加。所有post（现有和新增），都要加上comment
+> Add 20 more posts, with the same requirements as above; make the text longer so they look more realistic. Include as many images as possible, linked to the various existing Quests. Increase the number of tags moderately. All posts (existing and new) must have comments added.
 >
-> comment要求真实
+> The comments must feel realistic.
 
 ## Implementation instruction
 

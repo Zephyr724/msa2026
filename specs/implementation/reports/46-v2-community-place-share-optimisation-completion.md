@@ -121,7 +121,7 @@ Correction-pass verification (from `frontend/`, observed):
 ## Implemented scope
 
 One frontend-only vertical slice answering the four V2 feedback items
-(`需要优化内容V2.pdf`). Contract: `specs/implementation/46-v2-community-place-share-optimisation.md`.
+(`content-to-optimise-V2.pdf`). Contract: `specs/implementation/46-v2-community-place-share-optimisation.md`.
 Prompt record: `specs/ai/prompts/102-v2-community-place-share-optimisation.md`.
 
 1. **Community challenges clarity** — `CommunityChallengesSection` now

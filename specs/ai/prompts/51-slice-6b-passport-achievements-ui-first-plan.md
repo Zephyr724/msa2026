@@ -10,20 +10,20 @@
 
 ## Prompt given to Kimi K3 (verbatim)
 
-> 你负责为 Slice 6B — Passport Achievements UI 创建 first implementation plan，不实施代码。
+> You are responsible for creating the first implementation plan for Slice 6B — Passport Achievements UI. Do not implement any code.
 >
-> 基线：
+> Baseline:
 >
-> - 远端 `main`: `a974725`，PR #15 已合并 Slice 6A-2 及 CI 精度修正
-> - 开始前确认分支、HEAD 和干净工作树
-> - 阅读并遵守 `AGENTS.md`
+> - Remote `main`: `a974725`; PR #15 has merged Slice 6A-2 and the CI precision correction
+> - Before starting, confirm the branch, HEAD, and a clean working tree
+> - Read and follow `AGENTS.md`
 >
-> 必须阅读：
+> Required reading:
 >
 > - `PROJECT_STATUS.md`
-> - `specs/implementation/06a-simple-achievements-backend.md` §13–§17，重点 §17 handoff contract
+> - `specs/implementation/06a-simple-achievements-backend.md` §13–§17, with focus on the §17 handoff contract
 > - `specs/architecture/03-api-contract.md` §2.12
-> - 当前 Passport frontend：
+> - The current Passport frontend:
 >   - `frontend/src/pages/PassportPage.tsx`
 >   - `frontend/src/components/passport/`
 >   - `frontend/src/hooks/useProgression.ts`
@@ -34,86 +34,86 @@
 >   - `frontend/src/lib/api/passport.ts`
 >   - `frontend/src/lib/validation/`
 >   - `frontend/src/types/`
->   - 直接相关 frontend tests
-> - 6A-2 的 prompt、completion report 和 Review 43，只用于核对已实现 API 事实
+>   - Directly related frontend tests
+> - The 6A-2 prompt, completion report, and Review 43, used only to cross-check implemented API facts
 >
-> 创建：
+> Create:
 >
 > 1. `specs/implementation/06b-passport-achievements-ui.md`
 > 2. `specs/ai/prompts/51-slice-6b-passport-achievements-ui-first-plan.md`
 >
-> 计划首行必须是：
+> The plan's first line must be:
 >
 > `Status: Proposed — pending human decisions and independent Codex design review`
 >
-> 计划必须覆盖：
+> The plan must cover:
 >
-> 1. Baseline 与已实现 API 事实。
-> 2. P0 产品目标和明确 out-of-scope。
-> 3. Passport 页面信息架构和 responsive 布局。
-> 4. Catalog 与 earned 数据的客户端类型、严格 exact-key validators、transport 和 TanStack Query hooks。
-> 5. 推荐 UI：
->    - Achievements 区块放在 Level Summary 与 Completion History 之间；
->    - 展示全部 active catalog 项；
->    - 已获得项显示 unlocked 状态和 `awardedAt`；
->    - 未获得项显示 locked 状态，但不显示后端未提供的进度；
->    - mobile 单列，较宽屏幕最多三列。
-> 6. 错误和加载状态：
->    - 401 使用既有 private-session 生命周期；
->    - 404 与 Passport 既有 profile-missing 行为一致；
->    - 503 `progression-not-ready` 仅形成有界 Achievement 区块状态；
->    - `retry: false`；
->    - catalog 与 earned 的失败边界不得泄漏内部信息。
-> 7. 缓存合同：
->    - catalog key `['achievements','catalog']`，长 stale time；
->    - earned key 位于 `['achievements']` 前缀；
->    - redemption 的 `syncAuthoritativeCompletion` 扩展 invalidation；
->    - `expirePrivateSession` 扩展 achievements 私有缓存；
->    - 不使用 Zustand 保存服务端 Achievement 数据。
-> 8. 图标策略：
->    - 为三个现有 code 推荐具体 Lucide 图标；
->    - `iconUrl` 非空时的安全渲染策略；
->    - 未知 code 的稳定 fallback；
->    - 不添加依赖。
-> 9. Accessibility：语义 heading/list、locked/unlocked 不能仅靠颜色、图标装饰规则、日期文本、键盘和屏幕阅读器行为。
-> 10. 测试矩阵：
->     - validators/types；
->     - API transport 与 401 cleanup；
->     - hooks/query keys/retry；
->     - earned/locked rendering；
->     - ordering；
->     - loading/empty/404/503/error；
->     - responsive structural assertions；
->     - redemption invalidation；
->     - private-cache cleanup；
->     - existing Passport regression。
-> 11. 适用 frontend gates：
+> 1. Baseline and implemented API facts.
+> 2. P0 product goals and explicit out-of-scope.
+> 3. Passport page information architecture and responsive layout.
+> 4. Client-side types for catalog and earned data, strict exact-key validators, transport, and TanStack Query hooks.
+> 5. Recommended UI:
+>    - Place the Achievements section between Level Summary and Completion History;
+>    - Display all active catalog items;
+>    - Earned items show unlocked state and `awardedAt`;
+>    - Unearned items show locked state, but do not show progress the backend does not provide;
+>    - Single column on mobile, up to three columns on wider screens.
+> 6. Error and loading states:
+>    - 401 uses the existing private-session lifecycle;
+>    - 404 is consistent with the existing Passport profile-missing behavior;
+>    - 503 `progression-not-ready` only forms a bounded Achievements-section state;
+>    - `retry: false`;
+>    - Failure boundaries for catalog and earned must not leak internal information.
+> 7. Cache contract:
+>    - Catalog key `['achievements','catalog']` with a long stale time;
+>    - Earned key under the `['achievements']` prefix;
+>    - Extend the redemption `syncAuthoritativeCompletion` invalidation;
+>    - Extend `expirePrivateSession` to the achievements private cache;
+>    - Do not use Zustand to store server Achievement data.
+> 8. Icon strategy:
+>    - Recommend concrete Lucide icons for the three existing codes;
+>    - Safe rendering strategy when `iconUrl` is non-empty;
+>    - Stable fallback for unknown codes;
+>    - Do not add dependencies.
+> 9. Accessibility: semantic heading/list, locked/unlocked must not rely on color alone, icon decoration rules, date text, keyboard and screen reader behavior.
+> 10. Test matrix:
+>     - validators/types;
+>     - API transport and 401 cleanup;
+>     - hooks/query keys/retry;
+>     - earned/locked rendering;
+>     - ordering;
+>     - loading/empty/404/503/error;
+>     - responsive structural assertions;
+>     - redemption invalidation;
+>     - private-cache cleanup;
+>     - existing Passport regression.
+> 11. Applicable frontend gates:
 >     - `npm run lint`
 >     - `npm run type-check`
 >     - `npm run test -- --run`
 >     - `npm run build`
-> 12. 精确文件映射、文件计数、风险、DoD、证据和独立 review 流程。
-> 13. 明确列出 D1–D8 人工决定，每项给出推荐选项、备选项和影响。至少包括：
->     - 展示全部 catalog 还是 earned-only；
->     - 区块位置；
->     - locked 卡片内容；
->     - 503 是区块级还是页面级；
->     - icon 映射/fallback；
->     - 是否显示 unlock date；
->     - catalog/earned 空状态；
->     - 是否明确排除进度、toast 和动画。
-> 14. 明确说明进度数据、阈值、streak、toast、unlock animation、其他用户成就、写入端点和 backend change 均不在本 Slice。
+> 12. Exact file mapping, file counts, risks, DoD, evidence, and the independent review process.
+> 13. Explicitly list the D1–D8 human decisions, each with a recommended option, alternatives, and impact. Include at least:
+>     - Show the full catalog or earned-only;
+>     - Section placement;
+>     - Locked-card content;
+>     - Whether 503 is section-level or page-level;
+>     - Icon mapping/fallback;
+>     - Whether to show the unlock date;
+>     - Catalog/earned empty states;
+>     - Whether to explicitly exclude progress, toasts, and animations.
+> 14. Explicitly state that progress data, thresholds, streaks, toasts, unlock animations, other users' achievements, write endpoints, and backend changes are all out of this Slice.
 >
-> 不要修改生产代码、测试、accepted 文档、依赖或配置。不要 stage、commit、push、merge、创建 PR 或部署。不要替人类批准决定。
+> Do not modify production code, tests, accepted documents, dependencies, or configuration. Do not stage, commit, push, merge, create a PR, or deploy. Do not approve decisions on the human's behalf.
 >
-> 完成后报告：
+> Report after completion:
 >
-> - 创建的文件；
-> - baseline 验证；
-> - 推荐的 D1–D8；
-> - 需要人类选择的内容；
-> - 文件数和风险；
-> - 下一步为 Codex 独立设计 review。
+> - Files created;
+> - Baseline verification;
+> - Recommended D1–D8;
+> - What requires a human choice;
+> - File counts and risks;
+> - Next step: Codex independent design review.
 
 ## Execution record (observed facts only)
 

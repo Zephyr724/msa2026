@@ -4,7 +4,7 @@ Date: 2026-08-08
 
 ## Actual user instructions
 
-> 按msa2026的要求，写readme
+> Write the README according to the msa2026 requirements.
 
 The user then supplied the deployment address:
 
@@ -13,19 +13,19 @@ The user then supplied the deployment address:
 The user later supplied `/Users/zephyr/Downloads/Kiwimpact_README_final.md` and
 asked:
 
-> 这是chatgpt写的，哪个更好，有可以吸收改进的，你就用吧，没有就算了
+> This was written by ChatGPT — which one is better? If there is anything worth absorbing to improve ours, use it; if not, never mind.
 
 The user then requested a deeper Gamification-theme explanation:
 
-> ## How Kiwimpact meets the Gamification theme中加入我想法，我认为gamification分两个方面，一个是外在层，就是表现层，游戏系统，UI，动画，音乐还有游戏机制，这些用户能直观看到。第二是内在层，也就是核心层，这个是游戏行业里所说的game Loop。它包含用户行为loop，游戏经济体系loop等等。我们Kiwimpact不单单追求外在层，让用户感觉像游戏，更在核心中借鉴了游戏使人沉迷，驱动玩家经常参与，高留存率的核心。接下来我们会一一说明。然后接现在已经有解释的内容。现有的解释中，loop的部分不错了，可适当根据我上面内容扩展一下，我们解释了怎么做，可以加为什么这么做。而外在层的内容目前我看到不多，这部分需要你好好根据我们现在的项目重写。
+> Add my ideas into ## How Kiwimpact meets the Gamification theme. I believe gamification has two aspects. One is the outer layer, that is, the presentation layer — the game system, UI, animation, music, and game mechanics — which users can see directly. The second is the inner layer, that is, the core layer — what the game industry calls the game loop. It includes the user-behaviour loop, the game-economy loop, and so on. Kiwimpact not only pursues the outer layer so users feel it is like a game; at its core it also borrows from what makes games engaging — the core that drives players to participate frequently and achieve high retention. Next we will explain these one by one. Then continue with the content that is already explained. In the existing explanation, the loop part is fairly good — you can expand it appropriately based on what I said above; we explained how we do it, and we can add why we do it. As for the outer layer, I have not seen much content so far — you need to rewrite this part properly based on our current project.
 
 The user then requested that the original Shop decision be explained:
 
-> 在适当位置加入这几个句，原定设计时要加入商店，刺激用户做任务和个性化装扮，但是在权衡时间，（还有我们之前讨论很多次那个原因），不希望用户只关注虚拟的货币，甚至刷币，让用户还是紧紧围绕在现实中环保，对环境和社区做出贡献这个目标，再三权衡后，把这个设计推迟到后面。
+> Add these sentences at an appropriate place: the original design planned to include a shop to motivate users to do quests and personalise their appearance, but after weighing the time (and that reason we discussed many times before), we did not want users to focus only on virtual currency, or even farm coins — we want users to stay closely focused on the goal of real-world environmental protection and contributing to the environment and the community. After careful repeated consideration, we postponed this design to a later stage.
 
 The user then requested a concise personal-experience and audience rationale:
 
-> 再优化一下刚才那部分，就加和修改几句，1.把第一句 I think改成， 以我过去十年的游戏策划和产品经理的经验，客观地总结和分析。  2.然后这部分How Kiwimpact meets the Gamification theme，还是强调一下，虽然我之前制作过很多休闲类的游戏，但是考虑到我们这次的市场人群（年龄从XX到XX），并没有生硬照搬以前的经验，也决定不采用儿童化的UI风格。以便于我们的广泛的宽广人群都能喜欢和学会使用。 个人判断和认为易用性，实用性，功能性的优先度高高于gamification。因此最终选择了当前的平衡后的经过深思熟虑的UI风格。 再适当的位置加入上面内容，不一定要加一大段。目的是，优化和补充当前How Kiwimpact meets the Gamification theme这部分内容表达。
+> Further refine the part from just now — just add and modify a few sentences: 1. Change the first sentence "I think" to: objectively summarised and analysed from my past ten years of experience as a game designer and product manager. 2. Then, in this How Kiwimpact meets the Gamification theme section, still emphasise that although I have made many casual games before, considering our market audience this time (ages from XX to XX), I did not mechanically copy my previous experience, and also decided not to adopt a childish UI style, so that our broad and wide-ranging audience can all like it and learn to use it. My personal judgement is that usability, practicality, and functionality take far higher priority than gamification. Therefore I ultimately chose the current balanced, well-considered UI style. Add the above content at an appropriate place — it does not have to be one whole large paragraph. The purpose is to optimise and supplement how the current How Kiwimpact meets the Gamification theme section is expressed.
 
 ## Implementation contract derived from accepted repository requirements
 

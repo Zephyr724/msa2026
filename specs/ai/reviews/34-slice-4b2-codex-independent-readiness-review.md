@@ -17,7 +17,7 @@
 The human requested that Codex independently review Slice 4B after Kimi K3
 implemented it:
 
-> 接下来审核4b，我让k3来写了，反过来就是codex审查了
+> Next, review 4B. I had K3 write it, so this time Codex does the review.
 
 The supplied implementation result identified the work as complete but pending
 the independent read-only review required before commit.

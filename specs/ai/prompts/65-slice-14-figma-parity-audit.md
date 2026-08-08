@@ -7,7 +7,10 @@
 
 ## Human instruction
 
-> 现在做一个slice，我观察到figma设计和现在的代码还是查很远，无论布局，功能，查看一下原因跟我一份完整的报告，我希望下面一个slice能还原figma设计。
+> Create a slice now. I have observed that the Figma design and the current
+> code are still far apart, in both layout and functionality. Investigate the
+> reasons and give me a complete report — I want the next slice to restore
+> the Figma design.
 
 ## Implementation instruction
 

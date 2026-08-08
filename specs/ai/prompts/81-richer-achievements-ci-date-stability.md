@@ -9,7 +9,7 @@
 After providing CI output for two backend integration failures and one
 frontend integration failure, the human instructed:
 
-> 那改成更合理的测试吧
+> Then change them to more reasonable tests.
 
 ## Reconstructed implementation instruction
 

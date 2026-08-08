@@ -3,7 +3,7 @@
 ## Status
 
 **Implemented — explicitly requested by the product owner on 2026-08-07** via
-the V2 feedback document (`需要优化内容V2.pdf`, four items) and the controlling
+the V2 feedback document (`content-to-optimise-V2.pdf`, four items) and the controlling
 task instruction naming Kimi as sole implementation owner, with Codex as the
 independent reviewer after evidence exists.
 

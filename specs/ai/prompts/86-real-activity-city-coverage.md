@@ -2,11 +2,11 @@
 
 ## Actual product-owner request
 
-> 添加更多的真实的活动，添加到20个，查找符合主题的免费的照片，pixel也有免费版权的，或者其他类似的
+> Add more real activities, bringing the total to 20; find free photos that match the theme — Pexels also has free-licence ones, or other similar sources.
 
 Follow-up clarification:
 
-> 多添加20个活动，覆盖一下不同地方，wellington，等每个大城市都有几个这样
+> Add 20 more activities, covering different places — Wellington and so on — so that each major city has a few.
 
 ## Implemented interpretation
 
