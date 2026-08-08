@@ -108,7 +108,13 @@ applicable to this documentation-only task.
 
 - Implementation owner review: complete; final diff and README requirement
   mapping inspected, with no unresolved documentation defect found.
-- Independent read-only review: not yet requested. Under repository policy this
-  assessment-facing documentation should receive one fresh independent review
-  before commit.
-- No file was staged, committed, pushed, merged, or deployed by this task.
+- Independent read-only review: complete against committed baseline `82abd69`;
+  see `specs/ai/reviews/97-msa-readme-rewrite-codex-review.md`.
+- Review result: 0 content Blockers, 0 content Majors, and 0 content Minors.
+- The review found one repository-process Major: the missing review record and
+  stale review-status text. This follow-up evidence correction closes it.
+- The public submission video remains an explicitly open final-submission gate,
+  not a merge blocker for an accurate README that labels it pending.
+- The implementation and evidence were committed and pushed as `82abd69` before
+  the independent review record was added. This follow-up corrects that process
+  gap. No merge or deployment was performed by the README task.
